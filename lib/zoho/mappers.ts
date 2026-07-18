@@ -44,7 +44,7 @@ export function mapZohoInvoice(raw: Record<string, unknown>): InvoiceInsert {
     total: optionalNumber(raw, "total") ?? 0,
     balance: optionalNumber(raw, "balance") ?? 0,
     currency_code: optionalString(raw, "currency_code"),
-    item_name: getInvoiceItemName(raw),
+    item_name: getItemName(raw),
     raw: raw as Json,
     synced_at: new Date().toISOString()
   };
@@ -63,6 +63,9 @@ export function mapZohoExpense(raw: Record<string, unknown>): ExpenseInsert {
     total: optionalNumber(raw, "total") ?? 0,
     balance: optionalNumber(raw, "balance") ?? 0,
     currency_code: optionalString(raw, "currency_code"),
+    account_name: optionalString(raw, "account_name"),
+    paid_through_account_name: optionalString(raw, "paid_through_account_name"),
+    description: optionalString(raw, "description"),
     raw: raw as Json,
     synced_at: new Date().toISOString()
   };
@@ -81,6 +84,8 @@ export function mapZohoBill(raw: Record<string, unknown>): BillInsert {
     total: optionalNumber(raw, "total") ?? 0,
     balance: optionalNumber(raw, "balance") ?? 0,
     currency_code: optionalString(raw, "currency_code"),
+    account_name: optionalString(raw, "account_name"),
+    item_name: getItemName(raw),
     raw: raw as Json,
     synced_at: new Date().toISOString()
   };
@@ -142,7 +147,7 @@ function getCustomerIsActive(raw: Record<string, unknown>) {
   return optionalBoolean(raw, "is_active") ?? true;
 }
 
-function getInvoiceItemName(raw: Record<string, unknown>) {
+function getItemName(raw: Record<string, unknown>) {
   const directItemName = optionalString(raw, "item_name") ?? optionalString(raw, "itemName");
   if (directItemName) {
     return directItemName;

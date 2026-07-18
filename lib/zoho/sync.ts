@@ -4,7 +4,8 @@ import {
   fetchZohoCustomers,
   fetchZohoInvoices,
   fetchZohoExpenses,
-  fetchZohoBills
+  fetchZohoBills,
+  type BillDetail
 } from "@/lib/zoho/client";
 import { mapZohoBill, mapZohoCustomer, mapZohoExpense, mapZohoInvoice } from "@/lib/zoho/mappers";
 
@@ -75,10 +76,13 @@ export async function runZohoBooksSync(options: ZohoSyncOptions = DEFAULT_SYNC_O
 
     // Records already synced to Supabase skip the per-record Zoho detail
     // call (billing address / line item name) to stay within API rate limits.
-    // Only brand-new customers/invoices pay for a detail lookup.
-    const [existingBillingAddresses, existingItemNames] = await Promise.all([
+    // Only brand-new customers/invoices/bills pay for a detail lookup; bills
+    // still missing account_name or item_name from a prior sync keep getting
+    // retried until Zoho's line items backfill them.
+    const [existingBillingAddresses, existingItemNames, existingBillDetails] = await Promise.all([
       resolvedOptions.customers ? loadExistingCustomerBillingAddresses(supabase) : Promise.resolve(new Map<string, string | null>()),
-      resolvedOptions.invoices ? loadExistingInvoiceItemNames(supabase) : Promise.resolve(new Map<string, string | null>())
+      resolvedOptions.invoices ? loadExistingInvoiceItemNames(supabase) : Promise.resolve(new Map<string, string | null>()),
+      resolvedOptions.bills ? loadExistingBillDetails(supabase) : Promise.resolve(new Map<string, BillDetail>())
     ]);
 
     const [customers, invoices, expenses, bills] = await Promise.all([
@@ -87,7 +91,7 @@ export async function runZohoBooksSync(options: ZohoSyncOptions = DEFAULT_SYNC_O
         : Promise.resolve([]),
       resolvedOptions.invoices ? fetchZohoInvoices(accessToken, existingItemNames) : Promise.resolve([]),
       resolvedOptions.expenses ? fetchZohoExpenses(accessToken) : Promise.resolve([]),
-      resolvedOptions.bills ? fetchZohoBills(accessToken) : Promise.resolve([])
+      resolvedOptions.bills ? fetchZohoBills(accessToken, existingBillDetails) : Promise.resolve([])
     ]);
 
     // customers.forEach((customer, index) => {
@@ -255,6 +259,26 @@ async function loadExistingInvoiceItemNames(supabase: ReturnType<typeof createAd
 
   for (const row of data) {
     map.set(row.zoho_invoice_id, row.item_name);
+  }
+
+  return map;
+}
+
+// Only bills that already have both fields populated are cached; anything
+// still missing either one is retried on the next sync so it eventually
+// gets backfilled once Zoho returns line items for it.
+async function loadExistingBillDetails(supabase: ReturnType<typeof createAdminClient>) {
+  const map = new Map<string, BillDetail>();
+  const { data, error } = await supabase.from("zoho_bills").select("zoho_bill_id, account_name, item_name");
+
+  if (error || !data) {
+    return map;
+  }
+
+  for (const row of data) {
+    if (row.account_name && row.item_name) {
+      map.set(row.zoho_bill_id, { accountName: row.account_name, itemName: row.item_name });
+    }
   }
 
   return map;

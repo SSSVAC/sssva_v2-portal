@@ -30,6 +30,10 @@ const BillResponse = z.object({
   bills: z.array(z.record(z.unknown())).default([])
 });
 
+const BillDetailResponse = z.object({
+  bill: z.record(z.unknown()).optional()
+});
+
 const PageContext = z.object({
   has_more_page: z.boolean().optional()
 });
@@ -39,6 +43,8 @@ const DEFAULT_CUSTOMER_DETAIL_CONCURRENCY = 2;
 const CUSTOMER_DETAIL_MAX_ATTEMPTS = 3;
 const DEFAULT_INVOICE_DETAIL_CONCURRENCY = 2;
 const INVOICE_DETAIL_MAX_ATTEMPTS = 3;
+const DEFAULT_BILL_DETAIL_CONCURRENCY = 2;
+const BILL_DETAIL_MAX_ATTEMPTS = 3;
 const DEFAULT_LIST_MAX_PAGES = 100;
 
 export async function getZohoAccessToken() {
@@ -187,9 +193,75 @@ export async function fetchZohoExpenses(accessToken: string) {
   return ExpenseResponse.parse(payload).expenses;
 }
 
-export async function fetchZohoBills(accessToken: string) {
+export type BillDetail = { accountName: string | null; itemName: string | null };
+
+export async function fetchZohoBills(accessToken: string, existingBillDetails = new Map<string, BillDetail>()) {
   const payload = await fetchZohoList(accessToken, "bills");
-  return BillResponse.parse(payload).bills;
+  const bills = BillResponse.parse(payload).bills;
+
+  if (bills.length === 0) {
+    return [];
+  }
+
+  const billsById = new Map<string, Record<string, unknown>>();
+  const billIdsForDetail: string[] = [];
+
+  bills.forEach((bill) => {
+    const billId = getBillId(bill);
+    if (!billId) {
+      return;
+    }
+
+    billsById.set(billId, bill);
+
+    // Already-synced bills with both an account and item name skip the
+    // detail call entirely to conserve Zoho's daily API limit; bills that
+    // are still missing either value (e.g. from before this backfill) keep
+    // getting retried until Zoho returns line items for them.
+    if (!existingBillDetails.has(billId)) {
+      billIdsForDetail.push(billId);
+    }
+  });
+
+  if (billIdsForDetail.length === 0) {
+    return bills.map((bill) => mergeBillDetail(bill, existingBillDetails));
+  }
+
+  const detailedBills = await mapWithConcurrency(
+    billIdsForDetail,
+    getBillDetailConcurrency(),
+    async (billId) => {
+      const detailedBill = await fetchZohoBillDetail(accessToken, billId);
+      return detailedBill ?? billsById.get(billId) ?? null;
+    }
+  );
+
+  const detailedBillsById = new Map<string, Record<string, unknown>>();
+  detailedBills.forEach((bill) => {
+    const billId = bill ? getBillId(bill) : null;
+    if (billId && bill) {
+      detailedBillsById.set(billId, bill);
+    }
+  });
+
+  return bills.map((bill) => {
+    const billId = getBillId(bill);
+    if (!billId) {
+      return bill;
+    }
+
+    if (existingBillDetails.has(billId)) {
+      return mergeBillDetail(bill, existingBillDetails);
+    }
+
+    return detailedBillsById.get(billId) ?? bill;
+  });
+}
+
+function mergeBillDetail(bill: Record<string, unknown>, existingBillDetails: Map<string, BillDetail>) {
+  const billId = getBillId(bill);
+  const existing = billId ? existingBillDetails.get(billId) : undefined;
+  return existing ? { ...bill, account_name: existing.accountName, item_name: existing.itemName } : bill;
 }
 
 async function fetchZohoCustomerDetail(accessToken: string, customerId: string) {
@@ -262,6 +334,42 @@ async function fetchZohoInvoiceDetail(accessToken: string, invoiceId: string) {
     }
 
     console.warn(`Zoho invoice detail fetch failed for ${invoiceId} with ${response.status}`);
+    return null;
+  }
+
+  return null;
+}
+
+async function fetchZohoBillDetail(accessToken: string, billId: string) {
+  const booksBaseUrl = getEnv("ZOHO_BOOKS_BASE_URL", "https://www.zohoapis.com/books/v3");
+  const organizationId = getEnv("ZOHO_ORGANIZATION_ID");
+  const url = new URL(`${booksBaseUrl}/bills/${billId}`);
+  url.searchParams.set("organization_id", organizationId);
+
+  for (let attempt = 1; attempt <= BILL_DETAIL_MAX_ATTEMPTS; attempt += 1) {
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Zoho-oauthtoken ${accessToken}`
+      },
+      cache: "no-store"
+    });
+
+    if (response.ok) {
+      const payload = (await response.json()) as Record<string, unknown>;
+      const bill = BillDetailResponse.parse(payload).bill ?? payload;
+      return enrichBillWithLineItemDetails(bill);
+    }
+
+    if (response.status === 429 && attempt < BILL_DETAIL_MAX_ATTEMPTS) {
+      const delayMs = getRetryDelayMs(response, attempt);
+      console.warn(
+        `Zoho bill detail fetch rate limited for ${billId} with 429; retrying attempt ${attempt + 1}/${BILL_DETAIL_MAX_ATTEMPTS} after ${delayMs}ms`
+      );
+      await delay(delayMs);
+      continue;
+    }
+
+    console.warn(`Zoho bill detail fetch failed for ${billId} with ${response.status}`);
     return null;
   }
 
@@ -361,6 +469,42 @@ function getInvoiceId(invoice: Record<string, unknown>) {
   return typeof candidate === "string" && candidate.trim() !== "" ? candidate : null;
 }
 
+function getBillId(bill: Record<string, unknown>) {
+  const candidate = bill.bill_id ?? bill.billId ?? bill.id;
+  return typeof candidate === "string" && candidate.trim() !== "" ? candidate : null;
+}
+
+function getFirstRecordFromArray(value: unknown): Record<string, unknown> | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  return value.find((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object");
+}
+
+// Zoho's bill list endpoint never includes account_name/item_name (they
+// live on line items and are only returned by the detail endpoint), so
+// every bill needs this enrichment to surface those two fields.
+function enrichBillWithLineItemDetails(bill: Record<string, unknown>) {
+  const firstLineItem = getFirstRecordFromArray(bill.line_items);
+
+  const accountName =
+    typeof bill.account_name === "string" && bill.account_name.trim() !== ""
+      ? bill.account_name
+      : typeof firstLineItem?.account_name === "string" && firstLineItem.account_name.trim() !== ""
+        ? firstLineItem.account_name
+        : null;
+
+  const itemName =
+    typeof bill.item_name === "string" && bill.item_name.trim() !== ""
+      ? bill.item_name
+      : typeof firstLineItem?.name === "string" && firstLineItem.name.trim() !== ""
+        ? firstLineItem.name
+        : null;
+
+  return { ...bill, account_name: accountName, item_name: itemName };
+}
+
 function hasInvoiceItemName(invoice: Record<string, unknown>) {
   if (typeof invoice.item_name === "string" && invoice.item_name.trim() !== "") {
     return true;
@@ -409,6 +553,11 @@ function getCustomerDetailConcurrency() {
 function getInvoiceDetailConcurrency() {
   const parsed = Number(process.env.ZOHO_INVOICE_DETAIL_CONCURRENCY);
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : DEFAULT_INVOICE_DETAIL_CONCURRENCY;
+}
+
+function getBillDetailConcurrency() {
+  const parsed = Number(process.env.ZOHO_BILL_DETAIL_CONCURRENCY);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : DEFAULT_BILL_DETAIL_CONCURRENCY;
 }
 
 function getZohoListMaxPages() {

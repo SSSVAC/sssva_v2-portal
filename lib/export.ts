@@ -23,44 +23,116 @@ function escapeCsvCell(value: string | number) {
 }
 
 export function exportToCsv(filename: string, headers: string[], rows: (string | number)[][]) {
-  const lines = [headers, ...rows].map((row) => row.map(escapeCsvCell).join(","));
+  exportSectionsToCsv(filename, [{ title: null, headers, rows }]);
+}
+
+export type ExportSection = {
+  title: string | null;
+  headers: string[];
+  rows: (string | number)[][];
+};
+
+// Concatenates multiple header+rows tables into a single CSV file, each
+// preceded by an optional title line and separated by a blank line, so a
+// report made of several distinct tables can still be exported as one file.
+export function exportSectionsToCsv(filename: string, sections: ExportSection[]) {
+  const blocks = sections.map((section) => {
+    const lines = [section.headers, ...section.rows].map((row) => row.map(escapeCsvCell).join(","));
+    return section.title ? [escapeCsvCell(section.title), ...lines].join("\r\n") : lines.join("\r\n");
+  });
+
   // Leading BOM so Excel opens the file as UTF-8 (needed for Tamil text).
-  downloadBlob(filename, "﻿" + lines.join("\r\n"), "text/csv;charset=utf-8;");
+  downloadBlob(filename, "﻿" + blocks.join("\r\n\r\n"), "text/csv;charset=utf-8;");
 }
 
 function escapeHtml(value: string) {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-export function exportToHtml(filename: string, title: string, headers: string[], rows: (string | number)[][]) {
+function renderHtmlTable(headers: string[], rows: (string | number)[][]) {
   const theadHtml = `<tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr>`;
   const tbodyHtml = rows
     .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(String(cell))}</td>`).join("")}</tr>`)
     .join("");
 
-  const html = `<!doctype html>
+  return `<div class="table-wrap"><table><thead>${theadHtml}</thead><tbody>${tbodyHtml}</tbody></table></div>`;
+}
+
+function buildHtmlDocument(title: string, bodyHtml: string) {
+  const generatedOn = new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(new Date());
+
+  return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>${escapeHtml(title)}</title>
 <style>
-  body { font-family: system-ui, sans-serif; padding: 24px; color: #111827; }
-  h1 { font-size: 20px; margin-bottom: 16px; }
-  table { border-collapse: collapse; width: 100%; }
-  th, td { border: 1px solid #d1d5db; padding: 8px 10px; text-align: left; font-size: 14px; }
-  th { background: #f3f4f6; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px;
+    background: #f7f8fa;
+    color: #18202f;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  h1 { margin: 0 0 4px; font-size: 22px; }
+  h2 { margin: 28px 0 8px; font-size: 16px; }
+  h2:first-of-type { margin-top: 8px; }
+  .meta { margin: 0 0 20px; color: #6b7280; font-size: 13px; }
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid #d9dee7;
+    border-radius: 8px;
+    background: #ffffff;
+  }
+  table { border-collapse: collapse; width: 100%; min-width: 480px; }
+  th, td {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 14px;
+    white-space: nowrap;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  th {
+    background: #f3f4f6;
+    color: #6b7280;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+  tbody tr:nth-child(even) { background: #fafafa; }
+  tbody tr:last-child td { border-bottom: none; }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .table-wrap { border: none; }
+  }
 </style>
 </head>
 <body>
 <h1>${escapeHtml(title)}</h1>
-<table>
-  <thead>${theadHtml}</thead>
-  <tbody>${tbodyHtml}</tbody>
-</table>
+<p class="meta">Generated ${escapeHtml(generatedOn)}</p>
+${bodyHtml}
 </body>
 </html>`;
+}
 
-  downloadBlob(filename, html, "text/html;charset=utf-8;");
+export function exportToHtml(filename: string, title: string, headers: string[], rows: (string | number)[][]) {
+  downloadBlob(filename, buildHtmlDocument(title, renderHtmlTable(headers, rows)), "text/html;charset=utf-8;");
+}
+
+// Same multi-table composition as exportSectionsToCsv, rendered as one HTML
+// page with a heading per section.
+export function exportSectionsToHtml(filename: string, title: string, sections: ExportSection[]) {
+  const bodyHtml = sections
+    .map((section) => {
+      const heading = section.title ? `<h2>${escapeHtml(section.title)}</h2>` : "";
+      return `${heading}${renderHtmlTable(section.headers, section.rows)}`;
+    })
+    .join("");
+
+  downloadBlob(filename, buildHtmlDocument(title, bodyHtml), "text/html;charset=utf-8;");
 }
 
 // Prints only the report section marked with data-print-id="target" by

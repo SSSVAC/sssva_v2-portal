@@ -1,9 +1,11 @@
 import Link from "next/link";
-import { FundStatusTable, type MemberRow } from "@/components/fund-status-table";
-import { MonthlyDonationsReport, type DonationMonth, type DonorDonationRow } from "@/components/monthly-donations-report";
+import { ReportsTabs } from "@/components/reports-tabs";
+import type { MemberRow } from "@/components/fund-status-table";
+import type { DonationMonth, DonorDonationRow } from "@/components/monthly-donations-report";
+import type { DonorContactRow } from "@/components/donor-contact-report";
+import type { MonthlyIncomeCategory, MonthlyIncomeRow, MonthlyExpenseRow, MonthlyBillRow } from "@/components/monthly-report";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { formatCurrency } from "@/lib/format";
 import type { Database } from "@/types/database";
 
 export const dynamic = "force-dynamic";
@@ -19,11 +21,30 @@ const FUND_MINIMUM_AMOUNT = 3000;
 const DONATION_ITEM_NAME = "Donations and/or Sponsorships";
 const DONATION_MONTHS_SHOWN = 5;
 
+// Archanai and Abhishegam income are recorded under both an English and a
+// Tamil item name in Zoho. Note: "Abishegam" (regular abhishegam) and
+// "வருஷாபிஷேகம்" (Varusha Abhishegam, the annual one) are distinct services
+// and are intentionally not merged here.
+const ARCHANAI_ITEM_NAMES = ["Archanai", "அர்ச்சனை"];
+const ABHISHEGAM_ITEM_NAMES = ["Abishegam"];
+const MONTHLY_REPORT_MONTHS_SHOWN = 24;
+
+// Statue-fund expenses/bills are already tracked in the Silai Contributions
+// report, so they're excluded from the general Monthly Report to avoid
+// double-purposing the same cost category.
+const MONTHLY_REPORT_EXCLUDED_ACCOUNT_NAME = "சிலை வைப்பதற்கான செலவுகல்";
+
 type CustomerRow = Database["public"]["Tables"]["zoho_customers"]["Row"];
 type InvoiceRow = Database["public"]["Tables"]["zoho_invoices"]["Row"];
+type ExpenseRow = Database["public"]["Tables"]["zoho_expenses"]["Row"];
+type BillRow = Database["public"]["Tables"]["zoho_bills"]["Row"];
 type Member = Pick<CustomerRow, "zoho_customer_id" | "display_name" | "phone" | "billing_address">;
+type Customer = Pick<CustomerRow, "zoho_customer_id" | "display_name" | "billing_address">;
 type Contribution = Pick<InvoiceRow, "customer_id" | "customer_name" | "total">;
 type DonationInvoice = Pick<InvoiceRow, "customer_id" | "customer_name" | "total" | "date">;
+type MonthlyIncomeInvoice = Pick<InvoiceRow, "date" | "total" | "item_name" | "customer_name">;
+type MonthlyExpenseSource = Pick<ExpenseRow, "id" | "description" | "account_name" | "date" | "total">;
+type MonthlyBillSource = Pick<BillRow, "id" | "bill_number" | "vendor_name" | "account_name" | "date" | "total">;
 
 // This page is intentionally public (no auth redirect): it's a read-only
 // report meant to be viewable without login. Row Level Security still
@@ -41,13 +62,30 @@ export default async function ReportsPage() {
   const donationMonths = getLastNMonths(DONATION_MONTHS_SHOWN);
   const donationRangeStart = `${donationMonths[0].key}-01`;
 
-  const [{ data: members }, { data: contributions }, { data: donationInvoices }] = await Promise.all([
+  const monthlyReportMonths = getLastNMonths(MONTHLY_REPORT_MONTHS_SHOWN);
+  const monthlyReportRangeStart = `${monthlyReportMonths[0].key}-01`;
+  const monthlyIncomeItemNamePatterns = [DONATION_ITEM_NAME, ...ARCHANAI_ITEM_NAMES, ...ABHISHEGAM_ITEM_NAMES];
+
+  const [
+    { data: members },
+    { data: allCustomers },
+    { data: contributions },
+    { data: donationInvoices },
+    { data: monthlyIncomeInvoices },
+    { data: monthlyExpenses },
+    { data: monthlyBills }
+  ] = await Promise.all([
     admin
       .from("zoho_customers")
       .select("zoho_customer_id, display_name, phone, billing_address")
       .eq("is_member", true)
       .order("display_name", { ascending: true })
       .returns<Member[]>(),
+    admin
+      .from("zoho_customers")
+      .select("zoho_customer_id, display_name, billing_address")
+      .order("display_name", { ascending: true })
+      .returns<Customer[]>(),
     admin
       .from("zoho_invoices")
       .select("customer_id, customer_name, total")
@@ -58,7 +96,25 @@ export default async function ReportsPage() {
       .select("customer_id, customer_name, total, date")
       .ilike("item_name", `%${DONATION_ITEM_NAME}%`)
       .gte("date", donationRangeStart)
-      .returns<DonationInvoice[]>()
+      .returns<DonationInvoice[]>(),
+    admin
+      .from("zoho_invoices")
+      .select("date, total, item_name, customer_name")
+      .gte("date", monthlyReportRangeStart)
+      .or(monthlyIncomeItemNamePatterns.map((name) => `item_name.ilike.%${name}%`).join(","))
+      .returns<MonthlyIncomeInvoice[]>(),
+    admin
+      .from("zoho_expenses")
+      .select("id, description, account_name, date, total")
+      .gte("date", monthlyReportRangeStart)
+      .order("date", { ascending: false })
+      .returns<MonthlyExpenseSource[]>(),
+    admin
+      .from("zoho_bills")
+      .select("id, bill_number, vendor_name, account_name, date, total")
+      .gte("date", monthlyReportRangeStart)
+      .order("date", { ascending: false })
+      .returns<MonthlyBillSource[]>()
   ]);
 
   const memberRows = buildMemberRows(members ?? [], contributions ?? []);
@@ -69,6 +125,11 @@ export default async function ReportsPage() {
   const fullyPaidCount = memberRows.filter((member) => member.status === "fully_paid").length;
 
   const donorRows = buildDonorDonationRows(members ?? [], donationInvoices ?? [], donationMonths);
+  const donorContactRows = buildDonorContactRows(allCustomers ?? [], donationInvoices ?? [], donationMonths);
+
+  const monthlyReportIncomeRows = buildMonthlyIncomeRows(monthlyIncomeInvoices ?? []);
+  const monthlyReportExpenseRows = buildMonthlyExpenseRows(monthlyExpenses ?? []);
+  const monthlyReportBillRows = buildMonthlyBillRows(monthlyBills ?? []);
 
   return (
     <main className="shell">
@@ -109,70 +170,23 @@ export default async function ReportsPage() {
           </div>
         </section>
 
-        <section className="report-card" aria-labelledby="members-silai-contributions-heading" data-print-id="silai">
-          <div className="report-card-head">
-            <h2 id="members-silai-contributions-heading">Members Silai Contributions</h2>
-            <span className="muted">
-              சிலை வைப்பதற்கான நிதி — minimum {formatCurrency(FUND_MINIMUM_AMOUNT)} per member
-            </span>
-          </div>
-
-          <div className="metric-grid" aria-label="Fund summary">
-            <article className="metric-card">
-              <div className="metric-head">
-                <span>Members</span>
-              </div>
-              <div className="metric-value">{memberRows.length}</div>
-              <div className="metric-sub">Total members tracked</div>
-            </article>
-            <article className="metric-card">
-              <div className="metric-head">
-                <span>Not Paid</span>
-              </div>
-              <div className="metric-value">{notPaidCount}</div>
-              <div className="metric-sub">No contribution recorded</div>
-            </article>
-            <article className="metric-card">
-              <div className="metric-head">
-                <span>Partially Paid</span>
-              </div>
-              <div className="metric-value">{partiallyPaidCount}</div>
-              <div className="metric-sub">Below {formatCurrency(FUND_MINIMUM_AMOUNT)}</div>
-            </article>
-            <article className="metric-card">
-              <div className="metric-head">
-                <span>Fully Paid</span>
-              </div>
-              <div className="metric-value">{fullyPaidCount}</div>
-              <div className="metric-sub">Reached {formatCurrency(FUND_MINIMUM_AMOUNT)}</div>
-            </article>
-            <article className="metric-card">
-              <div className="metric-head">
-                <span>Total Paid</span>
-              </div>
-              <div className="metric-value">{formatCurrency(totalCollectedFromMembers)}</div>
-              <div className="metric-sub">Collected from all members</div>
-            </article>
-            <article className="metric-card">
-              <div className="metric-head">
-                <span>Balance Due</span>
-              </div>
-              <div className="metric-value">{formatCurrency(totalBalanceDue)}</div>
-              <div className="metric-sub">Outstanding to reach minimum</div>
-            </article>
-          </div>
-
-          <FundStatusTable members={memberRows} minimumAmount={FUND_MINIMUM_AMOUNT} />
-        </section>
-
-        <section className="report-card" aria-labelledby="monthly-donations-heading" data-print-id="donations">
-          <div className="report-card-head">
-            <h2 id="monthly-donations-heading">Monthly Donations</h2>
-            <span className="muted">Donations and/or Sponsorships — last {DONATION_MONTHS_SHOWN} months</span>
-          </div>
-
-          <MonthlyDonationsReport months={donationMonths} donors={donorRows} />
-        </section>
+        <ReportsTabs
+          fundMinimumAmount={FUND_MINIMUM_AMOUNT}
+          memberRows={memberRows}
+          totalCollectedFromMembers={totalCollectedFromMembers}
+          totalBalanceDue={totalBalanceDue}
+          notPaidCount={notPaidCount}
+          partiallyPaidCount={partiallyPaidCount}
+          fullyPaidCount={fullyPaidCount}
+          donationMonths={donationMonths}
+          donationMonthsShown={DONATION_MONTHS_SHOWN}
+          donorRows={donorRows}
+          donorContactRows={donorContactRows}
+          monthlyReportMonths={monthlyReportMonths}
+          monthlyReportIncomeRows={monthlyReportIncomeRows}
+          monthlyReportExpenseRows={monthlyReportExpenseRows}
+          monthlyReportBillRows={monthlyReportBillRows}
+        />
       </div>
     </main>
   );
@@ -270,4 +284,116 @@ function buildDonorDonationRows(
       total
     };
   });
+}
+
+// Same monthly amount aggregation as buildDonorDonationRows, but applied to
+// all customers (not just flagged members) and filtered down to only those
+// who actually contributed in the window, since this report is for mailing
+// donor contact info alongside their recent giving history.
+function buildDonorContactRows(
+  customers: Customer[],
+  donationInvoices: DonationInvoice[],
+  months: DonationMonth[]
+): DonorContactRow[] {
+  const monthKeys = new Set(months.map((month) => month.key));
+  const amountsById = new Map<string, Record<string, number>>();
+  const amountsByName = new Map<string, Record<string, number>>();
+
+  for (const invoice of donationInvoices) {
+    if (!invoice.date) continue;
+    const monthKey = invoice.date.slice(0, 7);
+    if (!monthKeys.has(monthKey)) continue;
+
+    const amount = Number(invoice.total ?? 0);
+
+    if (invoice.customer_id) {
+      const amounts = amountsById.get(invoice.customer_id) ?? {};
+      amounts[monthKey] = (amounts[monthKey] ?? 0) + amount;
+      amountsById.set(invoice.customer_id, amounts);
+    }
+
+    if (invoice.customer_name) {
+      const key = invoice.customer_name.trim().toLowerCase();
+      const amounts = amountsByName.get(key) ?? {};
+      amounts[monthKey] = (amounts[monthKey] ?? 0) + amount;
+      amountsByName.set(key, amounts);
+    }
+  }
+
+  return customers
+    .map((customer) => {
+      const amounts =
+        amountsById.get(customer.zoho_customer_id) ??
+        amountsByName.get(customer.display_name.trim().toLowerCase()) ??
+        {};
+      const total = months.reduce((sum, month) => sum + (amounts[month.key] ?? 0), 0);
+
+      return {
+        id: customer.zoho_customer_id,
+        donorName: customer.display_name,
+        address: customer.billing_address,
+        amounts,
+        total
+      };
+    })
+    .filter((row) => row.total > 0);
+}
+
+// Archanai is checked before Abhishegam, and both before the general
+// donation match, since "Abishegam" and "Archanai" are unambiguous while
+// the donation item name is a looser catch-all.
+function categorizeMonthlyIncomeItemName(itemName: string | null): MonthlyIncomeCategory | null {
+  if (!itemName) return null;
+  const normalized = itemName.toLowerCase();
+
+  if (ARCHANAI_ITEM_NAMES.some((name) => normalized.includes(name.toLowerCase()))) {
+    return "archanai";
+  }
+
+  if (ABHISHEGAM_ITEM_NAMES.some((name) => normalized.includes(name.toLowerCase()))) {
+    return "abhishegam";
+  }
+
+  if (normalized.includes(DONATION_ITEM_NAME.toLowerCase())) {
+    return "donations";
+  }
+
+  return null;
+}
+
+function buildMonthlyIncomeRows(invoices: MonthlyIncomeInvoice[]): MonthlyIncomeRow[] {
+  return invoices.reduce<MonthlyIncomeRow[]>((rows, invoice) => {
+    const category = categorizeMonthlyIncomeItemName(invoice.item_name);
+
+    if (category && invoice.date) {
+      rows.push({ date: invoice.date, total: Number(invoice.total ?? 0), category, customerName: invoice.customer_name });
+    }
+
+    return rows;
+  }, []);
+}
+
+function buildMonthlyExpenseRows(expenses: MonthlyExpenseSource[]): MonthlyExpenseRow[] {
+  return expenses
+    .filter((expense) => expense.account_name !== MONTHLY_REPORT_EXCLUDED_ACCOUNT_NAME)
+    .map((expense) => ({
+      id: expense.id,
+      itemName: expense.description,
+      accountName: expense.account_name,
+      date: expense.date,
+      total: Number(expense.total ?? 0)
+    }));
+}
+
+function buildMonthlyBillRows(bills: MonthlyBillSource[]): MonthlyBillRow[] {
+  return bills
+    .filter((bill) => bill.account_name !== MONTHLY_REPORT_EXCLUDED_ACCOUNT_NAME)
+    .map((bill) => ({
+      id: bill.id,
+      number: bill.bill_number,
+      vendorName: bill.vendor_name,
+      accountName: bill.account_name,
+      date: bill.date,
+      total: Number(bill.total ?? 0)
+    }));
 }

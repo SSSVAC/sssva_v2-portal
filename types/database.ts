@@ -91,6 +91,9 @@ export type Database = {
           total: number;
           balance: number;
           currency_code: string | null;
+          account_name: string | null;
+          paid_through_account_name: string | null;
+          description: string | null;
           raw: Json;
           synced_at: string;
           created_at: string;
@@ -107,6 +110,9 @@ export type Database = {
           total?: number;
           balance?: number;
           currency_code?: string | null;
+          account_name?: string | null;
+          paid_through_account_name?: string | null;
+          description?: string | null;
           raw?: Json;
           synced_at?: string;
           created_at?: string;
@@ -127,6 +133,8 @@ export type Database = {
           total: number;
           balance: number;
           currency_code: string | null;
+          account_name: string | null;
+          item_name: string | null;
           raw: Json;
           synced_at: string;
           created_at: string;
@@ -143,6 +151,8 @@ export type Database = {
           total?: number;
           balance?: number;
           currency_code?: string | null;
+          account_name?: string | null;
+          item_name?: string | null;
           raw?: Json;
           synced_at?: string;
           created_at?: string;

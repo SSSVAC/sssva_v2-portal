@@ -27,6 +27,9 @@ const EDITABLE_TABLES = {
   zoho_expenses: [
     "expense_number",
     "vendor_name",
+    "account_name",
+    "paid_through_account_name",
+    "description",
     "status",
     "date",
     "due_date",
@@ -37,6 +40,8 @@ const EDITABLE_TABLES = {
   zoho_bills: [
     "bill_number",
     "vendor_name",
+    "account_name",
+    "item_name",
     "status",
     "date",
     "due_date",

@@ -239,6 +239,10 @@ input {
   padding: 18px;
 }
 
+.report-card[hidden] {
+  display: none;
+}
+
 .report-card-head h2 {
   margin: 0 0 4px;
   font-size: 20px;
@@ -485,6 +489,14 @@ input {
 }
 
 @media print {
+  @page {
+    margin: 14mm;
+  }
+
+  body {
+    background: #fff;
+  }
+
   .topbar,
   .hero-band,
   .no-print {
@@ -496,8 +508,38 @@ input {
   }
 
   body[data-print-target="silai"] .report-card[data-print-id="silai"],
-  body[data-print-target="donations"] .report-card[data-print-id="donations"] {
+  body[data-print-target="donations"] .report-card[data-print-id="donations"],
+  body[data-print-target="donor-contacts"] .report-card[data-print-id="donor-contacts"],
+  body[data-print-target="monthly-report"] .report-card[data-print-id="monthly-report"] {
     display: block !important;
+  }
+
+  body[data-print-target] .report-card[data-print-id] {
+    border: none;
+    padding: 0;
+  }
+
+  .table-panel {
+    overflow: visible !important;
+    border: none;
+    padding: 0;
+  }
+
+  .data-table {
+    font-size: 12px;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 8px 10px;
+  }
+
+  .data-table thead {
+    display: table-header-group;
+  }
+
+  .data-table tr {
+    break-inside: avoid;
   }
 }
 

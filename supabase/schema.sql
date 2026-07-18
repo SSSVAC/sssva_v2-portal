@@ -60,6 +60,15 @@ create table if not exists public.zoho_expenses (
   updated_at timestamptz not null default now()
 );
 
+alter table public.zoho_expenses
+add column if not exists account_name text;
+
+alter table public.zoho_expenses
+add column if not exists paid_through_account_name text;
+
+alter table public.zoho_expenses
+add column if not exists description text;
+
 create table if not exists public.zoho_bills (
   id uuid primary key default gen_random_uuid(),
   zoho_bill_id text not null unique,
@@ -76,6 +85,12 @@ create table if not exists public.zoho_bills (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.zoho_bills
+add column if not exists account_name text;
+
+alter table public.zoho_bills
+add column if not exists item_name text;
 
 create table if not exists public.sync_runs (
   id uuid primary key default gen_random_uuid(),
