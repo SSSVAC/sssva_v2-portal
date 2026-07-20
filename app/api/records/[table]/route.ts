@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resyncZohoRecords } from "@/lib/zoho/sync";
 
 const EDITABLE_TABLES = {
   zoho_customers: [
@@ -103,4 +104,74 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 
   return NextResponse.json({ ok: true });
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ table: string }> }) {
+  const { table } = await params;
+
+  if (!isTableName(table)) {
+    return NextResponse.json({ error: "Unknown table" }, { status: 404 });
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await request.json().catch(() => null);
+  const ids = body?.ids;
+
+  if (!Array.isArray(ids) || ids.length === 0 || !ids.every((id) => typeof id === "string")) {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  }
+
+  const admin = createAdminClient();
+  const { data, error } = await admin.from(table).delete().in("id", ids).select("id");
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true, deleted: data?.length ?? 0 });
+}
+
+export async function POST(request: NextRequest, { params }: { params: Promise<{ table: string }> }) {
+  const { table } = await params;
+
+  if (!isTableName(table)) {
+    return NextResponse.json({ error: "Unknown table" }, { status: 404 });
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await request.json().catch(() => null);
+  const action = body?.action;
+  const ids = body?.ids;
+
+  if (action !== "resync") {
+    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+  }
+
+  if (!Array.isArray(ids) || ids.length === 0 || !ids.every((id) => typeof id === "string")) {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  }
+
+  try {
+    const result = await resyncZohoRecords(table, ids);
+    return NextResponse.json({ ok: true, ...result });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Resync failed";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }

@@ -26,6 +26,10 @@ const ExpenseResponse = z.object({
   expenses: z.array(z.record(z.unknown())).default([])
 });
 
+const ExpenseDetailResponse = z.object({
+  expense: z.record(z.unknown()).optional()
+});
+
 const BillResponse = z.object({
   bills: z.array(z.record(z.unknown())).default([])
 });
@@ -45,6 +49,7 @@ const DEFAULT_INVOICE_DETAIL_CONCURRENCY = 2;
 const INVOICE_DETAIL_MAX_ATTEMPTS = 3;
 const DEFAULT_BILL_DETAIL_CONCURRENCY = 2;
 const BILL_DETAIL_MAX_ATTEMPTS = 3;
+const EXPENSE_DETAIL_MAX_ATTEMPTS = 3;
 const DEFAULT_LIST_MAX_PAGES = 100;
 
 export async function getZohoAccessToken() {
@@ -264,7 +269,7 @@ function mergeBillDetail(bill: Record<string, unknown>, existingBillDetails: Map
   return existing ? { ...bill, account_name: existing.accountName, item_name: existing.itemName } : bill;
 }
 
-async function fetchZohoCustomerDetail(accessToken: string, customerId: string) {
+export async function fetchZohoCustomerDetail(accessToken: string, customerId: string) {
   const booksBaseUrl = getEnv("ZOHO_BOOKS_BASE_URL", "https://www.zohoapis.com/books/v3");
   const organizationId = getEnv("ZOHO_ORGANIZATION_ID");
   const url = new URL(`${booksBaseUrl}/contacts/${customerId}`);
@@ -305,7 +310,7 @@ async function fetchZohoCustomerDetail(accessToken: string, customerId: string) 
   return null;
 }
 
-async function fetchZohoInvoiceDetail(accessToken: string, invoiceId: string) {
+export async function fetchZohoInvoiceDetail(accessToken: string, invoiceId: string) {
   const booksBaseUrl = getEnv("ZOHO_BOOKS_BASE_URL", "https://www.zohoapis.com/books/v3");
   const organizationId = getEnv("ZOHO_ORGANIZATION_ID");
   const url = new URL(`${booksBaseUrl}/invoices/${invoiceId}`);
@@ -340,7 +345,7 @@ async function fetchZohoInvoiceDetail(accessToken: string, invoiceId: string) {
   return null;
 }
 
-async function fetchZohoBillDetail(accessToken: string, billId: string) {
+export async function fetchZohoBillDetail(accessToken: string, billId: string) {
   const booksBaseUrl = getEnv("ZOHO_BOOKS_BASE_URL", "https://www.zohoapis.com/books/v3");
   const organizationId = getEnv("ZOHO_ORGANIZATION_ID");
   const url = new URL(`${booksBaseUrl}/bills/${billId}`);
@@ -370,6 +375,44 @@ async function fetchZohoBillDetail(accessToken: string, billId: string) {
     }
 
     console.warn(`Zoho bill detail fetch failed for ${billId} with ${response.status}`);
+    return null;
+  }
+
+  return null;
+}
+
+// Only used for on-demand single-record resync (see resyncZohoRecords in
+// lib/zoho/sync.ts); the bulk fetchZohoExpenses list call already returns
+// everything mapExpense needs, so this isn't part of the regular sync path.
+export async function fetchZohoExpenseDetail(accessToken: string, expenseId: string) {
+  const booksBaseUrl = getEnv("ZOHO_BOOKS_BASE_URL", "https://www.zohoapis.com/books/v3");
+  const organizationId = getEnv("ZOHO_ORGANIZATION_ID");
+  const url = new URL(`${booksBaseUrl}/expenses/${expenseId}`);
+  url.searchParams.set("organization_id", organizationId);
+
+  for (let attempt = 1; attempt <= EXPENSE_DETAIL_MAX_ATTEMPTS; attempt += 1) {
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Zoho-oauthtoken ${accessToken}`
+      },
+      cache: "no-store"
+    });
+
+    if (response.ok) {
+      const payload = (await response.json()) as Record<string, unknown>;
+      return ExpenseDetailResponse.parse(payload).expense ?? payload;
+    }
+
+    if (response.status === 429 && attempt < EXPENSE_DETAIL_MAX_ATTEMPTS) {
+      const delayMs = getRetryDelayMs(response, attempt);
+      console.warn(
+        `Zoho expense detail fetch rate limited for ${expenseId} with 429; retrying attempt ${attempt + 1}/${EXPENSE_DETAIL_MAX_ATTEMPTS} after ${delayMs}ms`
+      );
+      await delay(delayMs);
+      continue;
+    }
+
+    console.warn(`Zoho expense detail fetch failed for ${expenseId} with ${response.status}`);
     return null;
   }
 

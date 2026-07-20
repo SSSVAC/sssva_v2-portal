@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 
 export type RecordColumn = {
   key: string;
@@ -33,12 +34,25 @@ export function EditableDataTable({
   presetFilter
 }: EditableDataTableProps) {
   const [rows, setRows] = useState(initialRows);
+
+  // Picks up fresh data after resyncSelected() below triggers router.refresh();
+  // initialRows otherwise only changes across full navigations, not re-renders.
+  useEffect(() => {
+    setRows(initialRows);
+  }, [initialRows]);
+
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [sort, setSort] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [savingCell, setSavingCell] = useState<string | null>(null);
   const [errorCell, setErrorCell] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [resyncing, setResyncing] = useState(false);
+  const [resyncMessage, setResyncMessage] = useState<string | null>(null);
+  const router = useRouter();
 
   const filteredRows = useMemo(() => {
     return rows.filter((row) => {
@@ -136,11 +150,140 @@ export function EditableDataTable({
     void saveCell(rowId, column.key, trimmed === "" ? null : trimmed);
   }
 
+  function toggleRowSelected(rowId: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(rowId)) {
+        next.delete(rowId);
+      } else {
+        next.add(rowId);
+      }
+      return next;
+    });
+  }
+
+  function toggleSelectAllVisible() {
+    const visibleIds = sortedRows.map((row) => String(row.id));
+    const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
+
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allSelected) {
+        visibleIds.forEach((id) => next.delete(id));
+      } else {
+        visibleIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  }
+
+  async function deleteSelected() {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+
+    const confirmed = window.confirm(
+      `Delete ${ids.length} record${ids.length === 1 ? "" : "s"}? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+    setDeleteError(null);
+
+    try {
+      const response = await fetch(`/api/records/${table}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids })
+      });
+
+      if (!response.ok) {
+        throw new Error("Delete failed");
+      }
+
+      const idSet = new Set(ids);
+      setRows((prev) => prev.filter((row) => !idSet.has(String(row.id))));
+      setSelectedIds(new Set());
+    } catch {
+      setDeleteError(`Failed to delete ${ids.length} record${ids.length === 1 ? "" : "s"}. Please try again.`);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  async function resyncSelected() {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+
+    setResyncing(true);
+    setResyncMessage(null);
+
+    try {
+      const response = await fetch(`/api/records/${table}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "resync", ids })
+      });
+
+      if (!response.ok) {
+        throw new Error("Resync failed");
+      }
+
+      const result = await response.json();
+      const resynced = typeof result.resynced === "number" ? result.resynced : 0;
+      const failed = typeof result.failed === "number" ? result.failed : 0;
+
+      setResyncMessage(
+        failed > 0
+          ? `Resynced ${resynced}, ${failed} failed from Zoho.`
+          : `Resynced ${resynced} record${resynced === 1 ? "" : "s"} from Zoho.`
+      );
+      router.refresh();
+    } catch {
+      setResyncMessage(`Failed to resync ${ids.length} record${ids.length === 1 ? "" : "s"}. Please try again.`);
+    } finally {
+      setResyncing(false);
+    }
+  }
+
+  const visibleIds = sortedRows.map((row) => String(row.id));
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
+
   return (
-    <div style={{ overflowX: "auto" }}>
+    <div>
+      <div className="filter-banner no-print" style={{ justifyContent: "flex-start", gap: 12 }}>
+        <span>{selectedIds.size} selected</span>
+        <button
+          type="button"
+          className="button secondary"
+          disabled={selectedIds.size === 0 || resyncing}
+          onClick={() => void resyncSelected()}
+        >
+          {resyncing ? "Resyncing…" : "Resync Selected"}
+        </button>
+        <button
+          type="button"
+          className="button secondary"
+          disabled={selectedIds.size === 0 || deleting}
+          onClick={() => void deleteSelected()}
+        >
+          {deleting ? "Deleting…" : "Delete Selected"}
+        </button>
+        {resyncMessage && <span>{resyncMessage}</span>}
+        {deleteError && <span style={{ color: "var(--danger)" }}>{deleteError}</span>}
+      </div>
+
+      <div style={{ overflowX: "auto" }}>
       <table className="data-table">
         <thead>
           <tr>
+            <th>
+              <input
+                type="checkbox"
+                aria-label="Select all visible rows"
+                checked={allVisibleSelected}
+                onChange={toggleSelectAllVisible}
+              />
+            </th>
             {columns.map((column) => (
               <th
                 key={column.key}
@@ -159,6 +302,7 @@ export function EditableDataTable({
             {actionColumn && <th>{actionColumn.label}</th>}
           </tr>
           <tr>
+            <th className="filter-cell" />
             {columns.map((column) => (
               <th key={column.key} className="filter-cell">
                 {column.type === "boolean" ? (
@@ -195,6 +339,14 @@ export function EditableDataTable({
 
             return (
               <tr key={rowId}>
+                <td>
+                  <input
+                    type="checkbox"
+                    aria-label={`Select row ${rowId}`}
+                    checked={selectedIds.has(rowId)}
+                    onChange={() => toggleRowSelected(rowId)}
+                  />
+                </td>
                 {columns.map((column) => {
                   const cellKey = `${rowId}:${column.key}`;
                   const value = row[column.key];
@@ -252,6 +404,7 @@ export function EditableDataTable({
           })}
         </tbody>
       </table>
+      </div>
 
       {sortedRows.length === 0 && (
         <div className="empty-state">

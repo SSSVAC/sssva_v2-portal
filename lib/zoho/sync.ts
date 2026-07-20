@@ -5,6 +5,10 @@ import {
   fetchZohoInvoices,
   fetchZohoExpenses,
   fetchZohoBills,
+  fetchZohoCustomerDetail,
+  fetchZohoInvoiceDetail,
+  fetchZohoExpenseDetail,
+  fetchZohoBillDetail,
   type BillDetail
 } from "@/lib/zoho/client";
 import { mapZohoBill, mapZohoCustomer, mapZohoExpense, mapZohoInvoice } from "@/lib/zoho/mappers";
@@ -232,6 +236,98 @@ export async function runZohoBooksSync(options: ZohoSyncOptions = DEFAULT_SYNC_O
 
     throw new Error(message);
   }
+}
+
+export const RESYNC_TABLES = ["zoho_customers", "zoho_invoices", "zoho_expenses", "zoho_bills"] as const;
+export type ResyncTableName = (typeof RESYNC_TABLES)[number];
+
+const RESYNC_ZOHO_ID_COLUMN: Record<ResyncTableName, string> = {
+  zoho_customers: "zoho_customer_id",
+  zoho_invoices: "zoho_invoice_id",
+  zoho_expenses: "zoho_expense_id",
+  zoho_bills: "zoho_bill_id"
+};
+
+// Re-fetches just the selected rows from Zoho and upserts them, instead of
+// the full list sync in runZohoBooksSync above. Used by the Records UI's
+// "Resync Selected" action, where a user has spotted a handful of stale or
+// wrong records rather than wanting to wait on a full sync.
+export async function resyncZohoRecords(table: ResyncTableName, ids: string[]) {
+  const supabase = createAdminClient();
+  const zohoIdColumn = RESYNC_ZOHO_ID_COLUMN[table];
+
+  const { data: existingRows, error: lookupError } = await supabase
+    .from(table)
+    .select(`id, ${zohoIdColumn}`)
+    .in("id", ids)
+    .returns<Record<string, unknown>[]>();
+
+  if (lookupError) {
+    throw lookupError;
+  }
+
+  const zohoIds = (existingRows ?? [])
+    .map((row) => row[zohoIdColumn])
+    .filter((value): value is string => typeof value === "string" && value.length > 0);
+
+  if (zohoIds.length === 0) {
+    return { resynced: 0, failed: 0 };
+  }
+
+  const accessToken = await getZohoAccessToken();
+
+  if (table === "zoho_customers") {
+    const details = await Promise.all(zohoIds.map((zohoId) => fetchZohoCustomerDetail(accessToken, zohoId)));
+    return upsertResyncedRecords(supabase, "zoho_customers", "zoho_customer_id", details, mapZohoCustomer);
+  }
+
+  if (table === "zoho_invoices") {
+    const details = await Promise.all(zohoIds.map((zohoId) => fetchZohoInvoiceDetail(accessToken, zohoId)));
+    return upsertResyncedRecords(supabase, "zoho_invoices", "zoho_invoice_id", details, mapZohoInvoice);
+  }
+
+  if (table === "zoho_expenses") {
+    const details = await Promise.all(zohoIds.map((zohoId) => fetchZohoExpenseDetail(accessToken, zohoId)));
+    return upsertResyncedRecords(supabase, "zoho_expenses", "zoho_expense_id", details, mapZohoExpense);
+  }
+
+  const details = await Promise.all(zohoIds.map((zohoId) => fetchZohoBillDetail(accessToken, zohoId)));
+  return upsertResyncedRecords(supabase, "zoho_bills", "zoho_bill_id", details, mapZohoBill);
+}
+
+async function upsertResyncedRecords<T extends { [key: string]: unknown }>(
+  supabase: ReturnType<typeof createAdminClient>,
+  table: ResyncTableName,
+  conflictColumn: string,
+  details: Array<Record<string, unknown> | null>,
+  mapRecord: (raw: Record<string, unknown>) => T
+) {
+  let failed = 0;
+
+  const mapped = details.reduce<T[]>((acc, detail) => {
+    if (!detail) {
+      failed += 1;
+      return acc;
+    }
+
+    try {
+      acc.push(mapRecord(detail));
+    } catch (error) {
+      console.warn(`Skipping invalid Zoho record while resyncing ${table}`, error, detail);
+      failed += 1;
+    }
+
+    return acc;
+  }, []);
+
+  if (mapped.length > 0) {
+    const { error } = await supabase.from(table).upsert(mapped as never, { onConflict: conflictColumn });
+    if (error) {
+      throw error;
+    }
+  }
+
+  return { resynced: mapped.length, failed };
 }
 
 async function loadExistingCustomerBillingAddresses(supabase: ReturnType<typeof createAdminClient>) {
