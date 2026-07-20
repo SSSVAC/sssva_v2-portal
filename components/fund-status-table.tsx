@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { formatCurrency } from "@/lib/format";
 import { ExportToolbar } from "@/components/export-toolbar";
 import { SortableTh, type SortDirection } from "@/components/sortable-th";
-import { exportToCsv, exportToHtml, printReportSection } from "@/lib/export";
+import { exportSectionsToCsv, exportSectionsToHtml, printReportSection, type ExportSection } from "@/lib/export";
 
 export type MemberStatus = "not_paid" | "partially_paid" | "fully_paid";
 
@@ -97,6 +97,19 @@ export function FundStatusTable({ members, minimumAmount }: FundStatusTableProps
     }
   };
 
+  const totalCollectedFromMembers = members.reduce((sum, member) => sum + member.paid, 0);
+  const totalBalanceDue = members.reduce((sum, member) => sum + member.balanceDue, 0);
+
+  const metricsExportHeaders = ["Metric", "Value"];
+  const metricsExportRows = () => [
+    ["Members", counts.all],
+    ["Not Paid", counts.not_paid],
+    ["Partially Paid", counts.partially_paid],
+    ["Fully Paid", counts.fully_paid],
+    ["Total Paid", formatCurrency(totalCollectedFromMembers)],
+    ["Balance Due", formatCurrency(totalBalanceDue)]
+  ];
+
   const exportHeaders = ["Name", "Phone", "Address", "Paid", "Balance Due", "Status"];
   const exportRows = () =>
     sortedMembers.map((member) => [
@@ -108,13 +121,16 @@ export function FundStatusTable({ members, minimumAmount }: FundStatusTableProps
       STATUS_LABEL[member.status]
     ]);
 
+  const exportSections = (): ExportSection[] => [
+    { title: "Metrics", headers: metricsExportHeaders, rows: metricsExportRows() },
+    { title: "Members", headers: exportHeaders, rows: exportRows() }
+  ];
+
   return (
     <div className="table-panel" style={{ minWidth: 0 }}>
       <ExportToolbar
-        onExportCsv={() => exportToCsv("members-silai-contributions.csv", exportHeaders, exportRows())}
-        onExportHtml={() =>
-          exportToHtml("members-silai-contributions.html", "Members Silai Contributions", exportHeaders, exportRows())
-        }
+        onExportCsv={() => exportSectionsToCsv("members-silai-contributions.csv", exportSections())}
+        onExportHtml={() => exportSectionsToHtml("members-silai-contributions.html", "Members Silai Contributions", exportSections())}
         onExportPdf={() => printReportSection("silai")}
       />
 

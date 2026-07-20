@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { formatCurrency } from "@/lib/format";
 import { ExportToolbar } from "@/components/export-toolbar";
 import { SortableTh, type SortDirection } from "@/components/sortable-th";
-import { exportToCsv, exportToHtml, printReportSection } from "@/lib/export";
+import { exportSectionsToCsv, exportSectionsToHtml, printReportSection, type ExportSection } from "@/lib/export";
 import type { DonationMonth } from "@/components/monthly-donations-report";
 
 export type DonorContactRow = {
@@ -57,6 +57,12 @@ export function DonorContactReport({ months, donors }: DonorContactReportProps) 
 
   const grandTotal = sortedDonors.reduce((sum, donor) => sum + donor.total, 0);
 
+  const metricsExportHeaders = ["Metric", "Value"];
+  const metricsExportRows = () => [
+    ["Contributors", sortedDonors.length],
+    ["Total Collected", formatCurrency(grandTotal)]
+  ];
+
   const exportHeaders = ["Name", "Address", ...months.map((month) => month.label), "Total"];
   const exportRows = () =>
     sortedDonors.map((donor) => [
@@ -68,6 +74,11 @@ export function DonorContactReport({ months, donors }: DonorContactReportProps) 
       }),
       formatCurrency(donor.total)
     ]);
+
+  const exportSections = (): ExportSection[] => [
+    { title: "Metrics", headers: metricsExportHeaders, rows: metricsExportRows() },
+    { title: "Monthly Donors", headers: exportHeaders, rows: exportRows() }
+  ];
 
   return (
     <div>
@@ -91,8 +102,8 @@ export function DonorContactReport({ months, donors }: DonorContactReportProps) 
       </div>
 
       <ExportToolbar
-        onExportCsv={() => exportToCsv("donor-contacts.csv", exportHeaders, exportRows())}
-        onExportHtml={() => exportToHtml("donor-contacts.html", "Donor Contacts", exportHeaders, exportRows())}
+        onExportCsv={() => exportSectionsToCsv("monthly-donors.csv", exportSections())}
+        onExportHtml={() => exportSectionsToHtml("monthly-donors.html", "Monthly Donors", exportSections())}
         onExportPdf={() => printReportSection("donor-contacts")}
       />
 

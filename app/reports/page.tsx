@@ -4,6 +4,7 @@ import type { MemberRow } from "@/components/fund-status-table";
 import type { DonationMonth, DonorDonationRow } from "@/components/monthly-donations-report";
 import type { DonorContactRow } from "@/components/donor-contact-report";
 import type { MonthlyIncomeCategory, MonthlyIncomeRow, MonthlyExpenseRow, MonthlyBillRow } from "@/components/monthly-report";
+import type { SilaiContributionRow, SilaiExpenseRow, SilaiBillRow } from "@/components/silai-fund-report";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/types/database";
@@ -27,12 +28,15 @@ const DONATION_MONTHS_SHOWN = 5;
 // and are intentionally not merged here.
 const ARCHANAI_ITEM_NAMES = ["Archanai", "அர்ச்சனை"];
 const ABHISHEGAM_ITEM_NAMES = ["Abishegam"];
+// Catch-all invoice item name for miscellaneous income (e.g. from the
+// "General" customer) that doesn't fit the other named categories.
+const OTHERS_ITEM_NAMES = ["Others"];
 const MONTHLY_REPORT_MONTHS_SHOWN = 24;
 
-// Statue-fund expenses/bills are already tracked in the Silai Contributions
-// report, so they're excluded from the general Monthly Report to avoid
-// double-purposing the same cost category.
-const MONTHLY_REPORT_EXCLUDED_ACCOUNT_NAME = "சிலை வைப்பதற்கான செலவுகல்";
+// Zoho expense/bill account name used for statue-fund costs. Excluded from
+// the general Monthly Report (tracked separately there) and used as the
+// positive match for the dedicated Silai Fund Report below.
+const SILAI_EXPENSE_ACCOUNT_NAME = "சிலை வைப்பதற்கான செலவுகல்";
 
 type CustomerRow = Database["public"]["Tables"]["zoho_customers"]["Row"];
 type InvoiceRow = Database["public"]["Tables"]["zoho_invoices"]["Row"];
@@ -45,6 +49,9 @@ type DonationInvoice = Pick<InvoiceRow, "customer_id" | "customer_name" | "total
 type MonthlyIncomeInvoice = Pick<InvoiceRow, "date" | "total" | "item_name" | "customer_name">;
 type MonthlyExpenseSource = Pick<ExpenseRow, "id" | "description" | "account_name" | "date" | "total">;
 type MonthlyBillSource = Pick<BillRow, "id" | "bill_number" | "vendor_name" | "account_name" | "date" | "total">;
+type SilaiContributionInvoice = Pick<InvoiceRow, "customer_name" | "date" | "total">;
+type SilaiExpenseSource = Pick<ExpenseRow, "id" | "description" | "date" | "total">;
+type SilaiBillSource = Pick<BillRow, "id" | "bill_number" | "vendor_name" | "date" | "total">;
 
 // This page is intentionally public (no auth redirect): it's a read-only
 // report meant to be viewable without login. Row Level Security still
@@ -64,7 +71,12 @@ export default async function ReportsPage() {
 
   const monthlyReportMonths = getLastNMonths(MONTHLY_REPORT_MONTHS_SHOWN);
   const monthlyReportRangeStart = `${monthlyReportMonths[0].key}-01`;
-  const monthlyIncomeItemNamePatterns = [DONATION_ITEM_NAME, ...ARCHANAI_ITEM_NAMES, ...ABHISHEGAM_ITEM_NAMES];
+  const monthlyIncomeItemNamePatterns = [
+    DONATION_ITEM_NAME,
+    ...ARCHANAI_ITEM_NAMES,
+    ...ABHISHEGAM_ITEM_NAMES,
+    ...OTHERS_ITEM_NAMES
+  ];
 
   const [
     { data: members },
@@ -73,7 +85,10 @@ export default async function ReportsPage() {
     { data: donationInvoices },
     { data: monthlyIncomeInvoices },
     { data: monthlyExpenses },
-    { data: monthlyBills }
+    { data: monthlyBills },
+    { data: silaiContributionInvoices },
+    { data: silaiExpenses },
+    { data: silaiBills }
   ] = await Promise.all([
     admin
       .from("zoho_customers")
@@ -114,7 +129,25 @@ export default async function ReportsPage() {
       .select("id, bill_number, vendor_name, account_name, date, total")
       .gte("date", monthlyReportRangeStart)
       .order("date", { ascending: false })
-      .returns<MonthlyBillSource[]>()
+      .returns<MonthlyBillSource[]>(),
+    admin
+      .from("zoho_invoices")
+      .select("customer_name, date, total")
+      .ilike("item_name", `%${FUND_ITEM_NAME}%`)
+      .order("date", { ascending: false })
+      .returns<SilaiContributionInvoice[]>(),
+    admin
+      .from("zoho_expenses")
+      .select("id, description, date, total")
+      .eq("account_name", SILAI_EXPENSE_ACCOUNT_NAME)
+      .order("date", { ascending: false })
+      .returns<SilaiExpenseSource[]>(),
+    admin
+      .from("zoho_bills")
+      .select("id, bill_number, vendor_name, date, total")
+      .eq("account_name", SILAI_EXPENSE_ACCOUNT_NAME)
+      .order("date", { ascending: false })
+      .returns<SilaiBillSource[]>()
   ]);
 
   const memberRows = buildMemberRows(members ?? [], contributions ?? []);
@@ -130,6 +163,10 @@ export default async function ReportsPage() {
   const monthlyReportIncomeRows = buildMonthlyIncomeRows(monthlyIncomeInvoices ?? []);
   const monthlyReportExpenseRows = buildMonthlyExpenseRows(monthlyExpenses ?? []);
   const monthlyReportBillRows = buildMonthlyBillRows(monthlyBills ?? []);
+
+  const silaiFundContributionRows = buildSilaiContributionRows(silaiContributionInvoices ?? []);
+  const silaiFundExpenseRows = buildSilaiExpenseRows(silaiExpenses ?? []);
+  const silaiFundBillRows = buildSilaiBillRows(silaiBills ?? []);
 
   return (
     <main className="shell">
@@ -186,6 +223,9 @@ export default async function ReportsPage() {
           monthlyReportIncomeRows={monthlyReportIncomeRows}
           monthlyReportExpenseRows={monthlyReportExpenseRows}
           monthlyReportBillRows={monthlyReportBillRows}
+          silaiFundContributionRows={silaiFundContributionRows}
+          silaiFundExpenseRows={silaiFundExpenseRows}
+          silaiFundBillRows={silaiFundBillRows}
         />
       </div>
     </main>
@@ -358,6 +398,10 @@ function categorizeMonthlyIncomeItemName(itemName: string | null): MonthlyIncome
     return "donations";
   }
 
+  if (OTHERS_ITEM_NAMES.some((name) => normalized.includes(name.toLowerCase()))) {
+    return "others";
+  }
+
   return null;
 }
 
@@ -375,7 +419,7 @@ function buildMonthlyIncomeRows(invoices: MonthlyIncomeInvoice[]): MonthlyIncome
 
 function buildMonthlyExpenseRows(expenses: MonthlyExpenseSource[]): MonthlyExpenseRow[] {
   return expenses
-    .filter((expense) => expense.account_name !== MONTHLY_REPORT_EXCLUDED_ACCOUNT_NAME)
+    .filter((expense) => expense.account_name !== SILAI_EXPENSE_ACCOUNT_NAME)
     .map((expense) => ({
       id: expense.id,
       itemName: expense.description,
@@ -387,7 +431,7 @@ function buildMonthlyExpenseRows(expenses: MonthlyExpenseSource[]): MonthlyExpen
 
 function buildMonthlyBillRows(bills: MonthlyBillSource[]): MonthlyBillRow[] {
   return bills
-    .filter((bill) => bill.account_name !== MONTHLY_REPORT_EXCLUDED_ACCOUNT_NAME)
+    .filter((bill) => bill.account_name !== SILAI_EXPENSE_ACCOUNT_NAME)
     .map((bill) => ({
       id: bill.id,
       number: bill.bill_number,
@@ -396,4 +440,31 @@ function buildMonthlyBillRows(bills: MonthlyBillSource[]): MonthlyBillRow[] {
       date: bill.date,
       total: Number(bill.total ?? 0)
     }));
+}
+
+function buildSilaiContributionRows(invoices: SilaiContributionInvoice[]): SilaiContributionRow[] {
+  return invoices.map((invoice) => ({
+    donorName: invoice.customer_name,
+    date: invoice.date,
+    total: Number(invoice.total ?? 0)
+  }));
+}
+
+function buildSilaiExpenseRows(expenses: SilaiExpenseSource[]): SilaiExpenseRow[] {
+  return expenses.map((expense) => ({
+    id: expense.id,
+    itemName: expense.description,
+    date: expense.date,
+    total: Number(expense.total ?? 0)
+  }));
+}
+
+function buildSilaiBillRows(bills: SilaiBillSource[]): SilaiBillRow[] {
+  return bills.map((bill) => ({
+    id: bill.id,
+    number: bill.bill_number,
+    vendorName: bill.vendor_name,
+    date: bill.date,
+    total: Number(bill.total ?? 0)
+  }));
 }

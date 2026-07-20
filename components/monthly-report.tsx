@@ -6,7 +6,7 @@ import { ExportToolbar } from "@/components/export-toolbar";
 import { exportToCsv, exportToHtml, exportSectionsToCsv, exportSectionsToHtml, printReportSection, type ExportSection } from "@/lib/export";
 import type { DonationMonth } from "@/components/monthly-donations-report";
 
-export type MonthlyIncomeCategory = "donations" | "archanai" | "abhishegam";
+export type MonthlyIncomeCategory = "donations" | "archanai" | "abhishegam" | "others";
 
 export type MonthlyIncomeRow = {
   date: string;
@@ -42,11 +42,27 @@ type MonthlyReportProps = {
 const INCOME_CATEGORY_LABELS: Record<MonthlyIncomeCategory, string> = {
   donations: "Monthly Donations",
   archanai: "Archanai",
-  abhishegam: "Abhishegam"
+  abhishegam: "Abhishegam",
+  others: "Others"
 };
 
 function sumTotals<T extends { total: number }>(rows: T[]) {
   return rows.reduce((sum, row) => sum + row.total, 0);
+}
+
+function buildDonorRowsForCategory(rows: MonthlyIncomeRow[], category: MonthlyIncomeCategory) {
+  const totalsByName = new Map<string, number>();
+
+  rows
+    .filter((row) => row.category === category)
+    .forEach((row) => {
+      const name = row.customerName?.trim() || "Unknown";
+      totalsByName.set(name, (totalsByName.get(name) ?? 0) + row.total);
+    });
+
+  return Array.from(totalsByName.entries())
+    .map(([donorName, total]) => ({ donorName, total }))
+    .sort((a, b) => a.donorName.localeCompare(b.donorName));
 }
 
 export function MonthlyReport({ months, incomeRows, expenseRows, billRows }: MonthlyReportProps) {
@@ -71,7 +87,8 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows }: Mon
   const totalDonations = sumTotals(monthIncomeRows.filter((row) => row.category === "donations"));
   const totalArchanai = sumTotals(monthIncomeRows.filter((row) => row.category === "archanai"));
   const totalAbhishegam = sumTotals(monthIncomeRows.filter((row) => row.category === "abhishegam"));
-  const totalReceived = totalDonations + totalArchanai + totalAbhishegam;
+  const totalOthers = sumTotals(monthIncomeRows.filter((row) => row.category === "others"));
+  const totalReceived = totalDonations + totalArchanai + totalAbhishegam + totalOthers;
 
   const totalExpenses = sumTotals(monthExpenseRows);
   const totalBills = sumTotals(monthBillRows);
@@ -79,20 +96,8 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows }: Mon
 
   const balance = totalReceived - totalSpends;
 
-  const donationDonorRows = useMemo(() => {
-    const totalsByName = new Map<string, number>();
-
-    monthIncomeRows
-      .filter((row) => row.category === "donations")
-      .forEach((row) => {
-        const name = row.customerName?.trim() || "Unknown";
-        totalsByName.set(name, (totalsByName.get(name) ?? 0) + row.total);
-      });
-
-    return Array.from(totalsByName.entries())
-      .map(([donorName, total]) => ({ donorName, total }))
-      .sort((a, b) => a.donorName.localeCompare(b.donorName));
-  }, [monthIncomeRows]);
+  const donationDonorRows = useMemo(() => buildDonorRowsForCategory(monthIncomeRows, "donations"), [monthIncomeRows]);
+  const othersDonorRows = useMemo(() => buildDonorRowsForCategory(monthIncomeRows, "others"), [monthIncomeRows]);
 
   const metricsExportHeaders = ["Metric", "Value"];
   const metricsExportRows = () => [
@@ -102,6 +107,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows }: Mon
     ["Monthly Donations", formatCurrency(totalDonations)],
     ["Archanai", formatCurrency(totalArchanai)],
     ["Abhishegam", formatCurrency(totalAbhishegam)],
+    ["Others", formatCurrency(totalOthers)],
     ["Expenses", formatCurrency(totalExpenses)],
     ["Bills", formatCurrency(totalBills)]
   ];
@@ -111,6 +117,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows }: Mon
     ["Monthly Donations", formatCurrency(totalDonations)],
     ["Archanai", formatCurrency(totalArchanai)],
     ["Abhishegam", formatCurrency(totalAbhishegam)],
+    ["Others", formatCurrency(totalOthers)],
     ["Total Received", formatCurrency(totalReceived)]
   ];
 
@@ -118,6 +125,12 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows }: Mon
   const donationDonorExportRows = () => [
     ...donationDonorRows.map((row) => [row.donorName, formatCurrency(row.total)]),
     ["Total", formatCurrency(totalDonations)]
+  ];
+
+  const othersDonorExportHeaders = ["Donor", "Amount"];
+  const othersDonorExportRows = () => [
+    ...othersDonorRows.map((row) => [row.donorName, formatCurrency(row.total)]),
+    ["Total", formatCurrency(totalOthers)]
   ];
 
   const expenseExportHeaders = ["Item", "Account", "Date", "Amount"];
@@ -146,6 +159,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows }: Mon
     { title: "Metrics", headers: metricsExportHeaders, rows: metricsExportRows() },
     { title: "Income by Category", headers: incomeExportHeaders, rows: incomeExportRows() },
     { title: "Monthly Donations — Donor Detail", headers: donationDonorExportHeaders, rows: donationDonorExportRows() },
+    { title: "Others — Detail", headers: othersDonorExportHeaders, rows: othersDonorExportRows() },
     { title: "Expenses", headers: expenseExportHeaders, rows: expenseExportRows() },
     { title: "Bills", headers: billExportHeaders, rows: billExportRows() }
   ];
@@ -185,7 +199,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows }: Mon
             <span>Total Received</span>
           </div>
           <div className="metric-value">{formatCurrency(totalReceived)}</div>
-          <div className="metric-sub">Donations, Archanai &amp; Abhishegam</div>
+          <div className="metric-sub">Donations, Archanai, Abhishegam &amp; Others</div>
         </article>
         <article className="metric-card">
           <div className="metric-head">
@@ -218,6 +232,12 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows }: Mon
             <span>Abhishegam</span>
           </div>
           <div className="metric-value">{formatCurrency(totalAbhishegam)}</div>
+        </article>
+        <article className="metric-card">
+          <div className="metric-head">
+            <span>Others</span>
+          </div>
+          <div className="metric-value">{formatCurrency(totalOthers)}</div>
         </article>
         <article className="metric-card">
           <div className="metric-head">
@@ -261,6 +281,10 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows }: Mon
             <tr>
               <td>{INCOME_CATEGORY_LABELS.abhishegam}</td>
               <td>{formatCurrency(totalAbhishegam)}</td>
+            </tr>
+            <tr>
+              <td>{INCOME_CATEGORY_LABELS.others}</td>
+              <td>{formatCurrency(totalOthers)}</td>
             </tr>
           </tbody>
           <tfoot>
@@ -315,6 +339,50 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows }: Mon
       ) : (
         <div className="empty-state">
           <p>No monthly donations recorded for this month.</p>
+        </div>
+      )}
+
+      <h3>Others — Detail</h3>
+      <ExportToolbar
+        onExportCsv={() => exportToCsv(`monthly-report-others-${selectedMonth}.csv`, othersDonorExportHeaders, othersDonorExportRows())}
+        onExportHtml={() =>
+          exportToHtml(
+            `monthly-report-others-${selectedMonth}.html`,
+            "Monthly Report — Others",
+            othersDonorExportHeaders,
+            othersDonorExportRows()
+          )
+        }
+        onExportPdf={exportPdf}
+      />
+      {othersDonorRows.length > 0 ? (
+        <div className="table-panel" style={{ minWidth: 0, overflowX: "auto" }}>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Donor</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {othersDonorRows.map((row) => (
+                <tr key={row.donorName}>
+                  <td>{row.donorName}</td>
+                  <td>{formatCurrency(row.total)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td>Total</td>
+                <td>{formatCurrency(totalOthers)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      ) : (
+        <div className="empty-state">
+          <p>No other income recorded for this month.</p>
         </div>
       )}
 

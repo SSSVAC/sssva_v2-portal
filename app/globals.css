@@ -490,7 +490,15 @@ input {
 
 @media print {
   @page {
+    size: A4;
     margin: 14mm;
+  }
+
+  html,
+  body {
+    /* Floor for all print text; nothing in a report should render smaller
+       than this on the printed A4 page. */
+    font-size: 12px;
   }
 
   body {
@@ -510,13 +518,50 @@ input {
   body[data-print-target="silai"] .report-card[data-print-id="silai"],
   body[data-print-target="donations"] .report-card[data-print-id="donations"],
   body[data-print-target="donor-contacts"] .report-card[data-print-id="donor-contacts"],
-  body[data-print-target="monthly-report"] .report-card[data-print-id="monthly-report"] {
+  body[data-print-target="monthly-report"] .report-card[data-print-id="monthly-report"],
+  body[data-print-target="silai-fund"] .report-card[data-print-id="silai-fund"] {
     display: block !important;
   }
 
   body[data-print-target] .report-card[data-print-id] {
     border: none;
     padding: 0;
+  }
+
+  .report-card-head h2 {
+    font-size: 16px;
+  }
+
+  .report-card h3 {
+    font-size: 13px;
+    margin: 16px 0 8px;
+  }
+
+  /* Screen layout reserves a 180px minimum per card, which doesn't reliably
+     fit four across an A4 page's printable width; drop the minimum so cards
+     always divide the page width evenly instead of wrapping unpredictably. */
+  .metric-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .metric-card {
+    min-height: 0;
+    gap: 4px;
+    padding: 8px 10px;
+    break-inside: avoid;
+  }
+
+  .metric-head {
+    font-size: 12px;
+  }
+
+  .metric-value {
+    font-size: 16px;
+  }
+
+  .metric-sub {
+    font-size: 12px;
   }
 
   .table-panel {
@@ -527,11 +572,13 @@ input {
 
   .data-table {
     font-size: 12px;
+    width: 100%;
   }
 
   .data-table th,
   .data-table td {
-    padding: 8px 10px;
+    padding: 6px 8px;
+    font-size: 12px;
   }
 
   .data-table thead {

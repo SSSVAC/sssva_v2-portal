@@ -18,4 +18,4 @@ POST /api/jobs/zoho-sync
 Authorization: Bearer $SYNC_JOB_SECRET
 ```
 
-On Vercel, configure a cron job for `/api/jobs/zoho-sync` and add the same `SYNC_JOB_SECRET` as an environment variable.
+Sync is triggered manually (e.g. the "Sync now" action on the dashboard, or a direct call to the endpoint above) rather than on a schedule. Set `SYNC_JOB_SECRET` as an environment variable for non-interactive calls.

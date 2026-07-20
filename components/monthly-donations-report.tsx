@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { formatCurrency } from "@/lib/format";
 import { ExportToolbar } from "@/components/export-toolbar";
 import { SortableTh, type SortDirection } from "@/components/sortable-th";
-import { exportToCsv, exportToHtml, printReportSection } from "@/lib/export";
+import { exportSectionsToCsv, exportSectionsToHtml, printReportSection, type ExportSection } from "@/lib/export";
 
 export type DonationMonth = {
   key: string;
@@ -60,6 +60,14 @@ export function MonthlyDonationsReport({ months, donors }: MonthlyDonationsRepor
   const contributingCount = sortedDonors.filter((donor) => donor.total > 0).length;
   const averagePerContributor = contributingCount > 0 ? grandTotal / contributingCount : 0;
 
+  const metricsExportHeaders = ["Metric", "Value"];
+  const metricsExportRows = () => [
+    ["Total Collected", formatCurrency(grandTotal)],
+    ["Members", sortedDonors.length],
+    ["Contributing", contributingCount],
+    ["Average per Contributor", formatCurrency(averagePerContributor)]
+  ];
+
   const exportHeaders = ["Member", ...months.map((month) => month.label), "Total"];
   const exportRows = () =>
     sortedDonors.map((donor) => [
@@ -70,6 +78,11 @@ export function MonthlyDonationsReport({ months, donors }: MonthlyDonationsRepor
       }),
       formatCurrency(donor.total)
     ]);
+
+  const exportSections = (): ExportSection[] => [
+    { title: "Metrics", headers: metricsExportHeaders, rows: metricsExportRows() },
+    { title: "Member Monthly Donation", headers: exportHeaders, rows: exportRows() }
+  ];
 
   return (
     <div>
@@ -100,8 +113,8 @@ export function MonthlyDonationsReport({ months, donors }: MonthlyDonationsRepor
       </div>
 
       <ExportToolbar
-        onExportCsv={() => exportToCsv("monthly-donations.csv", exportHeaders, exportRows())}
-        onExportHtml={() => exportToHtml("monthly-donations.html", "Monthly Donations", exportHeaders, exportRows())}
+        onExportCsv={() => exportSectionsToCsv("member-monthly-donation.csv", exportSections())}
+        onExportHtml={() => exportSectionsToHtml("member-monthly-donation.html", "Member Monthly Donation", exportSections())}
         onExportPdf={() => printReportSection("donations")}
       />
 

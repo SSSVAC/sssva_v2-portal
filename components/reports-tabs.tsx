@@ -5,6 +5,7 @@ import { FundStatusTable, type MemberRow } from "@/components/fund-status-table"
 import { MonthlyDonationsReport, type DonationMonth, type DonorDonationRow } from "@/components/monthly-donations-report";
 import { DonorContactReport, type DonorContactRow } from "@/components/donor-contact-report";
 import { MonthlyReport, type MonthlyIncomeRow, type MonthlyExpenseRow, type MonthlyBillRow } from "@/components/monthly-report";
+import { SilaiFundReport, type SilaiContributionRow, type SilaiExpenseRow, type SilaiBillRow } from "@/components/silai-fund-report";
 import { formatCurrency } from "@/lib/format";
 
 type ReportsTabsProps = {
@@ -23,13 +24,17 @@ type ReportsTabsProps = {
   monthlyReportIncomeRows: MonthlyIncomeRow[];
   monthlyReportExpenseRows: MonthlyExpenseRow[];
   monthlyReportBillRows: MonthlyBillRow[];
+  silaiFundContributionRows: SilaiContributionRow[];
+  silaiFundExpenseRows: SilaiExpenseRow[];
+  silaiFundBillRows: SilaiBillRow[];
 };
 
 const TABS = [
   { id: "silai", label: "Silai Contributions" },
   { id: "donations", label: "Member Monthly Donation" },
   { id: "donor-contacts", label: "Monthly Donors" },
-  { id: "monthly-report", label: "Monthly Report" }
+  { id: "monthly-report", label: "Monthly Report" },
+  { id: "silai-fund", label: "Silai Fund Report" }
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -49,7 +54,10 @@ export function ReportsTabs({
   monthlyReportMonths,
   monthlyReportIncomeRows,
   monthlyReportExpenseRows,
-  monthlyReportBillRows
+  monthlyReportBillRows,
+  silaiFundContributionRows,
+  silaiFundExpenseRows,
+  silaiFundBillRows
 }: ReportsTabsProps) {
   const [activeTab, setActiveTab] = useState<TabId>("silai");
 
@@ -177,6 +185,24 @@ export function ReportsTabs({
           incomeRows={monthlyReportIncomeRows}
           expenseRows={monthlyReportExpenseRows}
           billRows={monthlyReportBillRows}
+        />
+      </section>
+
+      <section
+        className="report-card"
+        aria-labelledby="silai-fund-report-heading"
+        data-print-id="silai-fund"
+        hidden={activeTab !== "silai-fund"}
+      >
+        <div className="report-card-head">
+          <h2 id="silai-fund-report-heading">Silai Fund Report</h2>
+          <span className="muted">All-time contributions, expenses &amp; bills for the statue installation fund</span>
+        </div>
+
+        <SilaiFundReport
+          contributionRows={silaiFundContributionRows}
+          expenseRows={silaiFundExpenseRows}
+          billRows={silaiFundBillRows}
         />
       </section>
     </div>
