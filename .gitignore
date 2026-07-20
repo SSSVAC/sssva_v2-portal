@@ -14,3 +14,4 @@ next-dev.err.log
 next-dev.pid
 *.tsbuildinfo
 .DS_Store
+.claude/

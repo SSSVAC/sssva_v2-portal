@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(curl -s http://localhost:3000/reports --max-time 15 -o /tmp/reports3.html)"
-    ]
-  }
-}
