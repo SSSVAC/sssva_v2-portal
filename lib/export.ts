@@ -135,6 +135,33 @@ export function exportSectionsToHtml(filename: string, title: string, sections: 
   downloadBlob(filename, buildHtmlDocument(title, bodyHtml), "text/html;charset=utf-8;");
 }
 
+// Renders the report section marked with data-print-id="target" to a PNG at
+// 1.5x its on-screen size, via html-to-image's SVG foreignObject approach
+// (renders Tamil/unicode text correctly, unlike html2canvas's manual glyph
+// drawing — the same reason printReportSection below uses the browser's
+// native print path for PDF instead of a canvas screenshot library).
+// Elements marked .no-print (filters, action toolbars, the export buttons
+// themselves) are excluded, matching what print/PDF already hides.
+export async function exportSectionToImage(target: string, filename: string) {
+  const element = document.querySelector<HTMLElement>(`[data-print-id="${target}"]`);
+  if (!element) return;
+
+  const { toPng } = await import("html-to-image");
+  const dataUrl = await toPng(element, {
+    pixelRatio: 1.5,
+    backgroundColor: "#ffffff",
+    cacheBust: true,
+    filter: (node) => !(node instanceof HTMLElement && node.classList.contains("no-print"))
+  });
+
+  const link = document.createElement("a");
+  link.href = dataUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 // Prints only the report section marked with data-print-id="target" by
 // stamping data-print-target on <body>; global print CSS uses that attribute
 // to hide everything else. Lets users "Save as PDF" via the browser's print

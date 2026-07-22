@@ -4,7 +4,13 @@ import { useMemo, useState } from "react";
 import { formatCurrency } from "@/lib/format";
 import { ExportToolbar } from "@/components/export-toolbar";
 import { SortableTh, type SortDirection } from "@/components/sortable-th";
-import { exportSectionsToCsv, exportSectionsToHtml, printReportSection, type ExportSection } from "@/lib/export";
+import {
+  exportSectionsToCsv,
+  exportSectionsToHtml,
+  exportSectionToImage,
+  printReportSection,
+  type ExportSection
+} from "@/lib/export";
 import type { DonationMonth } from "@/components/monthly-donations-report";
 
 export type DonorContactRow = {
@@ -105,6 +111,7 @@ export function DonorContactReport({ months, donors }: DonorContactReportProps) 
         onExportCsv={() => exportSectionsToCsv("monthly-donors.csv", exportSections())}
         onExportHtml={() => exportSectionsToHtml("monthly-donors.html", "Monthly Donors", exportSections())}
         onExportPdf={() => printReportSection("donor-contacts")}
+        onExportImage={() => exportSectionToImage("donor-contacts", "monthly-donors.png")}
       />
 
       <input

@@ -4,7 +4,13 @@ import { useMemo, useState } from "react";
 import { formatCurrency } from "@/lib/format";
 import { ExportToolbar } from "@/components/export-toolbar";
 import { SortableTh, type SortDirection } from "@/components/sortable-th";
-import { exportSectionsToCsv, exportSectionsToHtml, printReportSection, type ExportSection } from "@/lib/export";
+import {
+  exportSectionsToCsv,
+  exportSectionsToHtml,
+  exportSectionToImage,
+  printReportSection,
+  type ExportSection
+} from "@/lib/export";
 
 export type DonationMonth = {
   key: string;
@@ -116,6 +122,7 @@ export function MonthlyDonationsReport({ months, donors }: MonthlyDonationsRepor
         onExportCsv={() => exportSectionsToCsv("member-monthly-donation.csv", exportSections())}
         onExportHtml={() => exportSectionsToHtml("member-monthly-donation.html", "Member Monthly Donation", exportSections())}
         onExportPdf={() => printReportSection("donations")}
+        onExportImage={() => exportSectionToImage("donations", "member-monthly-donation.png")}
       />
 
       <input

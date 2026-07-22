@@ -3,7 +3,13 @@
 import { useMemo } from "react";
 import { formatCurrency } from "@/lib/format";
 import { ExportToolbar } from "@/components/export-toolbar";
-import { exportSectionsToCsv, exportSectionsToHtml, printReportSection, type ExportSection } from "@/lib/export";
+import {
+  exportSectionsToCsv,
+  exportSectionsToHtml,
+  exportSectionToImage,
+  printReportSection,
+  type ExportSection
+} from "@/lib/export";
 
 export type SilaiGroupedRow = {
   id: string;
@@ -85,6 +91,7 @@ export function SilaiGroupedReport({ rows }: SilaiGroupedReportProps) {
   ];
 
   const exportPdf = () => printReportSection(PRINT_TARGET);
+  const exportImage = () => exportSectionToImage(PRINT_TARGET, "silai-grouped-report.png");
 
   const fullReportSections = (): ExportSection[] => [
     {
@@ -108,6 +115,7 @@ export function SilaiGroupedReport({ rows }: SilaiGroupedReportProps) {
         onExportCsv={() => exportSectionsToCsv("silai-grouped-report.csv", fullReportSections())}
         onExportHtml={() => exportSectionsToHtml("silai-grouped-report.html", "Silai Grouped Report", fullReportSections())}
         onExportPdf={exportPdf}
+        onExportImage={exportImage}
       />
 
       <div className="metric-grid" aria-label="Silai grouped summary">

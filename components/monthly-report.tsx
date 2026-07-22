@@ -3,7 +3,15 @@
 import { useMemo, useState } from "react";
 import { formatCurrency, formatDateOnly } from "@/lib/format";
 import { ExportToolbar } from "@/components/export-toolbar";
-import { exportToCsv, exportToHtml, exportSectionsToCsv, exportSectionsToHtml, printReportSection, type ExportSection } from "@/lib/export";
+import {
+  exportToCsv,
+  exportToHtml,
+  exportSectionsToCsv,
+  exportSectionsToHtml,
+  exportSectionToImage,
+  printReportSection,
+  type ExportSection
+} from "@/lib/export";
 import type { DonationMonth } from "@/components/monthly-donations-report";
 
 export type MonthlyIncomeCategory = "donations" | "archanai" | "abhishegam" | "others";
@@ -153,6 +161,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows }: Mon
     ]);
 
   const exportPdf = () => printReportSection("monthly-report");
+  const exportImage = () => exportSectionToImage("monthly-report", `monthly-report-${selectedMonth}.png`);
 
   const fullReportTitle = `Monthly Report — ${selectedMonthLabel}`;
   const fullReportSections = (): ExportSection[] => [
@@ -191,6 +200,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows }: Mon
         onExportCsv={() => exportSectionsToCsv(`monthly-report-${selectedMonth}.csv`, fullReportSections())}
         onExportHtml={() => exportSectionsToHtml(`monthly-report-${selectedMonth}.html`, fullReportTitle, fullReportSections())}
         onExportPdf={exportPdf}
+        onExportImage={exportImage}
       />
 
       <div className="metric-grid" aria-label="Monthly report summary">
@@ -260,6 +270,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows }: Mon
           exportToHtml(`monthly-report-income-${selectedMonth}.html`, "Monthly Report — Income", incomeExportHeaders, incomeExportRows())
         }
         onExportPdf={exportPdf}
+        onExportImage={exportImage}
       />
       <div className="table-panel" style={{ minWidth: 0, overflowX: "auto" }}>
         <table className="data-table">
@@ -310,6 +321,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows }: Mon
           )
         }
         onExportPdf={exportPdf}
+        onExportImage={exportImage}
       />
       {donationDonorRows.length > 0 ? (
         <div className="table-panel" style={{ minWidth: 0, overflowX: "auto" }}>
@@ -354,6 +366,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows }: Mon
           )
         }
         onExportPdf={exportPdf}
+        onExportImage={exportImage}
       />
       {othersDonorRows.length > 0 ? (
         <div className="table-panel" style={{ minWidth: 0, overflowX: "auto" }}>
@@ -393,6 +406,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows }: Mon
           exportToHtml(`monthly-report-expenses-${selectedMonth}.html`, "Monthly Report — Expenses", expenseExportHeaders, expenseExportRows())
         }
         onExportPdf={exportPdf}
+        onExportImage={exportImage}
       />
       {monthExpenseRows.length > 0 ? (
         <div className="table-panel" style={{ minWidth: 0, overflowX: "auto" }}>
@@ -436,6 +450,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows }: Mon
           exportToHtml(`monthly-report-bills-${selectedMonth}.html`, "Monthly Report — Bills", billExportHeaders, billExportRows())
         }
         onExportPdf={exportPdf}
+        onExportImage={exportImage}
       />
       {monthBillRows.length > 0 ? (
         <div className="table-panel" style={{ minWidth: 0, overflowX: "auto" }}>

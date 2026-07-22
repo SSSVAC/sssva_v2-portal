@@ -4,7 +4,13 @@ import { useMemo, useState } from "react";
 import { formatCurrency } from "@/lib/format";
 import { ExportToolbar } from "@/components/export-toolbar";
 import { SortableTh, type SortDirection } from "@/components/sortable-th";
-import { exportSectionsToCsv, exportSectionsToHtml, printReportSection, type ExportSection } from "@/lib/export";
+import {
+  exportSectionsToCsv,
+  exportSectionsToHtml,
+  exportSectionToImage,
+  printReportSection,
+  type ExportSection
+} from "@/lib/export";
 
 export type MemberStatus = "not_paid" | "partially_paid" | "fully_paid";
 
@@ -132,6 +138,7 @@ export function FundStatusTable({ members, minimumAmount }: FundStatusTableProps
         onExportCsv={() => exportSectionsToCsv("members-silai-contributions.csv", exportSections())}
         onExportHtml={() => exportSectionsToHtml("members-silai-contributions.html", "Members Silai Contributions", exportSections())}
         onExportPdf={() => printReportSection("silai")}
+        onExportImage={() => exportSectionToImage("silai", "members-silai-contributions.png")}
       />
 
       <div className="report-tablist no-print" role="tablist" aria-label="Member fund status">
