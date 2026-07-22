@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download, FileCode, FileSpreadsheet, Image as ImageIcon, Printer } from "lucide-react";
+import { Copy, Download, FileCode, FileSpreadsheet, Image as ImageIcon, Printer } from "lucide-react";
 
 type ExportToolbarProps = {
   onExportCsv: () => void;
@@ -9,11 +9,20 @@ type ExportToolbarProps = {
   onExportPdf: () => void;
   onExportImage: () => Promise<void>;
   onExportExcel?: () => Promise<void>;
+  onCopyWhatsAppText?: () => Promise<void>;
 };
 
-export function ExportToolbar({ onExportCsv, onExportHtml, onExportPdf, onExportImage, onExportExcel }: ExportToolbarProps) {
+export function ExportToolbar({
+  onExportCsv,
+  onExportHtml,
+  onExportPdf,
+  onExportImage,
+  onExportExcel,
+  onCopyWhatsAppText
+}: ExportToolbarProps) {
   const [generatingImage, setGeneratingImage] = useState(false);
   const [generatingExcel, setGeneratingExcel] = useState(false);
+  const [copyState, setCopyState] = useState<"idle" | "copying" | "copied">("idle");
 
   async function handleExportImage() {
     setGeneratingImage(true);
@@ -38,6 +47,21 @@ export function ExportToolbar({ onExportCsv, onExportHtml, onExportPdf, onExport
       window.alert("Failed to export Excel file. Please try again.");
     } finally {
       setGeneratingExcel(false);
+    }
+  }
+
+  async function handleCopyWhatsAppText() {
+    if (!onCopyWhatsAppText) return;
+
+    setCopyState("copying");
+    try {
+      await onCopyWhatsAppText();
+      setCopyState("copied");
+      setTimeout(() => setCopyState("idle"), 2000);
+    } catch (error) {
+      console.error("Failed to copy summary", error);
+      window.alert("Failed to copy summary. Please try again.");
+      setCopyState("idle");
     }
   }
 
@@ -73,6 +97,17 @@ export function ExportToolbar({ onExportCsv, onExportHtml, onExportPdf, onExport
         >
           <FileSpreadsheet size={15} />
           {generatingExcel ? "Generating…" : "Export Excel"}
+        </button>
+      )}
+      {onCopyWhatsAppText && (
+        <button
+          type="button"
+          className="button secondary"
+          disabled={copyState === "copying"}
+          onClick={() => void handleCopyWhatsAppText()}
+        >
+          <Copy size={15} />
+          {copyState === "copied" ? "Copied!" : copyState === "copying" ? "Copying…" : "Copy for WhatsApp"}
         </button>
       )}
     </div>

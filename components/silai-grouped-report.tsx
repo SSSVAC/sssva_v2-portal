@@ -8,6 +8,7 @@ import {
   exportSectionsToHtml,
   exportSectionToImage,
   exportSilaiGroupedToExcel,
+  copySilaiGroupedSummaryToWhatsApp,
   printReportSection,
   type ExportSection
 } from "@/lib/export";
@@ -112,6 +113,16 @@ export function SilaiGroupedReport({ rows }: SilaiGroupedReportProps) {
         subtotal: group.subtotal
       }))
     );
+  const copyWhatsAppText = () =>
+    copySilaiGroupedSummaryToWhatsApp(
+      formatCurrency(totalCollected),
+      contributorCount,
+      groups.map((group) => ({
+        groupName: group.groupName,
+        contributorCount: group.rows.filter((row) => row.total > 0).length,
+        subtotal: formatCurrency(group.subtotal)
+      }))
+    );
 
   const fullReportSections = (): ExportSection[] => [
     {
@@ -137,6 +148,7 @@ export function SilaiGroupedReport({ rows }: SilaiGroupedReportProps) {
         onExportPdf={exportPdf}
         onExportImage={exportImage}
         onExportExcel={exportExcel}
+        onCopyWhatsAppText={copyWhatsAppText}
       />
 
       <div className="metric-grid" aria-label="Silai grouped summary">

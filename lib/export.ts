@@ -306,6 +306,58 @@ export async function exportSilaiGroupedToExcel(
   downloadBlob(filename, buffer, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 }
 
+// Falls back to a hidden textarea + execCommand for browsers/contexts where
+// navigator.clipboard is unavailable (e.g. no secure context).
+async function copyTextToClipboard(text: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+
+  try {
+    if (!document.execCommand("copy")) {
+      throw new Error("Copy command was not successful");
+    }
+  } finally {
+    document.body.removeChild(textarea);
+  }
+}
+
+// A short, WhatsApp-ready summary (*bold* is WhatsApp's own markdown) —
+// group subtotals only, not the full name/phone/address roster, since a
+// "blurb" meant to be pasted into a chat should read as a status update,
+// not a data dump of everyone's contact details.
+export async function copySilaiGroupedSummaryToWhatsApp(
+  totalCollected: string,
+  contributorCount: number,
+  groups: { groupName: string; contributorCount: number; subtotal: string }[]
+) {
+  const generatedOn = new Intl.DateTimeFormat("en-IN", { dateStyle: "medium" }).format(new Date());
+
+  const lines = [
+    "*Silai by Group Report*",
+    "சிலை வைப்பதற்கான நிதி",
+    "",
+    `*Total Collected:* ${totalCollected}`,
+    `*Contributors:* ${contributorCount}`,
+    "",
+    "*By Group:*",
+    ...groups.map((group, index) => `${index + 1}. ${group.groupName} — ${group.subtotal} (${group.contributorCount})`),
+    "",
+    `_Generated ${generatedOn}_`
+  ];
+
+  await copyTextToClipboard(lines.join("\n"));
+}
+
 // Prints only the report section marked with data-print-id="target" by
 // stamping data-print-target on <body>; global print CSS uses that attribute
 // to hide everything else. Lets users "Save as PDF" via the browser's print
