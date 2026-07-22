@@ -49,10 +49,19 @@ function escapeHtml(value: string) {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+// Each <td> carries a data-label matching its column header. On desktop
+// this is unused; on mobile the table collapses into a per-row card and
+// data-label supplies the "field name" next to each value via ::before,
+// since a shrunk/scrolling table is unreadable on a phone screen.
 function renderHtmlTable(headers: string[], rows: (string | number)[][]) {
   const theadHtml = `<tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr>`;
   const tbodyHtml = rows
-    .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(String(cell))}</td>`).join("")}</tr>`)
+    .map(
+      (row) =>
+        `<tr>${row
+          .map((cell, index) => `<td data-label="${escapeHtml(headers[index] ?? "")}">${escapeHtml(String(cell))}</td>`)
+          .join("")}</tr>`
+    )
     .join("");
 
   return `<div class="table-wrap"><table><thead>${theadHtml}</thead><tbody>${tbodyHtml}</tbody></table></div>`;
@@ -108,8 +117,44 @@ function buildHtmlDocument(title: string, bodyHtml: string) {
     body { padding: 16px; }
     h1 { font-size: 18px; }
     h2 { font-size: 14px; margin: 20px 0 6px; }
-    table { min-width: 0; }
-    th, td { padding: 8px 10px; font-size: 13px; }
+    /* Card layout: a shrunk or horizontally-scrolling table is unreadable
+       on a phone, so each row becomes its own card with label: value
+       lines instead (data-label set per cell in renderHtmlTable). */
+    .table-wrap { overflow-x: visible; border: none; border-radius: 0; background: none; }
+    table, tbody { display: block; width: 100%; min-width: 0; }
+    thead { display: none; }
+    tr {
+      display: block;
+      margin-bottom: 12px;
+      padding: 4px 12px;
+      background: #ffffff;
+      border: 1px solid #d9dee7;
+      border-radius: 8px;
+    }
+    tbody tr:nth-child(even) { background: #ffffff; }
+    td {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 16px;
+      padding: 8px 0;
+      border-bottom: 1px solid #f1f3f5;
+      font-size: 14px;
+      white-space: normal;
+      text-align: right;
+    }
+    td:last-child { border-bottom: none; }
+    td::before {
+      content: attr(data-label);
+      flex-shrink: 0;
+      color: #6b7280;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      text-align: left;
+    }
+    td:empty { display: none; }
   }
   @media print {
     body { background: #fff; padding: 0; }
