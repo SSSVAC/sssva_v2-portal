@@ -19,6 +19,8 @@ export type MemberRow = {
   name: string;
   phone: string | null;
   address: string | null;
+  group: string | null;
+  orderNumber: number | null;
   paid: number;
   balanceDue: number;
   status: MemberStatus;

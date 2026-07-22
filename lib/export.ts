@@ -325,6 +325,129 @@ export async function exportSilaiGroupedToExcel(
   downloadBlob(filename, buffer, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 }
 
+export type SilaiFollowUpStatus = "not_paid" | "partially_paid";
+
+export type ExcelFollowUpGroupSection = {
+  groupName: string;
+  rows: {
+    name: string;
+    phone: string | null;
+    address: string | null;
+    status: SilaiFollowUpStatus;
+    paid: number;
+    balanceDue: number;
+  }[];
+  balanceDueSubtotal: number;
+};
+
+const EXCEL_STATUS_LABEL: Record<SilaiFollowUpStatus, string> = {
+  not_paid: "Not Paid",
+  partially_paid: "Partially Paid"
+};
+
+const EXCEL_STATUS_FILL: Record<SilaiFollowUpStatus, string> = {
+  not_paid: "FFFEE2E2", // matches .status-overdue
+  partially_paid: "FFFEF3C7" // matches .status-sent
+};
+
+const EXCEL_STATUS_FONT: Record<SilaiFollowUpStatus, string> = {
+  not_paid: "FF991B1B",
+  partially_paid: "FF854D0E"
+};
+
+// Same styling approach as exportSilaiGroupedToExcel, for the "who still
+// needs to pay/finish paying" follow-up list — status cells get the same
+// red/yellow used by the on-screen status pills.
+export async function exportSilaiFollowUpToExcel(
+  filename: string,
+  metrics: { label: string; value: string | number }[],
+  groups: ExcelFollowUpGroupSection[]
+) {
+  const ExcelJS = (await import("exceljs")).default;
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("Silai Follow-up");
+
+  sheet.columns = [
+    { key: "name", width: 32 },
+    { key: "phone", width: 18 },
+    { key: "address", width: 44 },
+    { key: "status", width: 16 },
+    { key: "paid", width: 14 },
+    { key: "balanceDue", width: 14 }
+  ];
+
+  const titleRow = sheet.addRow(["Silai Follow-up Report"]);
+  titleRow.font = { bold: true, size: 16 };
+  sheet.mergeCells(titleRow.number, 1, titleRow.number, 6);
+
+  const generatedRow = sheet.addRow([
+    `Generated ${new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(new Date())}`
+  ]);
+  generatedRow.font = { color: { argb: "FF6B7280" }, italic: true };
+  sheet.mergeCells(generatedRow.number, 1, generatedRow.number, 6);
+
+  sheet.addRow([]);
+
+  metrics.forEach((metric) => {
+    const row = sheet.addRow([metric.label, "", "", "", "", metric.value]);
+    row.font = { bold: true };
+    if (typeof metric.value === "number") {
+      row.getCell(6).numFmt = EXCEL_CURRENCY_FORMAT;
+    }
+  });
+
+  sheet.addRow([]);
+
+  groups.forEach((group) => {
+    const groupRow = sheet.addRow([`${group.groupName} (${group.rows.length})`]);
+    groupRow.font = { bold: true, color: { argb: "FF115E59" } };
+    groupRow.eachCell({ includeEmpty: true }, (cell) => {
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: EXCEL_GROUP_FILL } };
+    });
+    sheet.mergeCells(groupRow.number, 1, groupRow.number, 6);
+
+    const headerRow = sheet.addRow(["Name", "Phone", "Address", "Status", "Paid", "Balance Due"]);
+    headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
+    headerRow.eachCell((cell) => {
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: EXCEL_HEADER_FILL } };
+    });
+
+    group.rows.forEach((row) => {
+      const dataRow = sheet.addRow([
+        row.name,
+        row.phone ?? "",
+        row.address ?? "",
+        EXCEL_STATUS_LABEL[row.status],
+        row.paid,
+        row.balanceDue
+      ]);
+      dataRow.getCell(5).numFmt = EXCEL_CURRENCY_FORMAT;
+      dataRow.getCell(6).numFmt = EXCEL_CURRENCY_FORMAT;
+      const statusCell = dataRow.getCell(4);
+      statusCell.font = { bold: true, color: { argb: EXCEL_STATUS_FONT[row.status] } };
+      statusCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: EXCEL_STATUS_FILL[row.status] } };
+    });
+
+    const subtotalRow = sheet.addRow(["Subtotal", "", "", "", "", group.balanceDueSubtotal]);
+    subtotalRow.font = { bold: true };
+    subtotalRow.getCell(6).numFmt = EXCEL_CURRENCY_FORMAT;
+    subtotalRow.eachCell({ includeEmpty: true }, (cell) => {
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: EXCEL_SUBTOTAL_FILL } };
+    });
+
+    sheet.addRow([]);
+  });
+
+  sheet.eachRow((row) => {
+    row.eachCell({ includeEmpty: false }, (cell) => {
+      cell.border = { bottom: { style: "thin", color: { argb: "FFE5E7EB" } } };
+    });
+  });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  downloadBlob(filename, buffer, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+}
+
 // Falls back to a hidden textarea + execCommand for browsers/contexts where
 // navigator.clipboard is unavailable (e.g. no secure context).
 async function copyTextToClipboard(text: string) {
@@ -380,6 +503,45 @@ export async function copySilaiGroupedToWhatsApp(
     });
 
     lines.push(`*Subtotal:* ${formatCurrency(group.subtotal)}`, "");
+  });
+
+  lines.push(`_Generated ${generatedOn}_`);
+
+  await copyTextToClipboard(lines.join("\n"));
+}
+
+// Same shape as copySilaiGroupedToWhatsApp, for the not-paid/partially-paid
+// follow-up list — status plus paid/balance due per contributor.
+export async function copySilaiFollowUpToWhatsApp(
+  notPaidCount: number,
+  partiallyPaidCount: number,
+  totalBalanceDue: number,
+  groups: ExcelFollowUpGroupSection[]
+) {
+  const generatedOn = new Intl.DateTimeFormat("en-IN", { dateStyle: "medium" }).format(new Date());
+
+  const lines = [
+    "*Silai Follow-up Report*",
+    "சிலை வைப்பதற்கான நிதி",
+    "",
+    `*Not Paid:* ${notPaidCount}`,
+    `*Partially Paid:* ${partiallyPaidCount}`,
+    `*Total Balance Due:* ${formatCurrency(totalBalanceDue)}`,
+    ""
+  ];
+
+  groups.forEach((group) => {
+    lines.push(`*${group.groupName} (${group.rows.length})*`);
+
+    group.rows.forEach((row, index) => {
+      const parts = [row.name, row.phone, row.address].filter((part): part is string => Boolean(part));
+      const statusLabel = EXCEL_STATUS_LABEL[row.status];
+      lines.push(
+        `${index + 1}. ${parts.join(" - ")} - ${statusLabel} - Paid ${formatCurrency(row.paid)} - Due ${formatCurrency(row.balanceDue)}`
+      );
+    });
+
+    lines.push(`*Balance Due Subtotal:* ${formatCurrency(group.balanceDueSubtotal)}`, "");
   });
 
   lines.push(`_Generated ${generatedOn}_`);

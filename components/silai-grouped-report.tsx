@@ -13,6 +13,7 @@ import {
   type ExportCell,
   type ExportSection
 } from "@/lib/export";
+import { groupByStreet } from "@/lib/silai-groups";
 
 export type SilaiGroupedRow = {
   id: string;
@@ -30,7 +31,6 @@ type SilaiGroupedReportProps = {
   rows: SilaiGroupedRow[];
 };
 
-const OTHERS_GROUP_LABEL = "Others";
 const PRINT_TARGET = "silai-grouped";
 
 // Matches the per-member Silai fund minimum used elsewhere (Members Silai
@@ -46,56 +46,12 @@ function amountCell(total: number): ExportCell {
   return text;
 }
 
-// Groups are streets/areas with a fixed physical order the temple committee
-// walks in; anything not in this list (a newly-added group not yet added
-// here) sorts after the known ones and before "Others".
-const GROUP_ORDER = [
-  "Ramaiya Nagar",
-  "Kalaignar Nagar 2nd Street",
-  "Kalaignar Nagar 1st Street",
-  "Kalluri Salai",
-  "Kalluri Salai Cross Street",
-  "Balamurugan Nagar"
-];
-
-function groupSortRank(name: string) {
-  if (name === OTHERS_GROUP_LABEL) return Number.POSITIVE_INFINITY;
-  const index = GROUP_ORDER.indexOf(name);
-  return index === -1 ? GROUP_ORDER.length : index;
-}
-
-function sortWithinGroup(rows: SilaiGroupedRow[]) {
-  return [...rows].sort((a, b) => {
-    const aOrder = a.orderNumber ?? Number.POSITIVE_INFINITY;
-    const bOrder = b.orderNumber ?? Number.POSITIVE_INFINITY;
-    if (aOrder !== bOrder) return aOrder - bOrder;
-    return a.name.localeCompare(b.name);
-  });
-}
-
 export function SilaiGroupedReport({ rows }: SilaiGroupedReportProps) {
   const groups = useMemo(() => {
-    const byGroup = new Map<string, SilaiGroupedRow[]>();
-
-    rows.forEach((row) => {
-      const key = row.group?.trim() || OTHERS_GROUP_LABEL;
-      const list = byGroup.get(key) ?? [];
-      list.push(row);
-      byGroup.set(key, list);
-    });
-
-    const groupNames = Array.from(byGroup.keys()).sort((a, b) => {
-      const rankA = groupSortRank(a);
-      const rankB = groupSortRank(b);
-      if (rankA !== rankB) return rankA - rankB;
-      return a.localeCompare(b);
-    });
-
-    return groupNames.map((groupName) => {
-      const groupRows = sortWithinGroup(byGroup.get(groupName) ?? []);
-      const subtotal = groupRows.reduce((sum, row) => sum + row.total, 0);
-      return { groupName, rows: groupRows, subtotal };
-    });
+    return groupByStreet(rows).map((group) => ({
+      ...group,
+      subtotal: group.rows.reduce((sum, row) => sum + row.total, 0)
+    }));
   }, [rows]);
 
   const totalCollected = rows.reduce((sum, row) => sum + row.total, 0);

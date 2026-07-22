@@ -7,6 +7,7 @@ import { DonorContactReport, type DonorContactRow } from "@/components/donor-con
 import { MonthlyReport, type MonthlyIncomeRow, type MonthlyExpenseRow, type MonthlyBillRow } from "@/components/monthly-report";
 import { SilaiFundReport, type SilaiContributionRow, type SilaiExpenseRow, type SilaiBillRow } from "@/components/silai-fund-report";
 import { SilaiGroupedReport, type SilaiGroupedRow } from "@/components/silai-grouped-report";
+import { SilaiFollowUpReport } from "@/components/silai-followup-report";
 import { formatCurrency } from "@/lib/format";
 
 type ReportsTabsProps = {
@@ -37,7 +38,8 @@ const TABS = [
   { id: "donor-contacts", label: "Monthly Donors" },
   { id: "monthly-report", label: "Monthly Report" },
   { id: "silai-fund", label: "Silai Fund Report" },
-  { id: "silai-grouped", label: "Silai by Group" }
+  { id: "silai-grouped", label: "Silai by Group" },
+  { id: "silai-followup", label: "Silai Follow-up" }
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -224,6 +226,22 @@ export function ReportsTabs({
         </div>
 
         <SilaiGroupedReport rows={silaiGroupedRows} />
+      </section>
+
+      <section
+        className="report-card"
+        aria-labelledby="silai-followup-report-heading"
+        data-print-id="silai-followup"
+        hidden={activeTab !== "silai-followup"}
+      >
+        <div className="report-card-head">
+          <h2 id="silai-followup-report-heading">Silai Follow-up</h2>
+          <span className="muted">
+            Members who haven&apos;t reached the {formatCurrency(fundMinimumAmount)} minimum, grouped by Group and ordered by Order #
+          </span>
+        </div>
+
+        <SilaiFollowUpReport members={memberRows} />
       </section>
     </div>
   );

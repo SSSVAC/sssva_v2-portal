@@ -44,7 +44,10 @@ type CustomerRow = Database["public"]["Tables"]["zoho_customers"]["Row"];
 type InvoiceRow = Database["public"]["Tables"]["zoho_invoices"]["Row"];
 type ExpenseRow = Database["public"]["Tables"]["zoho_expenses"]["Row"];
 type BillRow = Database["public"]["Tables"]["zoho_bills"]["Row"];
-type Member = Pick<CustomerRow, "zoho_customer_id" | "display_name" | "phone" | "billing_address">;
+type Member = Pick<
+  CustomerRow,
+  "zoho_customer_id" | "display_name" | "phone" | "billing_address" | "customer_group" | "order_number"
+>;
 type Customer = Pick<CustomerRow, "zoho_customer_id" | "display_name" | "billing_address">;
 type SilaiGroupedCustomer = Pick<
   CustomerRow,
@@ -106,7 +109,7 @@ export default async function ReportsPage() {
   ] = await Promise.all([
     admin
       .from("zoho_customers")
-      .select("zoho_customer_id, display_name, phone, billing_address")
+      .select("zoho_customer_id, display_name, phone, billing_address, customer_group, order_number")
       .eq("is_member", true)
       .order("display_name", { ascending: true })
       .returns<Member[]>(),
@@ -284,6 +287,8 @@ function buildMemberRows(members: Member[], contributions: Contribution[]): Memb
       name: member.display_name,
       phone: member.phone,
       address: member.billing_address,
+      group: member.customer_group,
+      orderNumber: member.order_number,
       paid,
       balanceDue: Math.max(0, FUND_MINIMUM_AMOUNT - paid),
       status
