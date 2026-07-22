@@ -5,6 +5,7 @@ import type { DonationMonth, DonorDonationRow } from "@/components/monthly-donat
 import type { DonorContactRow } from "@/components/donor-contact-report";
 import type { MonthlyIncomeCategory, MonthlyIncomeRow, MonthlyExpenseRow, MonthlyBillRow } from "@/components/monthly-report";
 import type { SilaiContributionRow, SilaiExpenseRow, SilaiBillRow } from "@/components/silai-fund-report";
+import type { SilaiGroupedRow } from "@/components/silai-grouped-report";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/types/database";
@@ -44,6 +45,10 @@ type ExpenseRow = Database["public"]["Tables"]["zoho_expenses"]["Row"];
 type BillRow = Database["public"]["Tables"]["zoho_bills"]["Row"];
 type Member = Pick<CustomerRow, "zoho_customer_id" | "display_name" | "phone" | "billing_address">;
 type Customer = Pick<CustomerRow, "zoho_customer_id" | "display_name" | "billing_address">;
+type SilaiGroupedCustomer = Pick<
+  CustomerRow,
+  "zoho_customer_id" | "display_name" | "company_name" | "billing_address" | "customer_group" | "order_number"
+>;
 type Contribution = Pick<InvoiceRow, "customer_id" | "customer_name" | "total">;
 type DonationInvoice = Pick<InvoiceRow, "customer_id" | "customer_name" | "total" | "date">;
 type MonthlyIncomeInvoice = Pick<InvoiceRow, "date" | "total" | "item_name" | "customer_name">;
@@ -88,7 +93,8 @@ export default async function ReportsPage() {
     { data: monthlyBills },
     { data: silaiContributionInvoices },
     { data: silaiExpenses },
-    { data: silaiBills }
+    { data: silaiBills },
+    { data: silaiGroupedCustomers }
   ] = await Promise.all([
     admin
       .from("zoho_customers")
@@ -147,7 +153,11 @@ export default async function ReportsPage() {
       .select("id, bill_number, vendor_name, date, total")
       .eq("account_name", SILAI_EXPENSE_ACCOUNT_NAME)
       .order("date", { ascending: false })
-      .returns<SilaiBillSource[]>()
+      .returns<SilaiBillSource[]>(),
+    admin
+      .from("zoho_customers")
+      .select("zoho_customer_id, display_name, company_name, billing_address, customer_group, order_number")
+      .returns<SilaiGroupedCustomer[]>()
   ]);
 
   const memberRows = buildMemberRows(members ?? [], contributions ?? []);
@@ -167,6 +177,8 @@ export default async function ReportsPage() {
   const silaiFundContributionRows = buildSilaiContributionRows(silaiContributionInvoices ?? []);
   const silaiFundExpenseRows = buildSilaiExpenseRows(silaiExpenses ?? []);
   const silaiFundBillRows = buildSilaiBillRows(silaiBills ?? []);
+
+  const silaiGroupedRows = buildSilaiGroupedRows(silaiGroupedCustomers ?? [], contributions ?? []);
 
   return (
     <main className="shell">
@@ -226,6 +238,7 @@ export default async function ReportsPage() {
           silaiFundContributionRows={silaiFundContributionRows}
           silaiFundExpenseRows={silaiFundExpenseRows}
           silaiFundBillRows={silaiFundBillRows}
+          silaiGroupedRows={silaiGroupedRows}
         />
       </div>
     </main>
@@ -467,4 +480,43 @@ function buildSilaiBillRows(bills: SilaiBillSource[]): SilaiBillRow[] {
     date: bill.date,
     total: Number(bill.total ?? 0)
   }));
+}
+
+// Every customer who contributed to the Silai fund, member or not, grouped
+// by their Group field (Group/Order # are display-only local fields, not
+// part of the member-vs-fund-minimum tracking the "Silai Contributions" tab
+// does).
+function buildSilaiGroupedRows(customers: SilaiGroupedCustomer[], contributions: Contribution[]): SilaiGroupedRow[] {
+  const totalsById = new Map<string, number>();
+  const totalsByName = new Map<string, number>();
+
+  for (const contribution of contributions) {
+    const amount = Number(contribution.total ?? 0);
+
+    if (contribution.customer_id) {
+      totalsById.set(contribution.customer_id, (totalsById.get(contribution.customer_id) ?? 0) + amount);
+    }
+
+    if (contribution.customer_name) {
+      const key = contribution.customer_name.trim().toLowerCase();
+      totalsByName.set(key, (totalsByName.get(key) ?? 0) + amount);
+    }
+  }
+
+  return customers
+    .map((customer) => {
+      const total =
+        totalsById.get(customer.zoho_customer_id) ?? totalsByName.get(customer.display_name.trim().toLowerCase()) ?? 0;
+
+      return {
+        id: customer.zoho_customer_id,
+        name: customer.display_name,
+        company: customer.company_name,
+        address: customer.billing_address,
+        group: customer.customer_group,
+        orderNumber: customer.order_number,
+        total
+      };
+    })
+    .filter((row) => row.total > 0);
 }

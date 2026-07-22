@@ -6,6 +6,7 @@ import { MonthlyDonationsReport, type DonationMonth, type DonorDonationRow } fro
 import { DonorContactReport, type DonorContactRow } from "@/components/donor-contact-report";
 import { MonthlyReport, type MonthlyIncomeRow, type MonthlyExpenseRow, type MonthlyBillRow } from "@/components/monthly-report";
 import { SilaiFundReport, type SilaiContributionRow, type SilaiExpenseRow, type SilaiBillRow } from "@/components/silai-fund-report";
+import { SilaiGroupedReport, type SilaiGroupedRow } from "@/components/silai-grouped-report";
 import { formatCurrency } from "@/lib/format";
 
 type ReportsTabsProps = {
@@ -27,6 +28,7 @@ type ReportsTabsProps = {
   silaiFundContributionRows: SilaiContributionRow[];
   silaiFundExpenseRows: SilaiExpenseRow[];
   silaiFundBillRows: SilaiBillRow[];
+  silaiGroupedRows: SilaiGroupedRow[];
 };
 
 const TABS = [
@@ -34,7 +36,8 @@ const TABS = [
   { id: "donations", label: "Member Monthly Donation" },
   { id: "donor-contacts", label: "Monthly Donors" },
   { id: "monthly-report", label: "Monthly Report" },
-  { id: "silai-fund", label: "Silai Fund Report" }
+  { id: "silai-fund", label: "Silai Fund Report" },
+  { id: "silai-grouped", label: "Silai by Group" }
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -57,7 +60,8 @@ export function ReportsTabs({
   monthlyReportBillRows,
   silaiFundContributionRows,
   silaiFundExpenseRows,
-  silaiFundBillRows
+  silaiFundBillRows,
+  silaiGroupedRows
 }: ReportsTabsProps) {
   const [activeTab, setActiveTab] = useState<TabId>("silai");
 
@@ -204,6 +208,22 @@ export function ReportsTabs({
           expenseRows={silaiFundExpenseRows}
           billRows={silaiFundBillRows}
         />
+      </section>
+
+      <section
+        className="report-card"
+        aria-labelledby="silai-grouped-report-heading"
+        data-print-id="silai-grouped"
+        hidden={activeTab !== "silai-grouped"}
+      >
+        <div className="report-card-head">
+          <h2 id="silai-grouped-report-heading">Silai by Group</h2>
+          <span className="muted">
+            All Silai contributors (members and non-members), grouped by Group and ordered by Order #
+          </span>
+        </div>
+
+        <SilaiGroupedReport rows={silaiGroupedRows} />
       </section>
     </div>
   );

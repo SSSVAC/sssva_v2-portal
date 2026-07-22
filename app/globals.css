@@ -519,7 +519,8 @@ input {
   body[data-print-target="donations"] .report-card[data-print-id="donations"],
   body[data-print-target="donor-contacts"] .report-card[data-print-id="donor-contacts"],
   body[data-print-target="monthly-report"] .report-card[data-print-id="monthly-report"],
-  body[data-print-target="silai-fund"] .report-card[data-print-id="silai-fund"] {
+  body[data-print-target="silai-fund"] .report-card[data-print-id="silai-fund"],
+  body[data-print-target="silai-grouped"] .report-card[data-print-id="silai-grouped"] {
     display: block !important;
   }
 
