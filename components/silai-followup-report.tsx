@@ -61,17 +61,10 @@ export function SilaiFollowUpReport({ members }: SilaiFollowUpReportProps) {
   const partiallyPaidCount = followUpRows.filter((row) => row.status === "partially_paid").length;
   const totalBalanceDue = followUpRows.reduce((sum, row) => sum + row.balanceDue, 0);
 
-  const sectionExportHeaders = ["Name", "Phone", "Address", "Group", "Paid", "Balance Due"];
+  const sectionExportHeaders = ["Name", "Phone", "Address", "Paid", "Balance Due"];
   const sectionExportRows = (sectionRows: (typeof followUpRows)[number][], balanceDueSubtotal: number) => [
-    ...sectionRows.map((row) => [
-      row.name,
-      row.phone ?? "",
-      row.address ?? "",
-      row.group ?? "",
-      formatCurrency(row.paid),
-      formatCurrency(row.balanceDue)
-    ]),
-    ["Subtotal", "", "", "", "", formatCurrency(balanceDueSubtotal)]
+    ...sectionRows.map((row) => [row.name, row.phone ?? "", row.address ?? "", formatCurrency(row.paid), formatCurrency(row.balanceDue)]),
+    ["Subtotal", "", "", "", formatCurrency(balanceDueSubtotal)]
   ];
 
   const excelSections = () =>
@@ -82,7 +75,6 @@ export function SilaiFollowUpReport({ members }: SilaiFollowUpReportProps) {
         name: row.name,
         phone: row.phone,
         address: row.address,
-        group: row.group,
         paid: row.paid,
         balanceDue: row.balanceDue
       })),
@@ -171,7 +163,6 @@ export function SilaiFollowUpReport({ members }: SilaiFollowUpReportProps) {
                       <th>Name</th>
                       <th>Phone</th>
                       <th>Address</th>
-                      <th>Group</th>
                       <th>Paid</th>
                       <th>Balance Due</th>
                     </tr>
@@ -182,7 +173,6 @@ export function SilaiFollowUpReport({ members }: SilaiFollowUpReportProps) {
                         <td>{row.name}</td>
                         <td>{row.phone ?? "—"}</td>
                         <td>{row.address ?? "—"}</td>
-                        <td>{row.group ?? "—"}</td>
                         <td>{row.paid > 0 ? formatCurrency(row.paid) : "—"}</td>
                         <td>{formatCurrency(row.balanceDue)}</td>
                       </tr>
@@ -190,7 +180,7 @@ export function SilaiFollowUpReport({ members }: SilaiFollowUpReportProps) {
                   </tbody>
                   <tfoot>
                     <tr>
-                      <td colSpan={5}>Subtotal</td>
+                      <td colSpan={4}>Subtotal</td>
                       <td>{formatCurrency(section.balanceDueSubtotal)}</td>
                     </tr>
                   </tfoot>

@@ -337,7 +337,6 @@ export type ExcelFollowUpSection = {
     name: string;
     phone: string | null;
     address: string | null;
-    group: string | null;
     paid: number;
     balanceDue: number;
   }[];
@@ -377,28 +376,27 @@ export async function exportSilaiFollowUpToExcel(
     { key: "name", width: 32 },
     { key: "phone", width: 18 },
     { key: "address", width: 44 },
-    { key: "group", width: 22 },
     { key: "paid", width: 14 },
     { key: "balanceDue", width: 14 }
   ];
 
   const titleRow = sheet.addRow(["Silai Follow-up Report"]);
   titleRow.font = { bold: true, size: 16 };
-  sheet.mergeCells(titleRow.number, 1, titleRow.number, 6);
+  sheet.mergeCells(titleRow.number, 1, titleRow.number, 5);
 
   const generatedRow = sheet.addRow([
     `Generated ${new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(new Date())}`
   ]);
   generatedRow.font = { color: { argb: "FF6B7280" }, italic: true };
-  sheet.mergeCells(generatedRow.number, 1, generatedRow.number, 6);
+  sheet.mergeCells(generatedRow.number, 1, generatedRow.number, 5);
 
   sheet.addRow([]);
 
   metrics.forEach((metric) => {
-    const row = sheet.addRow([metric.label, "", "", "", "", metric.value]);
+    const row = sheet.addRow([metric.label, "", "", "", metric.value]);
     row.font = { bold: true };
     if (typeof metric.value === "number") {
-      row.getCell(6).numFmt = EXCEL_CURRENCY_FORMAT;
+      row.getCell(5).numFmt = EXCEL_CURRENCY_FORMAT;
     }
   });
 
@@ -410,23 +408,23 @@ export async function exportSilaiFollowUpToExcel(
     sectionRow.eachCell({ includeEmpty: true }, (cell) => {
       cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: EXCEL_STATUS_FILL[section.status] } };
     });
-    sheet.mergeCells(sectionRow.number, 1, sectionRow.number, 6);
+    sheet.mergeCells(sectionRow.number, 1, sectionRow.number, 5);
 
-    const headerRow = sheet.addRow(["Name", "Phone", "Address", "Group", "Paid", "Balance Due"]);
+    const headerRow = sheet.addRow(["Name", "Phone", "Address", "Paid", "Balance Due"]);
     headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
     headerRow.eachCell((cell) => {
       cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: EXCEL_HEADER_FILL } };
     });
 
     section.rows.forEach((row) => {
-      const dataRow = sheet.addRow([row.name, row.phone ?? "", row.address ?? "", row.group ?? "", row.paid, row.balanceDue]);
+      const dataRow = sheet.addRow([row.name, row.phone ?? "", row.address ?? "", row.paid, row.balanceDue]);
+      dataRow.getCell(4).numFmt = EXCEL_CURRENCY_FORMAT;
       dataRow.getCell(5).numFmt = EXCEL_CURRENCY_FORMAT;
-      dataRow.getCell(6).numFmt = EXCEL_CURRENCY_FORMAT;
     });
 
-    const subtotalRow = sheet.addRow(["Subtotal", "", "", "", "", section.balanceDueSubtotal]);
+    const subtotalRow = sheet.addRow(["Subtotal", "", "", "", section.balanceDueSubtotal]);
     subtotalRow.font = { bold: true };
-    subtotalRow.getCell(6).numFmt = EXCEL_CURRENCY_FORMAT;
+    subtotalRow.getCell(5).numFmt = EXCEL_CURRENCY_FORMAT;
     subtotalRow.eachCell({ includeEmpty: true }, (cell) => {
       cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: EXCEL_SUBTOTAL_FILL } };
     });
@@ -530,7 +528,7 @@ export async function copySilaiFollowUpToWhatsApp(
     lines.push(`*${section.sectionName} (${section.rows.length})*`);
 
     section.rows.forEach((row, index) => {
-      const parts = [row.name, row.phone, row.address, row.group].filter((part): part is string => Boolean(part));
+      const parts = [row.name, row.phone, row.address].filter((part): part is string => Boolean(part));
       lines.push(`${index + 1}. ${parts.join(" - ")} - Paid ${formatCurrency(row.paid)} - Due ${formatCurrency(row.balanceDue)}`);
     });
 
