@@ -104,6 +104,13 @@ function buildHtmlDocument(title: string, bodyHtml: string) {
   }
   tbody tr:nth-child(even) { background: #fafafa; }
   tbody tr:last-child td { border-bottom: none; }
+  @media (max-width: 640px) {
+    body { padding: 16px; }
+    h1 { font-size: 18px; }
+    h2 { font-size: 14px; margin: 20px 0 6px; }
+    table { min-width: 0; }
+    th, td { padding: 8px 10px; font-size: 13px; }
+  }
   @media print {
     body { background: #fff; padding: 0; }
     .table-wrap { border: none; }
