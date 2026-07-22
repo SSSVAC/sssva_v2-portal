@@ -10,6 +10,7 @@ import {
   exportSilaiGroupedToExcel,
   copySilaiGroupedToWhatsApp,
   printReportSection,
+  type ExportCell,
   type ExportSection
 } from "@/lib/export";
 
@@ -31,6 +32,19 @@ type SilaiGroupedReportProps = {
 
 const OTHERS_GROUP_LABEL = "Others";
 const PRINT_TARGET = "silai-grouped";
+
+// Matches the per-member Silai fund minimum used elsewhere (Members Silai
+// Contributions' fully-paid threshold). Only affects the HTML export's cell
+// coloring, not the on-screen table or the other export formats.
+const HIGHLIGHT_THRESHOLD = 3000;
+
+function amountCell(total: number): ExportCell {
+  const text = total > 0 ? formatCurrency(total) : "";
+
+  if (total >= HIGHLIGHT_THRESHOLD) return { value: text, highlight: "success" };
+  if (total > 0) return { value: text, highlight: "warning" };
+  return text;
+}
 
 // Groups are streets/areas with a fixed physical order the temple committee
 // walks in; anything not in this list (a newly-added group not yet added
@@ -88,14 +102,9 @@ export function SilaiGroupedReport({ rows }: SilaiGroupedReportProps) {
   const contributorCount = rows.filter((row) => row.total > 0).length;
 
   const groupExportHeaders = ["Name", "Phone", "Address", "Total"];
-  const groupExportRows = (groupRows: SilaiGroupedRow[], subtotal: number) => [
-    ...groupRows.map((row) => [
-      row.name,
-      row.phone ?? "",
-      row.address ?? "",
-      row.total > 0 ? formatCurrency(row.total) : ""
-    ]),
-    ["Subtotal", "", "", formatCurrency(subtotal)]
+  const groupExportRows = (groupRows: SilaiGroupedRow[], subtotal: number): ExportCell[][] => [
+    ...groupRows.map((row) => [row.name, row.phone ?? "", row.address ?? "", amountCell(row.total)]),
+    ["Subtotal", "", "", amountCell(subtotal)]
   ];
 
   const excelGroups = () =>

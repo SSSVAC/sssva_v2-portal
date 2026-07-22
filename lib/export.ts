@@ -4,6 +4,15 @@ export type ExportColumn = {
   label: string;
 };
 
+// A plain string/number renders as-is. The object form additionally colors
+// the cell's background in HTML exports (CSV/Excel ignore `highlight` and
+// just use the value) — e.g. flagging amounts that cross a threshold.
+export type ExportCell = string | number | { value: string | number; highlight?: "success" | "warning" };
+
+function cellValue(cell: ExportCell): string | number {
+  return typeof cell === "object" ? cell.value : cell;
+}
+
 function downloadBlob(filename: string, content: BlobPart, mimeType: string) {
   const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
@@ -24,14 +33,14 @@ function escapeCsvCell(value: string | number) {
   return str;
 }
 
-export function exportToCsv(filename: string, headers: string[], rows: (string | number)[][]) {
+export function exportToCsv(filename: string, headers: string[], rows: ExportCell[][]) {
   exportSectionsToCsv(filename, [{ title: null, headers, rows }]);
 }
 
 export type ExportSection = {
   title: string | null;
   headers: string[];
-  rows: (string | number)[][];
+  rows: ExportCell[][];
 };
 
 // Concatenates multiple header+rows tables into a single CSV file, each
@@ -39,7 +48,9 @@ export type ExportSection = {
 // report made of several distinct tables can still be exported as one file.
 export function exportSectionsToCsv(filename: string, sections: ExportSection[]) {
   const blocks = sections.map((section) => {
-    const lines = [section.headers, ...section.rows].map((row) => row.map(escapeCsvCell).join(","));
+    const lines = [section.headers, ...section.rows.map((row) => row.map(cellValue))].map((row) =>
+      row.map(escapeCsvCell).join(",")
+    );
     return section.title ? [escapeCsvCell(section.title), ...lines].join("\r\n") : lines.join("\r\n");
   });
 
@@ -55,13 +66,17 @@ function escapeHtml(value: string) {
 // this is unused; on mobile the table collapses into a per-row card and
 // data-label supplies the "field name" next to each value via ::before,
 // since a shrunk/scrolling table is unreadable on a phone screen.
-function renderHtmlTable(headers: string[], rows: (string | number)[][]) {
+function renderHtmlTable(headers: string[], rows: ExportCell[][]) {
   const theadHtml = `<tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr>`;
   const tbodyHtml = rows
     .map(
       (row) =>
         `<tr>${row
-          .map((cell, index) => `<td data-label="${escapeHtml(headers[index] ?? "")}">${escapeHtml(String(cell))}</td>`)
+          .map((cell, index) => {
+            const highlight = typeof cell === "object" ? cell.highlight : undefined;
+            const classAttr = highlight ? ` class="cell-${highlight}"` : "";
+            return `<td data-label="${escapeHtml(headers[index] ?? "")}"${classAttr}>${escapeHtml(String(cellValue(cell)))}</td>`;
+          })
           .join("")}</tr>`
     )
     .join("");
@@ -115,6 +130,8 @@ function buildHtmlDocument(title: string, bodyHtml: string) {
   }
   tbody tr:nth-child(even) { background: #fafafa; }
   tbody tr:last-child td { border-bottom: none; }
+  .cell-success { background: #dcfce7; color: #166534; font-weight: 700; }
+  .cell-warning { background: #fef3c7; color: #854d0e; font-weight: 700; }
   @media (max-width: 640px) {
     body { padding: 16px; }
     h1 { font-size: 18px; }
@@ -172,7 +189,7 @@ ${bodyHtml}
 </html>`;
 }
 
-export function exportToHtml(filename: string, title: string, headers: string[], rows: (string | number)[][]) {
+export function exportToHtml(filename: string, title: string, headers: string[], rows: ExportCell[][]) {
   downloadBlob(filename, buildHtmlDocument(title, renderHtmlTable(headers, rows)), "text/html;charset=utf-8;");
 }
 
