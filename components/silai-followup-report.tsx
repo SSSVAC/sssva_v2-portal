@@ -10,6 +10,7 @@ import {
   exportSilaiFollowUpToExcel,
   copySilaiFollowUpToWhatsApp,
   printReportSection,
+  SILAI_FOLLOWUP_STATUS_LABEL,
   type ExportSection,
   type SilaiFollowUpStatus
 } from "@/lib/export";
@@ -22,18 +23,22 @@ type SilaiFollowUpReportProps = {
 
 const PRINT_TARGET = "silai-followup";
 
-const STATUS_LABEL: Record<SilaiFollowUpStatus, string> = {
-  not_paid: "Not Paid",
-  partially_paid: "Partially Paid"
-};
-
 const STATUS_CLASS: Record<SilaiFollowUpStatus, string> = {
   not_paid: "status-overdue",
   partially_paid: "status-sent"
 };
 
+const STATUSES: SilaiFollowUpStatus[] = ["not_paid", "partially_paid"];
+
 function isFollowUpStatus(status: MemberRow["status"]): status is SilaiFollowUpStatus {
   return status === "not_paid" || status === "partially_paid";
+}
+
+// Flattens the street-grouped order back into one list per status — same
+// walking order as Silai by Group, but as a single table instead of a
+// sub-table per street.
+function flattenInStreetOrder(rows: (MemberRow & { status: SilaiFollowUpStatus })[]) {
+  return groupByStreet(rows).flatMap((group) => group.rows);
 }
 
 export function SilaiFollowUpReport({ members }: SilaiFollowUpReportProps) {
@@ -42,45 +47,46 @@ export function SilaiFollowUpReport({ members }: SilaiFollowUpReportProps) {
     [members]
   );
 
-  const groups = useMemo(() => {
-    return groupByStreet(followUpRows).map((group) => ({
-      ...group,
-      balanceDueSubtotal: group.rows.reduce((sum, row) => sum + row.balanceDue, 0)
-    }));
-  }, [followUpRows]);
+  const sections = useMemo(
+    () =>
+      STATUSES.map((status) => {
+        const rows = flattenInStreetOrder(followUpRows.filter((row) => row.status === status));
+        const balanceDueSubtotal = rows.reduce((sum, row) => sum + row.balanceDue, 0);
+        return { status, sectionName: SILAI_FOLLOWUP_STATUS_LABEL[status], rows, balanceDueSubtotal };
+      }),
+    [followUpRows]
+  );
 
   const notPaidCount = followUpRows.filter((row) => row.status === "not_paid").length;
   const partiallyPaidCount = followUpRows.filter((row) => row.status === "partially_paid").length;
   const totalBalanceDue = followUpRows.reduce((sum, row) => sum + row.balanceDue, 0);
 
-  const groupExportHeaders = ["Name", "Phone", "Address", "Status", "Paid", "Balance Due"];
-  const groupExportRows = (
-    groupRows: (typeof followUpRows)[number][],
-    balanceDueSubtotal: number
-  ) => [
-    ...groupRows.map((row) => [
+  const sectionExportHeaders = ["Name", "Phone", "Address", "Group", "Paid", "Balance Due"];
+  const sectionExportRows = (sectionRows: (typeof followUpRows)[number][], balanceDueSubtotal: number) => [
+    ...sectionRows.map((row) => [
       row.name,
       row.phone ?? "",
       row.address ?? "",
-      STATUS_LABEL[row.status],
+      row.group ?? "",
       formatCurrency(row.paid),
       formatCurrency(row.balanceDue)
     ]),
     ["Subtotal", "", "", "", "", formatCurrency(balanceDueSubtotal)]
   ];
 
-  const excelGroups = () =>
-    groups.map((group) => ({
-      groupName: group.groupName,
-      rows: group.rows.map((row) => ({
+  const excelSections = () =>
+    sections.map((section) => ({
+      status: section.status,
+      sectionName: section.sectionName,
+      rows: section.rows.map((row) => ({
         name: row.name,
         phone: row.phone,
         address: row.address,
-        status: row.status,
+        group: row.group,
         paid: row.paid,
         balanceDue: row.balanceDue
       })),
-      balanceDueSubtotal: group.balanceDueSubtotal
+      balanceDueSubtotal: section.balanceDueSubtotal
     }));
 
   const exportPdf = () => printReportSection(PRINT_TARGET);
@@ -93,10 +99,10 @@ export function SilaiFollowUpReport({ members }: SilaiFollowUpReportProps) {
         { label: "Partially Paid", value: partiallyPaidCount },
         { label: "Total Balance Due", value: totalBalanceDue }
       ],
-      excelGroups()
+      excelSections()
     );
   const copyWhatsAppText = () =>
-    copySilaiFollowUpToWhatsApp(notPaidCount, partiallyPaidCount, totalBalanceDue, excelGroups());
+    copySilaiFollowUpToWhatsApp(notPaidCount, partiallyPaidCount, totalBalanceDue, excelSections());
 
   const fullReportSections = (): ExportSection[] => [
     {
@@ -108,10 +114,10 @@ export function SilaiFollowUpReport({ members }: SilaiFollowUpReportProps) {
         ["Total Balance Due", formatCurrency(totalBalanceDue)]
       ]
     },
-    ...groups.map((group) => ({
-      title: `${group.groupName} (${group.rows.length})`,
-      headers: groupExportHeaders,
-      rows: groupExportRows(group.rows, group.balanceDueSubtotal)
+    ...sections.map((section) => ({
+      title: `${section.sectionName} (${section.rows.length})`,
+      headers: sectionExportHeaders,
+      rows: sectionExportRows(section.rows, section.balanceDueSubtotal)
     }))
   ];
 
@@ -146,50 +152,55 @@ export function SilaiFollowUpReport({ members }: SilaiFollowUpReportProps) {
             <span>Total Balance Due</span>
           </div>
           <div className="metric-value">{formatCurrency(totalBalanceDue)}</div>
-          <div className="metric-sub">Outstanding across both groups</div>
+          <div className="metric-sub">Outstanding across both sections</div>
         </article>
       </div>
 
-      {groups.length > 0 ? (
-        groups.map((group) => (
-          <div key={group.groupName}>
+      {followUpRows.length > 0 ? (
+        sections.map((section) => (
+          <div key={section.status}>
             <h3>
-              {group.groupName} ({group.rows.length})
+              <span className={`status-pill ${STATUS_CLASS[section.status]}`}>{section.sectionName}</span>{" "}
+              ({section.rows.length})
             </h3>
-            <div className="table-panel" style={{ minWidth: 0, overflowX: "auto" }}>
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Phone</th>
-                    <th>Address</th>
-                    <th>Status</th>
-                    <th>Paid</th>
-                    <th>Balance Due</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {group.rows.map((row) => (
-                    <tr key={row.id}>
-                      <td>{row.name}</td>
-                      <td>{row.phone ?? "—"}</td>
-                      <td>{row.address ?? "—"}</td>
-                      <td>
-                        <span className={`status-pill ${STATUS_CLASS[row.status]}`}>{STATUS_LABEL[row.status]}</span>
-                      </td>
-                      <td>{row.paid > 0 ? formatCurrency(row.paid) : "—"}</td>
-                      <td>{formatCurrency(row.balanceDue)}</td>
+            {section.rows.length > 0 ? (
+              <div className="table-panel" style={{ minWidth: 0, overflowX: "auto" }}>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Phone</th>
+                      <th>Address</th>
+                      <th>Group</th>
+                      <th>Paid</th>
+                      <th>Balance Due</th>
                     </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td colSpan={5}>Subtotal</td>
-                    <td>{formatCurrency(group.balanceDueSubtotal)}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {section.rows.map((row) => (
+                      <tr key={row.id}>
+                        <td>{row.name}</td>
+                        <td>{row.phone ?? "—"}</td>
+                        <td>{row.address ?? "—"}</td>
+                        <td>{row.group ?? "—"}</td>
+                        <td>{row.paid > 0 ? formatCurrency(row.paid) : "—"}</td>
+                        <td>{formatCurrency(row.balanceDue)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colSpan={5}>Subtotal</td>
+                      <td>{formatCurrency(section.balanceDueSubtotal)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            ) : (
+              <div className="empty-state">
+                <p>No members in this section.</p>
+              </div>
+            )}
           </div>
         ))
       ) : (

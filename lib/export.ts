@@ -327,20 +327,26 @@ export async function exportSilaiGroupedToExcel(
 
 export type SilaiFollowUpStatus = "not_paid" | "partially_paid";
 
-export type ExcelFollowUpGroupSection = {
-  groupName: string;
+// A "section" here is one of the two status buckets (Not Paid / Partially
+// Paid), not a street — each is a single flat, street-ordered list rather
+// than being broken into per-street sub-tables.
+export type ExcelFollowUpSection = {
+  status: SilaiFollowUpStatus;
+  sectionName: string;
   rows: {
     name: string;
     phone: string | null;
     address: string | null;
-    status: SilaiFollowUpStatus;
+    group: string | null;
     paid: number;
     balanceDue: number;
   }[];
   balanceDueSubtotal: number;
 };
 
-const EXCEL_STATUS_LABEL: Record<SilaiFollowUpStatus, string> = {
+// Exported so the report component can build matching section titles
+// without maintaining a second copy of the same two labels.
+export const SILAI_FOLLOWUP_STATUS_LABEL: Record<SilaiFollowUpStatus, string> = {
   not_paid: "Not Paid",
   partially_paid: "Partially Paid"
 };
@@ -356,12 +362,12 @@ const EXCEL_STATUS_FONT: Record<SilaiFollowUpStatus, string> = {
 };
 
 // Same styling approach as exportSilaiGroupedToExcel, for the "who still
-// needs to pay/finish paying" follow-up list — status cells get the same
-// red/yellow used by the on-screen status pills.
+// needs to pay/finish paying" follow-up list — each status section header
+// gets the same red/yellow used by the on-screen status pills.
 export async function exportSilaiFollowUpToExcel(
   filename: string,
   metrics: { label: string; value: string | number }[],
-  groups: ExcelFollowUpGroupSection[]
+  sections: ExcelFollowUpSection[]
 ) {
   const ExcelJS = (await import("exceljs")).default;
   const workbook = new ExcelJS.Workbook();
@@ -371,7 +377,7 @@ export async function exportSilaiFollowUpToExcel(
     { key: "name", width: 32 },
     { key: "phone", width: 18 },
     { key: "address", width: 44 },
-    { key: "status", width: 16 },
+    { key: "group", width: 22 },
     { key: "paid", width: 14 },
     { key: "balanceDue", width: 14 }
   ];
@@ -398,37 +404,27 @@ export async function exportSilaiFollowUpToExcel(
 
   sheet.addRow([]);
 
-  groups.forEach((group) => {
-    const groupRow = sheet.addRow([`${group.groupName} (${group.rows.length})`]);
-    groupRow.font = { bold: true, color: { argb: "FF115E59" } };
-    groupRow.eachCell({ includeEmpty: true }, (cell) => {
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: EXCEL_GROUP_FILL } };
+  sections.forEach((section) => {
+    const sectionRow = sheet.addRow([`${section.sectionName} (${section.rows.length})`]);
+    sectionRow.font = { bold: true, color: { argb: EXCEL_STATUS_FONT[section.status] } };
+    sectionRow.eachCell({ includeEmpty: true }, (cell) => {
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: EXCEL_STATUS_FILL[section.status] } };
     });
-    sheet.mergeCells(groupRow.number, 1, groupRow.number, 6);
+    sheet.mergeCells(sectionRow.number, 1, sectionRow.number, 6);
 
-    const headerRow = sheet.addRow(["Name", "Phone", "Address", "Status", "Paid", "Balance Due"]);
+    const headerRow = sheet.addRow(["Name", "Phone", "Address", "Group", "Paid", "Balance Due"]);
     headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
     headerRow.eachCell((cell) => {
       cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: EXCEL_HEADER_FILL } };
     });
 
-    group.rows.forEach((row) => {
-      const dataRow = sheet.addRow([
-        row.name,
-        row.phone ?? "",
-        row.address ?? "",
-        EXCEL_STATUS_LABEL[row.status],
-        row.paid,
-        row.balanceDue
-      ]);
+    section.rows.forEach((row) => {
+      const dataRow = sheet.addRow([row.name, row.phone ?? "", row.address ?? "", row.group ?? "", row.paid, row.balanceDue]);
       dataRow.getCell(5).numFmt = EXCEL_CURRENCY_FORMAT;
       dataRow.getCell(6).numFmt = EXCEL_CURRENCY_FORMAT;
-      const statusCell = dataRow.getCell(4);
-      statusCell.font = { bold: true, color: { argb: EXCEL_STATUS_FONT[row.status] } };
-      statusCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: EXCEL_STATUS_FILL[row.status] } };
     });
 
-    const subtotalRow = sheet.addRow(["Subtotal", "", "", "", "", group.balanceDueSubtotal]);
+    const subtotalRow = sheet.addRow(["Subtotal", "", "", "", "", section.balanceDueSubtotal]);
     subtotalRow.font = { bold: true };
     subtotalRow.getCell(6).numFmt = EXCEL_CURRENCY_FORMAT;
     subtotalRow.eachCell({ includeEmpty: true }, (cell) => {
@@ -511,12 +507,12 @@ export async function copySilaiGroupedToWhatsApp(
 }
 
 // Same shape as copySilaiGroupedToWhatsApp, for the not-paid/partially-paid
-// follow-up list — status plus paid/balance due per contributor.
+// follow-up list — one section per status, each a flat street-ordered list.
 export async function copySilaiFollowUpToWhatsApp(
   notPaidCount: number,
   partiallyPaidCount: number,
   totalBalanceDue: number,
-  groups: ExcelFollowUpGroupSection[]
+  sections: ExcelFollowUpSection[]
 ) {
   const generatedOn = new Intl.DateTimeFormat("en-IN", { dateStyle: "medium" }).format(new Date());
 
@@ -530,18 +526,15 @@ export async function copySilaiFollowUpToWhatsApp(
     ""
   ];
 
-  groups.forEach((group) => {
-    lines.push(`*${group.groupName} (${group.rows.length})*`);
+  sections.forEach((section) => {
+    lines.push(`*${section.sectionName} (${section.rows.length})*`);
 
-    group.rows.forEach((row, index) => {
-      const parts = [row.name, row.phone, row.address].filter((part): part is string => Boolean(part));
-      const statusLabel = EXCEL_STATUS_LABEL[row.status];
-      lines.push(
-        `${index + 1}. ${parts.join(" - ")} - ${statusLabel} - Paid ${formatCurrency(row.paid)} - Due ${formatCurrency(row.balanceDue)}`
-      );
+    section.rows.forEach((row, index) => {
+      const parts = [row.name, row.phone, row.address, row.group].filter((part): part is string => Boolean(part));
+      lines.push(`${index + 1}. ${parts.join(" - ")} - Paid ${formatCurrency(row.paid)} - Due ${formatCurrency(row.balanceDue)}`);
     });
 
-    lines.push(`*Balance Due Subtotal:* ${formatCurrency(group.balanceDueSubtotal)}`, "");
+    lines.push(`*Balance Due Subtotal:* ${formatCurrency(section.balanceDueSubtotal)}`, "");
   });
 
   lines.push(`_Generated ${generatedOn}_`);
