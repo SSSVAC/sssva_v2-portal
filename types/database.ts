@@ -189,6 +189,28 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["sync_runs"]["Insert"]>;
         Relationships: [];
       };
+      audit_log: {
+        Row: {
+          id: string;
+          actor_email: string | null;
+          action: string;
+          table_name: string;
+          record_ids: string[];
+          detail: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          actor_email?: string | null;
+          action: string;
+          table_name: string;
+          record_ids?: string[];
+          detail?: Json;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["audit_log"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: {
       dashboard_monthly_revenue: {

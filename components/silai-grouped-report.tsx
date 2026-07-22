@@ -133,7 +133,7 @@ export function SilaiGroupedReport({ rows }: SilaiGroupedReportProps) {
             <h3>
               {group.groupName} ({group.rows.length})
             </h3>
-            <div className="table-panel" style={{ minWidth: 0, overflowX: "auto" }}>
+            <div className="table-panel table-panel-scroll">
               <table className="data-table">
                 <thead>
                   <tr>

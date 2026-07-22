@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resyncZohoRecords } from "@/lib/zoho/sync";
+import type { Json } from "@/types/database";
 
 const EDITABLE_TABLES = {
   zoho_customers: [
@@ -61,6 +62,27 @@ function isTableName(value: string): value is TableName {
   return value in EDITABLE_TABLES;
 }
 
+async function logAudit(
+  admin: ReturnType<typeof createAdminClient>,
+  actorEmail: string | null | undefined,
+  action: string,
+  table: string,
+  recordIds: string[],
+  detail: Record<string, unknown> = {}
+) {
+  const { error } = await admin.from("audit_log").insert({
+    actor_email: actorEmail ?? null,
+    action,
+    table_name: table,
+    record_ids: recordIds,
+    detail: detail as Json
+  });
+
+  if (error) {
+    console.error(`[audit_log] failed to record ${action} on ${table}`, error);
+  }
+}
+
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ table: string }> }) {
   const { table } = await params;
 
@@ -103,8 +125,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     .eq("id", id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(`[records/${table}] PATCH failed`, error);
+    return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
+
+  await logAudit(admin, user.email, "update", table, [id], { column });
 
   return NextResponse.json({ ok: true });
 }
@@ -125,6 +150,10 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  if (user.app_metadata?.is_admin !== true) {
+    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+  }
+
   const body = await request.json().catch(() => null);
   const ids = body?.ids;
 
@@ -136,8 +165,11 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   const { data, error } = await admin.from(table).delete().in("id", ids).select("id");
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(`[records/${table}] DELETE failed`, error);
+    return NextResponse.json({ error: "Delete failed" }, { status: 500 });
   }
+
+  await logAudit(admin, user.email, "delete", table, ids, { deleted: data?.length ?? 0 });
 
   return NextResponse.json({ ok: true, deleted: data?.length ?? 0 });
 }
@@ -158,6 +190,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  if (user.app_metadata?.is_admin !== true) {
+    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+  }
+
   const body = await request.json().catch(() => null);
   const action = body?.action;
   const ids = body?.ids;
@@ -172,9 +208,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   try {
     const result = await resyncZohoRecords(table, ids);
+    await logAudit(createAdminClient(), user.email, "resync", table, ids, result);
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Resync failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error(`[records/${table}] resync failed`, error);
+    return NextResponse.json({ error: "Resync failed" }, { status: 500 });
   }
 }

@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Topbar } from "@/components/topbar";
 import { RecordsTabs } from "@/components/records-tabs";
 import { createClient } from "@/lib/supabase/server";
 
@@ -23,6 +23,8 @@ export default async function RecordsPage({ searchParams }: RecordsPageProps) {
     redirect("/login");
   }
 
+  const isAdmin = user.app_metadata?.is_admin === true;
+
   const initialTab: RecordTab | undefined = RECORD_TABS.includes(params.tab as RecordTab)
     ? (params.tab as RecordTab)
     : undefined;
@@ -41,26 +43,7 @@ export default async function RecordsPage({ searchParams }: RecordsPageProps) {
 
   return (
     <main className="shell">
-      <header className="topbar">
-        <div className="brand">
-          <span className="brand-mark">S</span>
-          <span>SSSVA Portal</span>
-        </div>
-
-        <nav style={{ display: "flex", gap: 16, alignItems: "center" }}>
-          <Link href="/dashboard" className="muted">
-            Dashboard
-          </Link>
-          <Link href="/reports" className="muted">
-            Reports
-          </Link>
-          <form action="/logout" method="post">
-            <button className="button secondary" type="submit">
-              Sign out
-            </button>
-          </form>
-        </nav>
-      </header>
+      <Topbar active="records" />
 
       <div className="main">
         <section className="hero-band">
@@ -80,6 +63,7 @@ export default async function RecordsPage({ searchParams }: RecordsPageProps) {
           bills={bills ?? []}
           initialTab={initialTab}
           initialCustomerFilter={initialCustomerFilter}
+          isAdmin={isAdmin}
         />
       </div>
     </main>

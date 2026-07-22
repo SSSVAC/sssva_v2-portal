@@ -1,15 +1,8 @@
 import { redirect } from "next/navigation";
-import { LogIn } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { signIn } from "./actions";
+import { LoginForm } from "@/components/login-form";
 
-type LoginPageProps = {
-  searchParams: Promise<{
-    error?: string;
-  }>;
-};
-
-export default async function LoginPage({ searchParams }: LoginPageProps) {
+export default async function LoginPage() {
   const supabase = await createClient();
   const {
     data: { user }
@@ -18,8 +11,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   if (user) {
     redirect("/dashboard");
   }
-
-  const params = await searchParams;
 
   return (
     <main className="auth-page">
@@ -36,30 +27,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <h2>Sign in</h2>
           <p className="muted">Use your portal account to continue.</p>
 
-          <form action={signIn} className="form">
-            {params.error ? <div className="error-box">{params.error}</div> : null}
-
-            <label className="field">
-              <span>Email</span>
-              <input className="input" name="email" type="email" required />
-            </label>
-
-            <label className="field">
-              <span>Password</span>
-              <input
-                className="input"
-                name="password"
-                type="password"
-                minLength={6}
-                required
-              />
-            </label>
-
-            <button className="button" type="submit">
-              <LogIn size={18} />
-              Sign in
-            </button>
-          </form>
+          <LoginForm />
         </div>
       </section>
     </main>

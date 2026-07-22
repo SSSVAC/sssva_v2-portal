@@ -2,7 +2,7 @@
 
 import { formatCurrency } from "@/lib/format";
 
-const STATUS_COLORS = ["#0f766e", "#c2410c", "#2563eb", "#9333ea", "#64748b"];
+const STATUS_COLORS = ["var(--primary)", "var(--accent)", "#2563eb", "#9333ea", "var(--muted)"];
 
 type DashboardChartsProps = {
   monthlyRevenue: {
@@ -43,17 +43,17 @@ export function DashboardCharts({ monthlyRevenue, invoiceStatus }: DashboardChar
                         width: "100%",
                         height: `${height}%`,
                         minHeight: 8,
-                        backgroundColor: "#0f766e",
+                        backgroundColor: "var(--primary)",
                         borderRadius: "6px 6px 0 0"
                       }}
                     />
                   </div>
-                  <span style={{ fontSize: 12, color: "#64748b" }}>{item.month}</span>
+                  <span style={{ fontSize: 12, color: "var(--muted)" }}>{item.month}</span>
                 </div>
               );
             })
           ) : (
-            <div style={{ width: "100%", textAlign: "center", color: "#64748b" }}>
+            <div style={{ width: "100%", textAlign: "center", color: "var(--muted)" }}>
               No revenue data yet.
             </div>
           )}
@@ -63,7 +63,7 @@ export function DashboardCharts({ monthlyRevenue, invoiceStatus }: DashboardChar
       <div className="chart-box">
         <div style={{ height: 260, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
           <svg width="220" height="220" viewBox="0 0 120 120" aria-label="Invoice status breakdown">
-            <circle cx="60" cy="60" r="42" fill="none" stroke="#e5e7eb" strokeWidth="18" />
+            <circle cx="60" cy="60" r="42" fill="none" stroke="var(--border)" strokeWidth="18" />
             {invoiceStatus.map((entry, index) => {
               const radius = 42;
               const circumference = 2 * Math.PI * radius;
@@ -102,13 +102,13 @@ export function DashboardCharts({ monthlyRevenue, invoiceStatus }: DashboardChar
                       backgroundColor: STATUS_COLORS[index % STATUS_COLORS.length]
                     }}
                   />
-                  <span style={{ fontSize: 12, color: "#475569" }}>
+                  <span style={{ fontSize: 12, color: "var(--muted)" }}>
                     {entry.status} ({entry.count})
                   </span>
                 </div>
               ))
             ) : (
-              <span style={{ fontSize: 12, color: "#64748b" }}>No invoice status data yet.</span>
+              <span style={{ fontSize: 12, color: "var(--muted)" }}>No invoice status data yet.</span>
             )}
           </div>
         </div>

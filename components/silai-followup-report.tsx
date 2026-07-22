@@ -156,7 +156,7 @@ export function SilaiFollowUpReport({ members }: SilaiFollowUpReportProps) {
               ({section.rows.length})
             </h3>
             {section.rows.length > 0 ? (
-              <div className="table-panel" style={{ minWidth: 0, overflowX: "auto" }}>
+              <div className="table-panel table-panel-scroll">
                 <table className="data-table">
                   <thead>
                     <tr>

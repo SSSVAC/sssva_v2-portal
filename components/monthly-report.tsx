@@ -272,7 +272,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows }: Mon
         onExportPdf={exportPdf}
         onExportImage={exportImage}
       />
-      <div className="table-panel" style={{ minWidth: 0, overflowX: "auto" }}>
+      <div className="table-panel table-panel-scroll">
         <table className="data-table">
           <thead>
             <tr>
@@ -324,7 +324,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows }: Mon
         onExportImage={exportImage}
       />
       {donationDonorRows.length > 0 ? (
-        <div className="table-panel" style={{ minWidth: 0, overflowX: "auto" }}>
+        <div className="table-panel table-panel-scroll">
           <table className="data-table">
             <thead>
               <tr>
@@ -369,7 +369,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows }: Mon
         onExportImage={exportImage}
       />
       {othersDonorRows.length > 0 ? (
-        <div className="table-panel" style={{ minWidth: 0, overflowX: "auto" }}>
+        <div className="table-panel table-panel-scroll">
           <table className="data-table">
             <thead>
               <tr>
@@ -409,7 +409,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows }: Mon
         onExportImage={exportImage}
       />
       {monthExpenseRows.length > 0 ? (
-        <div className="table-panel" style={{ minWidth: 0, overflowX: "auto" }}>
+        <div className="table-panel table-panel-scroll">
           <table className="data-table">
             <thead>
               <tr>
@@ -453,7 +453,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows }: Mon
         onExportImage={exportImage}
       />
       {monthBillRows.length > 0 ? (
-        <div className="table-panel" style={{ minWidth: 0, overflowX: "auto" }}>
+        <div className="table-panel table-panel-scroll">
           <table className="data-table">
             <thead>
               <tr>

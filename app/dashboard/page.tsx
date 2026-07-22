@@ -1,7 +1,8 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CalendarClock, CircleDollarSign, FileText, RefreshCw } from "lucide-react";
+import { Topbar } from "@/components/topbar";
 import { DashboardCharts } from "@/components/dashboard-charts";
+import { SyncForm } from "@/components/sync-form";
 import { createClient } from "@/lib/supabase/server";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { Database } from "@/types/database";
@@ -12,7 +13,12 @@ type InvoiceRow = Database["public"]["Tables"]["zoho_invoices"]["Row"];
 type MonthlyRevenueRow = Database["public"]["Views"]["dashboard_monthly_revenue"]["Row"];
 type SyncRunRow = Database["public"]["Tables"]["sync_runs"]["Row"];
 
-export default async function DashboardPage() {
+type DashboardPageProps = {
+  searchParams: Promise<{ sync_error?: string }>;
+};
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
+  const { sync_error: syncError } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user }
@@ -53,26 +59,7 @@ export default async function DashboardPage() {
 
   return (
     <main className="shell">
-      <header className="topbar">
-        <div className="brand">
-          <span className="brand-mark">S</span>
-          <span>SSSVA Portal</span>
-        </div>
-
-        <nav style={{ display: "flex", gap: 16, alignItems: "center" }}>
-          <Link href="/records" className="muted">
-            Records
-          </Link>
-          <Link href="/reports" className="muted">
-            Reports
-          </Link>
-          <form action="/logout" method="post">
-            <button className="button secondary" type="submit">
-              Sign out
-            </button>
-          </form>
-        </nav>
-      </header>
+      <Topbar active="dashboard" />
 
       <div className="main">
         <section className="hero-band">
@@ -84,31 +71,15 @@ export default async function DashboardPage() {
           </div>
 
           <div className="hero-actions">
-            <form action="/api/jobs/zoho-sync" method="post">
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                <label htmlFor="sync-target" style={{ fontSize: 14 }}>
-                  Sync
-                </label>
-                <select
-                  id="sync-target"
-                  name="sync_target"
-                  defaultValue="all"
-                  style={{ padding: "6px 8px", borderRadius: 6, border: "1px solid #cbd5e1" }}
-                >
-                  <option value="all">Sync All</option>
-                  <option value="customers">Customers Only</option>
-                  <option value="invoices">Invoices Only</option>
-                  <option value="expenses">Expenses Only</option>
-                  <option value="bills">Bills Only</option>
-                </select>
-              </div>
-              <button className="button" type="submit">
-                <RefreshCw size={17} />
-                Sync Zoho
-              </button>
-            </form>
+            <SyncForm />
           </div>
         </section>
+
+        {syncError && (
+          <div className="error-box" role="alert">
+            Zoho sync failed: {syncError}
+          </div>
+        )}
 
         <section className="metric-grid" aria-label="Financial metrics">
           <MetricCard

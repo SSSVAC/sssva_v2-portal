@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { redirect } from "next/navigation";
+import { Topbar } from "@/components/topbar";
 import { ReportsTabs } from "@/components/reports-tabs";
 import type { MemberRow } from "@/components/fund-status-table";
 import type { DonationMonth, DonorDonationRow } from "@/components/monthly-donations-report";
@@ -7,7 +8,6 @@ import type { MonthlyIncomeCategory, MonthlyIncomeRow, MonthlyExpenseRow, Monthl
 import type { SilaiContributionRow, SilaiExpenseRow, SilaiBillRow } from "@/components/silai-fund-report";
 import type { SilaiGroupedRow } from "@/components/silai-grouped-report";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/types/database";
 
 export const dynamic = "force-dynamic";
@@ -69,18 +69,15 @@ type SilaiContributionInvoice = Pick<InvoiceRow, "customer_name" | "date" | "tot
 type SilaiExpenseSource = Pick<ExpenseRow, "id" | "description" | "date" | "total">;
 type SilaiBillSource = Pick<BillRow, "id" | "bill_number" | "vendor_name" | "date" | "total">;
 
-// This page is intentionally public (no auth redirect): it's a read-only
-// report meant to be viewable without login. Row Level Security still
-// restricts the zoho_* tables to the "authenticated" role, so data is
-// fetched with the admin (service role) client, which bypasses RLS.
-// Direct anon access to the database remains locked down either way.
 export default async function ReportsPage() {
-  const sessionClient = await createClient();
+  const supabase = await createClient();
   const {
     data: { user }
-  } = await sessionClient.auth.getUser();
+  } = await supabase.auth.getUser();
 
-  const admin = createAdminClient();
+  if (!user) {
+    redirect("/login");
+  }
 
   const donationMonths = getLastNMonths(DONATION_MONTHS_SHOWN);
   const donationRangeStart = `${donationMonths[0].key}-01`;
@@ -107,65 +104,65 @@ export default async function ReportsPage() {
     { data: silaiBills },
     { data: silaiGroupedCustomers }
   ] = await Promise.all([
-    admin
+    supabase
       .from("zoho_customers")
       .select("zoho_customer_id, display_name, phone, billing_address, customer_group, order_number")
       .eq("is_member", true)
       .order("display_name", { ascending: true })
       .returns<Member[]>(),
-    admin
+    supabase
       .from("zoho_customers")
       .select("zoho_customer_id, display_name, billing_address")
       .order("display_name", { ascending: true })
       .returns<Customer[]>(),
-    admin
+    supabase
       .from("zoho_invoices")
       .select("customer_id, customer_name, total")
       .or(FUND_ITEM_NAMES.map((name) => `item_name.ilike.%${name}%`).join(","))
       .returns<Contribution[]>(),
-    admin
+    supabase
       .from("zoho_invoices")
       .select("customer_id, customer_name, total, date")
       .ilike("item_name", `%${DONATION_ITEM_NAME}%`)
       .gte("date", donationRangeStart)
       .returns<DonationInvoice[]>(),
-    admin
+    supabase
       .from("zoho_invoices")
       .select("date, total, item_name, customer_name")
       .gte("date", monthlyReportRangeStart)
       .or(monthlyIncomeItemNamePatterns.map((name) => `item_name.ilike.%${name}%`).join(","))
       .returns<MonthlyIncomeInvoice[]>(),
-    admin
+    supabase
       .from("zoho_expenses")
       .select("id, description, account_name, date, total")
       .gte("date", monthlyReportRangeStart)
       .order("date", { ascending: false })
       .returns<MonthlyExpenseSource[]>(),
-    admin
+    supabase
       .from("zoho_bills")
       .select("id, bill_number, vendor_name, account_name, date, total")
       .gte("date", monthlyReportRangeStart)
       .order("date", { ascending: false })
       .returns<MonthlyBillSource[]>(),
-    admin
+    supabase
       .from("zoho_invoices")
       .select("customer_name, date, total")
       .or(FUND_ITEM_NAMES.map((name) => `item_name.ilike.%${name}%`).join(","))
       .order("date", { ascending: false })
       .returns<SilaiContributionInvoice[]>(),
-    admin
+    supabase
       .from("zoho_expenses")
       .select("id, description, date, total")
       .eq("account_name", SILAI_EXPENSE_ACCOUNT_NAME)
       .order("date", { ascending: false })
       .returns<SilaiExpenseSource[]>(),
-    admin
+    supabase
       .from("zoho_bills")
       .select("id, bill_number, vendor_name, date, total")
       .eq("account_name", SILAI_EXPENSE_ACCOUNT_NAME)
       .order("date", { ascending: false })
       .returns<SilaiBillSource[]>(),
-    admin
+    supabase
       .from("zoho_customers")
       .select(
         "zoho_customer_id, display_name, company_name, phone, billing_address, customer_group, order_number, is_member"
@@ -195,40 +192,13 @@ export default async function ReportsPage() {
 
   return (
     <main className="shell">
-      <header className="topbar">
-        <div className="brand">
-          <span className="brand-mark">S</span>
-          <span>SSSVA Portal</span>
-        </div>
-
-        <nav style={{ display: "flex", gap: 16, alignItems: "center" }}>
-          {user ? (
-            <>
-              <Link href="/dashboard" className="muted">
-                Dashboard
-              </Link>
-              <Link href="/records" className="muted">
-                Records
-              </Link>
-              <form action="/logout" method="post">
-                <button className="button secondary" type="submit">
-                  Sign out
-                </button>
-              </form>
-            </>
-          ) : (
-            <Link href="/login" className="button secondary">
-              Staff Sign In
-            </Link>
-          )}
-        </nav>
-      </header>
+      <Topbar active="reports" />
 
       <div className="main">
         <section className="hero-band">
           <div>
             <h1>Reports</h1>
-            <p className="muted">Public reports for SSSVA Portal.</p>
+            <p className="muted">Reports for SSSVA Portal staff.</p>
           </div>
         </section>
 

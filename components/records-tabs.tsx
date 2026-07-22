@@ -17,6 +17,7 @@ type RecordsTabsProps = {
   bills: Row[];
   initialTab?: TabId;
   initialCustomerFilter?: CustomerFilter | null;
+  isAdmin: boolean;
 };
 
 const CUSTOMER_COLUMNS: RecordColumn[] = [
@@ -95,7 +96,8 @@ export function RecordsTabs({
   expenses,
   bills,
   initialTab,
-  initialCustomerFilter
+  initialCustomerFilter,
+  isAdmin
 }: RecordsTabsProps) {
   const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? "customers");
   const [customerFilter, setCustomerFilter] = useState<CustomerFilter | null>(initialCustomerFilter ?? null);
@@ -132,6 +134,7 @@ export function RecordsTabs({
           table="zoho_customers"
           columns={CUSTOMER_COLUMNS}
           rows={customers}
+          isAdmin={isAdmin}
           actionColumn={{
             label: "Invoices",
             render: (row) => (
@@ -158,15 +161,16 @@ export function RecordsTabs({
             table="zoho_invoices"
             columns={INVOICE_COLUMNS}
             rows={invoices}
+            isAdmin={isAdmin}
             presetFilter={customerFilter ? (row) => row.customer_id === customerFilter.id : undefined}
           />
         </>
       )}
       {activeTab === "expenses" && (
-        <EditableDataTable table="zoho_expenses" columns={EXPENSE_COLUMNS} rows={expenses} />
+        <EditableDataTable table="zoho_expenses" columns={EXPENSE_COLUMNS} rows={expenses} isAdmin={isAdmin} />
       )}
       {activeTab === "bills" && (
-        <EditableDataTable table="zoho_bills" columns={BILL_COLUMNS} rows={bills} />
+        <EditableDataTable table="zoho_bills" columns={BILL_COLUMNS} rows={bills} isAdmin={isAdmin} />
       )}
     </div>
   );

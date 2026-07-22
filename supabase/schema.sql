@@ -115,6 +115,19 @@ create table if not exists public.sync_runs (
   error text
 );
 
+-- Persisted trail of who performed destructive/write actions (record edits,
+-- bulk deletes, Zoho resyncs) through the app's API routes, since these
+-- tables hold financial data and previously had no audit history at all.
+create table if not exists public.audit_log (
+  id uuid primary key default gen_random_uuid(),
+  actor_email text,
+  action text not null,
+  table_name text not null,
+  record_ids text[] not null default '{}',
+  detail jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -159,6 +172,13 @@ alter table public.zoho_invoices enable row level security;
 alter table public.zoho_expenses enable row level security;
 alter table public.zoho_bills enable row level security;
 alter table public.sync_runs enable row level security;
+alter table public.audit_log enable row level security;
+
+drop policy if exists "Authenticated users can read audit log" on public.audit_log;
+create policy "Authenticated users can read audit log"
+on public.audit_log for select
+to authenticated
+using (true);
 
 drop policy if exists "Authenticated users can read customers" on public.zoho_customers;
 create policy "Authenticated users can read customers"
@@ -197,3 +217,4 @@ create index if not exists zoho_expenses_status_idx on public.zoho_expenses (sta
 create index if not exists zoho_bills_date_idx on public.zoho_bills (date desc);
 create index if not exists zoho_bills_status_idx on public.zoho_bills (status);
 create index if not exists sync_runs_provider_started_idx on public.sync_runs (provider, started_at desc);
+create index if not exists audit_log_created_at_idx on public.audit_log (created_at desc);

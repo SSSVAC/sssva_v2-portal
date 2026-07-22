@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/toast";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 export type RecordColumn = {
   key: string;
@@ -34,6 +36,7 @@ type EditableDataTableProps = {
   rows: Row[];
   actionColumn?: ActionColumn;
   presetFilter?: (row: Row) => boolean;
+  isAdmin?: boolean;
 };
 
 export function EditableDataTable({
@@ -41,9 +44,11 @@ export function EditableDataTable({
   columns,
   rows: initialRows,
   actionColumn,
-  presetFilter
+  presetFilter,
+  isAdmin = false
 }: EditableDataTableProps) {
   const [rows, setRows] = useState(initialRows);
+  const { showToast } = useToast();
 
   // Picks up fresh data after resyncSelected() below triggers router.refresh();
   // initialRows otherwise only changes across full navigations, not re-renders.
@@ -55,13 +60,14 @@ export function EditableDataTable({
   const [sort, setSort] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [addingOptionCell, setAddingOptionCell] = useState<string | null>(null);
+  const [newOptionValue, setNewOptionValue] = useState("");
   const [savingCell, setSavingCell] = useState<string | null>(null);
   const [errorCell, setErrorCell] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [resyncing, setResyncing] = useState(false);
-  const [resyncMessage, setResyncMessage] = useState<string | null>(null);
   const router = useRouter();
 
   const derivedSelectOptions = useMemo(() => {
@@ -167,6 +173,7 @@ export function EditableDataTable({
       setRows((prev) => prev.map((row) => (row.id === rowId ? { ...row, [column]: value } : row)));
     } catch {
       setErrorCell(cellKey);
+      showToast("Save failed. Please try again.", "error");
     } finally {
       setSavingCell((current) => (current === cellKey ? null : current));
     }
@@ -187,6 +194,19 @@ export function EditableDataTable({
     }
 
     void saveCell(rowId, column.key, trimmed === "" ? null : trimmed);
+  }
+
+  function startAddOption(rowId: string, column: RecordColumn) {
+    setAddingOptionCell(`${rowId}:${column.key}`);
+    setNewOptionValue("");
+  }
+
+  function commitNewOption(rowId: string, column: RecordColumn) {
+    setAddingOptionCell(null);
+    const trimmed = newOptionValue.trim();
+    if (trimmed) {
+      void saveCell(rowId, column.key, trimmed);
+    }
   }
 
   function toggleRowSelected(rowId: string) {
@@ -216,17 +236,17 @@ export function EditableDataTable({
     });
   }
 
+  function requestDeleteSelected() {
+    if (selectedIds.size === 0) return;
+    setConfirmDeleteOpen(true);
+  }
+
   async function deleteSelected() {
     const ids = Array.from(selectedIds);
+    setConfirmDeleteOpen(false);
     if (ids.length === 0) return;
 
-    const confirmed = window.confirm(
-      `Delete ${ids.length} record${ids.length === 1 ? "" : "s"}? This cannot be undone.`
-    );
-    if (!confirmed) return;
-
     setDeleting(true);
-    setDeleteError(null);
 
     try {
       const response = await fetch(`/api/records/${table}`, {
@@ -242,8 +262,9 @@ export function EditableDataTable({
       const idSet = new Set(ids);
       setRows((prev) => prev.filter((row) => !idSet.has(String(row.id))));
       setSelectedIds(new Set());
+      showToast(`Deleted ${ids.length} record${ids.length === 1 ? "" : "s"}.`, "success");
     } catch {
-      setDeleteError(`Failed to delete ${ids.length} record${ids.length === 1 ? "" : "s"}. Please try again.`);
+      showToast(`Failed to delete ${ids.length} record${ids.length === 1 ? "" : "s"}. Please try again.`, "error");
     } finally {
       setDeleting(false);
     }
@@ -254,7 +275,6 @@ export function EditableDataTable({
     if (ids.length === 0) return;
 
     setResyncing(true);
-    setResyncMessage(null);
 
     try {
       const response = await fetch(`/api/records/${table}`, {
@@ -271,14 +291,15 @@ export function EditableDataTable({
       const resynced = typeof result.resynced === "number" ? result.resynced : 0;
       const failed = typeof result.failed === "number" ? result.failed : 0;
 
-      setResyncMessage(
+      showToast(
         failed > 0
           ? `Resynced ${resynced}, ${failed} failed from Zoho.`
-          : `Resynced ${resynced} record${resynced === 1 ? "" : "s"} from Zoho.`
+          : `Resynced ${resynced} record${resynced === 1 ? "" : "s"} from Zoho.`,
+        failed > 0 ? "error" : "success"
       );
       router.refresh();
     } catch {
-      setResyncMessage(`Failed to resync ${ids.length} record${ids.length === 1 ? "" : "s"}. Please try again.`);
+      showToast(`Failed to resync ${ids.length} record${ids.length === 1 ? "" : "s"}. Please try again.`, "error");
     } finally {
       setResyncing(false);
     }
@@ -289,40 +310,51 @@ export function EditableDataTable({
 
   return (
     <div>
-      <div className="filter-banner no-print" style={{ justifyContent: "flex-start", gap: 12 }}>
-        <span>{selectedIds.size} selected</span>
-        <button
-          type="button"
-          className="button secondary"
-          disabled={selectedIds.size === 0 || resyncing}
-          onClick={() => void resyncSelected()}
-        >
-          {resyncing ? "Resyncing…" : "Resync Selected"}
-        </button>
-        <button
-          type="button"
-          className="button secondary"
-          disabled={selectedIds.size === 0 || deleting}
-          onClick={() => void deleteSelected()}
-        >
-          {deleting ? "Deleting…" : "Delete Selected"}
-        </button>
-        {resyncMessage && <span>{resyncMessage}</span>}
-        {deleteError && <span style={{ color: "var(--danger)" }}>{deleteError}</span>}
-      </div>
+      {isAdmin && (
+        <div className="filter-banner no-print" style={{ justifyContent: "flex-start", gap: 12 }}>
+          <span>{selectedIds.size} selected</span>
+          <button
+            type="button"
+            className="button secondary"
+            disabled={selectedIds.size === 0 || resyncing}
+            onClick={() => void resyncSelected()}
+          >
+            {resyncing ? "Resyncing…" : "Resync Selected"}
+          </button>
+          <button
+            type="button"
+            className="button secondary"
+            disabled={selectedIds.size === 0 || deleting}
+            onClick={requestDeleteSelected}
+          >
+            {deleting ? "Deleting…" : "Delete Selected"}
+          </button>
+        </div>
+      )}
 
-      <div style={{ overflowX: "auto" }}>
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        title="Delete records"
+        message={`Delete ${selectedIds.size} record${selectedIds.size === 1 ? "" : "s"}? This cannot be undone.`}
+        confirmLabel="Delete"
+        onConfirm={() => void deleteSelected()}
+        onCancel={() => setConfirmDeleteOpen(false)}
+      />
+
+      <div className="table-panel-scroll">
       <table className="data-table">
         <thead>
           <tr>
-            <th>
-              <input
-                type="checkbox"
-                aria-label="Select all visible rows"
-                checked={allVisibleSelected}
-                onChange={toggleSelectAllVisible}
-              />
-            </th>
+            {isAdmin && (
+              <th>
+                <input
+                  type="checkbox"
+                  aria-label="Select all visible rows"
+                  checked={allVisibleSelected}
+                  onChange={toggleSelectAllVisible}
+                />
+              </th>
+            )}
             {columns.map((column) => (
               <th
                 key={column.key}
@@ -341,12 +373,13 @@ export function EditableDataTable({
             {actionColumn && <th>{actionColumn.label}</th>}
           </tr>
           <tr>
-            <th className="filter-cell" />
+            {isAdmin && <th className="filter-cell" />}
             {columns.map((column) => (
               <th key={column.key} className="filter-cell">
                 {column.type === "boolean" ? (
                   <select
                     className="filter-input"
+                    aria-label={`Filter ${column.label}`}
                     value={filters[column.key] ?? ""}
                     onChange={(event) =>
                       setFilters((prev) => ({ ...prev, [column.key]: event.target.value }))
@@ -359,6 +392,7 @@ export function EditableDataTable({
                 ) : column.type === "select" ? (
                   <select
                     className="filter-input"
+                    aria-label={`Filter ${column.label}`}
                     value={filters[column.key] ?? ""}
                     onChange={(event) =>
                       setFilters((prev) => ({ ...prev, [column.key]: event.target.value }))
@@ -377,6 +411,7 @@ export function EditableDataTable({
                     className="filter-input"
                     type="text"
                     placeholder="Filter…"
+                    aria-label={`Filter ${column.label}`}
                     value={filters[column.key] ?? ""}
                     onChange={(event) =>
                       setFilters((prev) => ({ ...prev, [column.key]: event.target.value }))
@@ -394,14 +429,16 @@ export function EditableDataTable({
 
             return (
               <tr key={rowId}>
-                <td>
-                  <input
-                    type="checkbox"
-                    aria-label={`Select row ${rowId}`}
-                    checked={selectedIds.has(rowId)}
-                    onChange={() => toggleRowSelected(rowId)}
-                  />
-                </td>
+                {isAdmin && (
+                  <td>
+                    <input
+                      type="checkbox"
+                      aria-label={`Select row ${rowId}`}
+                      checked={selectedIds.has(rowId)}
+                      onChange={() => toggleRowSelected(rowId)}
+                    />
+                  </td>
+                )}
                 {columns.map((column) => {
                   const cellKey = `${rowId}:${column.key}`;
                   const value = row[column.key];
@@ -427,20 +464,39 @@ export function EditableDataTable({
                     const isCreatable = !column.options;
                     const currentValue = typeof value === "string" ? value : "";
 
+                    if (addingOptionCell === cellKey) {
+                      return (
+                        <td key={column.key}>
+                          <input
+                            autoFocus
+                            className="cell-input"
+                            type="text"
+                            placeholder={`New ${column.label.toLowerCase()}…`}
+                            aria-label={`New ${column.label.toLowerCase()}`}
+                            value={newOptionValue}
+                            onChange={(event) => setNewOptionValue(event.target.value)}
+                            onBlur={() => commitNewOption(rowId, column)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") commitNewOption(rowId, column);
+                              if (event.key === "Escape") setAddingOptionCell(null);
+                            }}
+                          />
+                        </td>
+                      );
+                    }
+
                     return (
                       <td key={column.key}>
                         <select
                           className="filter-input"
+                          aria-label={`Edit ${column.label}`}
                           value={currentValue}
                           disabled={savingCell === cellKey}
                           onChange={(event) => {
                             const selected = event.target.value;
 
                             if (isCreatable && selected === ADD_NEW_OPTION_VALUE) {
-                              const entered = window.prompt(`New ${column.label.toLowerCase()}:`)?.trim();
-                              if (entered) {
-                                void saveCell(rowId, column.key, entered);
-                              }
+                              startAddOption(rowId, column);
                               return;
                             }
 
@@ -466,6 +522,7 @@ export function EditableDataTable({
                           autoFocus
                           className="cell-input"
                           type={column.type === "number" ? "number" : column.type === "date" ? "date" : "text"}
+                          aria-label={`Edit ${column.label}`}
                           value={editValue}
                           onChange={(event) => setEditValue(event.target.value)}
                           onBlur={() => commitEdit(rowId, column)}
@@ -483,7 +540,7 @@ export function EditableDataTable({
                       key={column.key}
                       className={`editable-cell ${errorCell === cellKey ? "editable-cell-error" : ""}`}
                       onClick={() => startEdit(rowId, column.key, value)}
-                      title="Click to edit"
+                      title={errorCell === cellKey ? "Save failed — click to retry" : "Click to edit"}
                     >
                       {savingCell === cellKey ? "Saving…" : formatValue(value)}
                     </td>

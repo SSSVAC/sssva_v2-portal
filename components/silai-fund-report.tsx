@@ -144,7 +144,7 @@ export function SilaiFundReport({ contributionRows, expenseRows, billRows }: Sil
         onExportImage={exportImage}
       />
       {contributionRows.length > 0 ? (
-        <div className="table-panel" style={{ minWidth: 0, overflowX: "auto" }}>
+        <div className="table-panel table-panel-scroll">
           <table className="data-table">
             <thead>
               <tr>
@@ -184,7 +184,7 @@ export function SilaiFundReport({ contributionRows, expenseRows, billRows }: Sil
         onExportImage={exportImage}
       />
       {expenseRows.length > 0 ? (
-        <div className="table-panel" style={{ minWidth: 0, overflowX: "auto" }}>
+        <div className="table-panel table-panel-scroll">
           <table className="data-table">
             <thead>
               <tr>
@@ -224,7 +224,7 @@ export function SilaiFundReport({ contributionRows, expenseRows, billRows }: Sil
         onExportImage={exportImage}
       />
       {billRows.length > 0 ? (
-        <div className="table-panel" style={{ minWidth: 0, overflowX: "auto" }}>
+        <div className="table-panel table-panel-scroll">
           <table className="data-table">
             <thead>
               <tr>

@@ -191,6 +191,31 @@ input {
   background: var(--primary);
 }
 
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.nav-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.nav-toggle span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--foreground);
+}
+
 .main {
   display: grid;
   gap: 24px;
@@ -216,6 +241,20 @@ input {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.sync-form-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.sync-target-select {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
 }
 
 .metric-grid {
@@ -285,6 +324,11 @@ input {
 .table-panel {
   min-width: 0;
   padding: 18px;
+}
+
+.table-panel-scroll {
+  min-width: 0;
+  overflow-x: auto;
 }
 
 .panel-head {
@@ -488,6 +532,86 @@ input {
   opacity: 1;
 }
 
+.toast-stack {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(360px, calc(100vw - 40px));
+}
+
+.toast {
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: white;
+  background: var(--foreground);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25);
+  font-size: 14px;
+}
+
+.toast-success {
+  background: var(--success);
+}
+
+.toast-error {
+  background: var(--danger);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.modal-panel {
+  width: 100%;
+  max-width: 420px;
+  border-radius: 10px;
+  padding: 22px;
+  background: var(--panel);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.3);
+}
+
+.modal-panel h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.page-loading {
+  display: grid;
+  min-height: 60vh;
+  place-items: center;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media print {
   @page {
     size: A4;
@@ -630,5 +754,40 @@ input {
 
   .metric-grid {
     grid-template-columns: 1fr;
+  }
+
+  .nav-toggle {
+    display: flex;
+  }
+
+  .nav {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    display: none;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+    background: var(--panel);
+    box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+  }
+
+  .nav-open {
+    display: flex;
+  }
+
+  .nav form {
+    width: 100%;
+  }
+
+  .nav .button {
+    width: 100%;
+  }
+
+  .table-panel-scroll {
+    overflow-x: auto;
   }
 }

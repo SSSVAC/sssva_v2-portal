@@ -50,7 +50,23 @@ const INVOICE_DETAIL_MAX_ATTEMPTS = 3;
 const DEFAULT_BILL_DETAIL_CONCURRENCY = 4;
 const BILL_DETAIL_MAX_ATTEMPTS = 3;
 const EXPENSE_DETAIL_MAX_ATTEMPTS = 3;
+const LIST_PAGE_MAX_ATTEMPTS = 3;
 const DEFAULT_LIST_MAX_PAGES = 100;
+const FETCH_TIMEOUT_MS = 30000;
+
+// Every Zoho API call goes through this instead of the bare fetch() so a
+// hung response can't block a sync indefinitely — the only backstop before
+// this was Vercel's hard maxDuration kill on the whole request.
+async function fetchWithTimeout(url: string | URL, init: RequestInit = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 export async function getZohoAccessToken() {
   const accountsBaseUrl = getEnv("ZOHO_ACCOUNTS_BASE_URL", "https://accounts.zoho.com");
@@ -61,7 +77,7 @@ export async function getZohoAccessToken() {
     grant_type: "refresh_token"
   });
 
-  const response = await fetch(`${accountsBaseUrl}/oauth/v2/token`, {
+  const response = await fetchWithTimeout(`${accountsBaseUrl}/oauth/v2/token`, {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded"
@@ -282,7 +298,7 @@ export async function fetchZohoCustomerDetail(accessToken: string, customerId: s
   url.searchParams.set("organization_id", organizationId);
 
   for (let attempt = 1; attempt <= CUSTOMER_DETAIL_MAX_ATTEMPTS; attempt += 1) {
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       headers: {
         Authorization: `Zoho-oauthtoken ${accessToken}`
       },
@@ -323,7 +339,7 @@ export async function fetchZohoInvoiceDetail(accessToken: string, invoiceId: str
   url.searchParams.set("organization_id", organizationId);
 
   for (let attempt = 1; attempt <= INVOICE_DETAIL_MAX_ATTEMPTS; attempt += 1) {
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       headers: {
         Authorization: `Zoho-oauthtoken ${accessToken}`
       },
@@ -358,7 +374,7 @@ export async function fetchZohoBillDetail(accessToken: string, billId: string) {
   url.searchParams.set("organization_id", organizationId);
 
   for (let attempt = 1; attempt <= BILL_DETAIL_MAX_ATTEMPTS; attempt += 1) {
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       headers: {
         Authorization: `Zoho-oauthtoken ${accessToken}`
       },
@@ -397,7 +413,7 @@ export async function fetchZohoExpenseDetail(accessToken: string, expenseId: str
   url.searchParams.set("organization_id", organizationId);
 
   for (let attempt = 1; attempt <= EXPENSE_DETAIL_MAX_ATTEMPTS; attempt += 1) {
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       headers: {
         Authorization: `Zoho-oauthtoken ${accessToken}`
       },
@@ -448,15 +464,29 @@ async function fetchZohoList(
     url.searchParams.set("per_page", String(perPage));
     url.searchParams.set("page", String(page));
 
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Zoho-oauthtoken ${accessToken}`,
-      },
-      cache: "no-store",
-    });
+    let response: Response | null = null;
 
-    if (!response.ok) {
-      throw new Error(`Zoho ${resource} fetch failed with ${response.status}`);
+    for (let attempt = 1; attempt <= LIST_PAGE_MAX_ATTEMPTS; attempt += 1) {
+      response = await fetchWithTimeout(url, {
+        headers: {
+          Authorization: `Zoho-oauthtoken ${accessToken}`,
+        },
+        cache: "no-store",
+      });
+
+      if (response.ok) break;
+
+      if (attempt < LIST_PAGE_MAX_ATTEMPTS) {
+        const delayMs = getRetryDelayMs(response, attempt);
+        console.warn(
+          `Zoho ${resource} list fetch failed for page ${page} with ${response.status}; retrying attempt ${attempt + 1}/${LIST_PAGE_MAX_ATTEMPTS} after ${delayMs}ms`
+        );
+        await delay(delayMs);
+      }
+    }
+
+    if (!response || !response.ok) {
+      throw new Error(`Zoho ${resource} fetch failed with ${response?.status}`);
     }
 
     const payload = (await response.json()) as Record<string, unknown>;

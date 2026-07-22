@@ -251,6 +251,8 @@ describe("fetchZohoInvoices", () => {
     const result = await fetchZohoInvoices("token");
 
     expect(result).toEqual([{ invoice_id: "1" }, { invoice_id: "2" }, { invoice_id: "3" }]);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    // 2 list pages + 1 detail fetch per invoice, since none of the listed
+    // invoices carry an item_name and the detail backfill fetches it.
+    expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 });
