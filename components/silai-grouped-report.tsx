@@ -84,10 +84,10 @@ export function SilaiGroupedReport({ rows }: SilaiGroupedReportProps) {
   const totalCollected = rows.reduce((sum, row) => sum + row.total, 0);
   const contributorCount = rows.filter((row) => row.total > 0).length;
 
-  const groupExportHeaders = ["Name", "Company", "Address", "Total"];
+  const groupExportHeaders = ["Name", "Address", "Total"];
   const groupExportRows = (groupRows: SilaiGroupedRow[], subtotal: number) => [
-    ...groupRows.map((row) => [row.name, row.company ?? "", row.address ?? "", row.total > 0 ? formatCurrency(row.total) : ""]),
-    ["Subtotal", "", "", formatCurrency(subtotal)]
+    ...groupRows.map((row) => [row.name, row.address ?? "", row.total > 0 ? formatCurrency(row.total) : ""]),
+    ["Subtotal", "", formatCurrency(subtotal)]
   ];
 
   const exportPdf = () => printReportSection(PRINT_TARGET);
@@ -146,7 +146,6 @@ export function SilaiGroupedReport({ rows }: SilaiGroupedReportProps) {
                 <thead>
                   <tr>
                     <th>Name</th>
-                    <th>Company</th>
                     <th>Address</th>
                     <th>Total</th>
                   </tr>
@@ -155,7 +154,6 @@ export function SilaiGroupedReport({ rows }: SilaiGroupedReportProps) {
                   {group.rows.map((row) => (
                     <tr key={row.id}>
                       <td>{row.name}</td>
-                      <td>{row.company ?? "—"}</td>
                       <td>{row.address ?? "—"}</td>
                       <td>{row.total > 0 ? formatCurrency(row.total) : "—"}</td>
                     </tr>
@@ -163,7 +161,7 @@ export function SilaiGroupedReport({ rows }: SilaiGroupedReportProps) {
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td colSpan={3}>Subtotal</td>
+                    <td colSpan={2}>Subtotal</td>
                     <td>{formatCurrency(group.subtotal)}</td>
                   </tr>
                 </tfoot>
