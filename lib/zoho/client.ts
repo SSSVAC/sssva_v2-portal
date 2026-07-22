@@ -77,10 +77,12 @@ export async function getZohoAccessToken() {
   return TokenResponse.parse(await response.json()).access_token;
 }
 
+export type CustomerFieldOverride = { billingAddress: string | null; phone: string | null };
+
 export async function fetchZohoCustomers(
   accessToken: string,
   limit?: number,
-  existingBillingAddresses = new Map<string, string | null>()
+  existingCustomerFields = new Map<string, CustomerFieldOverride>()
 ) {
   const payload = await fetchZohoList(accessToken, "contacts", limit);
   const customers = CustomerResponse.parse(payload).contacts;
@@ -110,12 +112,16 @@ export async function fetchZohoCustomers(
     customerIds,
     getCustomerDetailConcurrency(),
     async (customerId) => {
-      // Already-synced customers skip the detail call entirely to conserve
-      // Zoho's daily API limit; whatever billing address we have stays as-is.
-      if (existingBillingAddresses.has(customerId)) {
+      // Already-synced customers skip the detail call entirely: billing
+      // address and phone are corrected directly in the portal, so once a
+      // customer has been synced once, Zoho's copy of those two fields is
+      // never applied again (also conserves Zoho's daily API limit).
+      const existingFields = existingCustomerFields.get(customerId);
+      if (existingFields) {
         return {
           ...customersById.get(customerId),
-          billing_address: existingBillingAddresses.get(customerId) ?? null
+          billing_address: existingFields.billingAddress,
+          phone: existingFields.phone
         };
       }
 

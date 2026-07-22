@@ -43,6 +43,19 @@ add column if not exists is_member boolean not null default false;
 alter table public.zoho_customers
 add column if not exists collected_by text;
 
+-- Local-only fields, not sourced from Zoho: ownership type, an
+-- admin-defined group (dropdown values come from whatever's already in use
+-- across customers; no group left ungrouped is treated as "Others" in the
+-- UI rather than stored as a literal value), and a manual display order.
+alter table public.zoho_customers
+add column if not exists ownership text;
+
+alter table public.zoho_customers
+add column if not exists customer_group text;
+
+alter table public.zoho_customers
+add column if not exists order_number integer;
+
 create table if not exists public.zoho_expenses (
   id uuid primary key default gen_random_uuid(),
   zoho_expense_id text not null unique,

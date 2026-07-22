@@ -9,7 +9,8 @@ import {
   fetchZohoInvoiceDetail,
   fetchZohoExpenseDetail,
   fetchZohoBillDetail,
-  type BillDetail
+  type BillDetail,
+  type CustomerFieldOverride
 } from "@/lib/zoho/client";
 import { mapZohoBill, mapZohoCustomer, mapZohoExpense, mapZohoInvoice } from "@/lib/zoho/mappers";
 
@@ -79,19 +80,19 @@ export async function runZohoBooksSync(options: ZohoSyncOptions = DEFAULT_SYNC_O
     const accessToken = await getZohoAccessToken();
 
     // Records already synced to Supabase skip the per-record Zoho detail
-    // call (billing address / line item name) to stay within API rate limits.
-    // Only brand-new customers/invoices/bills pay for a detail lookup; bills
-    // still missing account_name or item_name from a prior sync keep getting
-    // retried until Zoho's line items backfill them.
-    const [existingBillingAddresses, existingItemNames, existingBillDetails] = await Promise.all([
-      resolvedOptions.customers ? loadExistingCustomerBillingAddresses(supabase) : Promise.resolve(new Map<string, string | null>()),
+    // call (billing address / phone / line item name) to stay within API
+    // rate limits. Only brand-new customers/invoices/bills pay for a detail
+    // lookup; bills still missing account_name or item_name from a prior
+    // sync keep getting retried until Zoho's line items backfill them.
+    const [existingCustomerFields, existingItemNames, existingBillDetails] = await Promise.all([
+      resolvedOptions.customers ? loadExistingCustomerFields(supabase) : Promise.resolve(new Map<string, CustomerFieldOverride>()),
       resolvedOptions.invoices ? loadExistingInvoiceItemNames(supabase) : Promise.resolve(new Map<string, string | null>()),
       resolvedOptions.bills ? loadExistingBillDetails(supabase) : Promise.resolve(new Map<string, BillDetail>())
     ]);
 
     const [customers, invoices, expenses, bills] = await Promise.all([
       resolvedOptions.customers
-        ? fetchZohoCustomers(accessToken, undefined, existingBillingAddresses)
+        ? fetchZohoCustomers(accessToken, undefined, existingCustomerFields)
         : Promise.resolve([]),
       resolvedOptions.invoices ? fetchZohoInvoices(accessToken, existingItemNames) : Promise.resolve([]),
       resolvedOptions.expenses ? fetchZohoExpenses(accessToken) : Promise.resolve([]),
@@ -330,16 +331,16 @@ async function upsertResyncedRecords<T extends { [key: string]: unknown }>(
   return { resynced: mapped.length, failed };
 }
 
-async function loadExistingCustomerBillingAddresses(supabase: ReturnType<typeof createAdminClient>) {
-  const map = new Map<string, string | null>();
-  const { data, error } = await supabase.from("zoho_customers").select("zoho_customer_id, billing_address");
+async function loadExistingCustomerFields(supabase: ReturnType<typeof createAdminClient>) {
+  const map = new Map<string, CustomerFieldOverride>();
+  const { data, error } = await supabase.from("zoho_customers").select("zoho_customer_id, billing_address, phone");
 
   if (error || !data) {
     return map;
   }
 
   for (const row of data) {
-    map.set(row.zoho_customer_id, row.billing_address);
+    map.set(row.zoho_customer_id, { billingAddress: row.billing_address, phone: row.phone });
   }
 
   return map;

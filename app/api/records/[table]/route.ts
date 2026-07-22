@@ -12,7 +12,10 @@ const EDITABLE_TABLES = {
     "billing_address",
     "is_active",
     "is_member",
-    "collected_by"
+    "collected_by",
+    "ownership",
+    "customer_group",
+    "order_number"
   ],
   zoho_invoices: [
     "invoice_number",

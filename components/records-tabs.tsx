@@ -29,7 +29,10 @@ const CUSTOMER_COLUMNS: RecordColumn[] = [
   { key: "billing_address", label: "Billing Address", type: "text", editable: true },
   { key: "is_active", label: "Active", type: "boolean", editable: true },
   { key: "is_member", label: "Member", type: "boolean", editable: true },
-  { key: "collected_by", label: "Collected By", type: "text", editable: true }
+  { key: "collected_by", label: "Collected By", type: "text", editable: true },
+  { key: "ownership", label: "Ownership", type: "select", editable: true, options: ["Tenant", "Owner", "Company"] },
+  { key: "customer_group", label: "Group", type: "select", editable: true, emptyLabel: "Others" },
+  { key: "order_number", label: "Order #", type: "number", editable: true }
 ];
 
 const INVOICE_COLUMNS: RecordColumn[] = [

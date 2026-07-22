@@ -15,6 +15,9 @@ export type Database = {
           is_active: boolean;
           is_member: boolean;
           collected_by: string | null;
+          ownership: string | null;
+          customer_group: string | null;
+          order_number: number | null;
           raw: Json;
           synced_at: string;
           created_at: string;
@@ -31,6 +34,9 @@ export type Database = {
           is_active?: boolean;
           is_member?: boolean;
           collected_by?: string | null;
+          ownership?: string | null;
+          customer_group?: string | null;
+          order_number?: number | null;
           raw?: Json;
           synced_at?: string;
           created_at?: string;

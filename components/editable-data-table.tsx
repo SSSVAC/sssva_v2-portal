@@ -6,12 +6,22 @@ import { useRouter } from "next/navigation";
 export type RecordColumn = {
   key: string;
   label: string;
-  type: "text" | "number" | "boolean" | "date";
+  type: "text" | "number" | "boolean" | "date" | "select";
   editable: boolean;
+  // For type "select": fixed dropdown options. If omitted, options are
+  // derived from whatever distinct values already exist for this column
+  // across all rows, plus an "Add new…" entry to introduce one.
+  options?: string[];
+  // For type "select": label shown for a null/empty value, and offered as
+  // an explicit option that saves null (e.g. "Others" for an unset group).
+  emptyLabel?: string;
 };
 
 type RowValue = string | number | boolean | null;
 type Row = Record<string, unknown>;
+
+const ADD_NEW_OPTION_VALUE = "__add_new__";
+const EMPTY_FILTER_VALUE = "__empty__";
 
 type ActionColumn = {
   label: string;
@@ -54,6 +64,30 @@ export function EditableDataTable({
   const [resyncMessage, setResyncMessage] = useState<string | null>(null);
   const router = useRouter();
 
+  const derivedSelectOptions = useMemo(() => {
+    const map: Record<string, string[]> = {};
+
+    columns.forEach((column) => {
+      if (column.type !== "select" || column.options) return;
+
+      const values = new Set<string>();
+      rows.forEach((row) => {
+        const value = row[column.key];
+        if (typeof value === "string" && value.trim() !== "") {
+          values.add(value);
+        }
+      });
+
+      map[column.key] = Array.from(values).sort((a, b) => a.localeCompare(b));
+    });
+
+    return map;
+  }, [columns, rows]);
+
+  function selectOptionsFor(column: RecordColumn) {
+    return column.options ?? derivedSelectOptions[column.key] ?? [];
+  }
+
   const filteredRows = useMemo(() => {
     return rows.filter((row) => {
       if (presetFilter && !presetFilter(row)) return false;
@@ -64,6 +98,11 @@ export function EditableDataTable({
 
         if (column.type === "boolean") {
           return String(Boolean(row[column.key])) === filterValue;
+        }
+
+        if (column.type === "select" && filterValue === EMPTY_FILTER_VALUE) {
+          const raw = row[column.key];
+          return raw === null || raw === undefined || raw === "";
         }
 
         return String(row[column.key] ?? "")
@@ -317,6 +356,22 @@ export function EditableDataTable({
                     <option value="true">True</option>
                     <option value="false">False</option>
                   </select>
+                ) : column.type === "select" ? (
+                  <select
+                    className="filter-input"
+                    value={filters[column.key] ?? ""}
+                    onChange={(event) =>
+                      setFilters((prev) => ({ ...prev, [column.key]: event.target.value }))
+                    }
+                  >
+                    <option value="">All</option>
+                    {column.emptyLabel && <option value={EMPTY_FILTER_VALUE}>{column.emptyLabel}</option>}
+                    {selectOptionsFor(column).map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
                 ) : (
                   <input
                     className="filter-input"
@@ -364,6 +419,42 @@ export function EditableDataTable({
                           disabled={savingCell === cellKey}
                           onChange={(event) => void saveCell(rowId, column.key, event.target.checked)}
                         />
+                      </td>
+                    );
+                  }
+
+                  if (column.type === "select") {
+                    const isCreatable = !column.options;
+                    const currentValue = typeof value === "string" ? value : "";
+
+                    return (
+                      <td key={column.key}>
+                        <select
+                          className="filter-input"
+                          value={currentValue}
+                          disabled={savingCell === cellKey}
+                          onChange={(event) => {
+                            const selected = event.target.value;
+
+                            if (isCreatable && selected === ADD_NEW_OPTION_VALUE) {
+                              const entered = window.prompt(`New ${column.label.toLowerCase()}:`)?.trim();
+                              if (entered) {
+                                void saveCell(rowId, column.key, entered);
+                              }
+                              return;
+                            }
+
+                            void saveCell(rowId, column.key, selected === "" ? null : selected);
+                          }}
+                        >
+                          <option value="">{column.emptyLabel ?? "—"}</option>
+                          {selectOptionsFor(column).map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                          {isCreatable && <option value={ADD_NEW_OPTION_VALUE}>+ Add new…</option>}
+                        </select>
                       </td>
                     );
                   }
