@@ -12,14 +12,15 @@ import type { Database } from "@/types/database";
 
 export const dynamic = "force-dynamic";
 
-// Invoice line-item name that marks a contribution to the statue
+// Invoice line-item names that mark a contribution to the statue
 // installation fund. Matched case-insensitively/contains, since Zoho line
-// item text may carry extra whitespace or minor variation.
-const FUND_ITEM_NAME = "சிலை வைப்பதற்கான நிதி";
+// item text may carry extra whitespace or minor variation, and Zoho has
+// recorded these contributions under two different item names.
+const FUND_ITEM_NAMES = ["சிலை வைப்பதற்கான நிதி", "Murugar & Iyyapan Statue Funds"];
 const FUND_MINIMUM_AMOUNT = 3000;
 
 // Invoice line-item name used for general recurring donations, matched the
-// same case-insensitive/contains way as FUND_ITEM_NAME.
+// same case-insensitive/contains way as FUND_ITEM_NAMES.
 const DONATION_ITEM_NAME = "Donations and/or Sponsorships";
 const DONATION_MONTHS_SHOWN = 5;
 
@@ -116,7 +117,7 @@ export default async function ReportsPage() {
     admin
       .from("zoho_invoices")
       .select("customer_id, customer_name, total")
-      .ilike("item_name", `%${FUND_ITEM_NAME}%`)
+      .or(FUND_ITEM_NAMES.map((name) => `item_name.ilike.%${name}%`).join(","))
       .returns<Contribution[]>(),
     admin
       .from("zoho_invoices")
@@ -145,7 +146,7 @@ export default async function ReportsPage() {
     admin
       .from("zoho_invoices")
       .select("customer_name, date, total")
-      .ilike("item_name", `%${FUND_ITEM_NAME}%`)
+      .or(FUND_ITEM_NAMES.map((name) => `item_name.ilike.%${name}%`).join(","))
       .order("date", { ascending: false })
       .returns<SilaiContributionInvoice[]>(),
     admin
