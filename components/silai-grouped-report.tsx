@@ -8,7 +8,7 @@ import {
   exportSectionsToHtml,
   exportSectionToImage,
   exportSilaiGroupedToExcel,
-  copySilaiGroupedSummaryToWhatsApp,
+  copySilaiGroupedToWhatsApp,
   printReportSection,
   type ExportSection
 } from "@/lib/export";
@@ -98,6 +98,13 @@ export function SilaiGroupedReport({ rows }: SilaiGroupedReportProps) {
     ["Subtotal", "", "", formatCurrency(subtotal)]
   ];
 
+  const excelGroups = () =>
+    groups.map((group) => ({
+      groupName: group.groupName,
+      rows: group.rows.map((row) => ({ name: row.name, phone: row.phone, address: row.address, total: row.total })),
+      subtotal: group.subtotal
+    }));
+
   const exportPdf = () => printReportSection(PRINT_TARGET);
   const exportImage = () => exportSectionToImage(PRINT_TARGET, "silai-grouped-report.png");
   const exportExcel = () =>
@@ -107,22 +114,9 @@ export function SilaiGroupedReport({ rows }: SilaiGroupedReportProps) {
         { label: "Total Collected", value: totalCollected },
         { label: "Members Contributed", value: contributorCount }
       ],
-      groups.map((group) => ({
-        groupName: group.groupName,
-        rows: group.rows.map((row) => ({ name: row.name, phone: row.phone, address: row.address, total: row.total })),
-        subtotal: group.subtotal
-      }))
+      excelGroups()
     );
-  const copyWhatsAppText = () =>
-    copySilaiGroupedSummaryToWhatsApp(
-      formatCurrency(totalCollected),
-      contributorCount,
-      groups.map((group) => ({
-        groupName: group.groupName,
-        contributorCount: group.rows.filter((row) => row.total > 0).length,
-        subtotal: formatCurrency(group.subtotal)
-      }))
-    );
+  const copyWhatsAppText = () => copySilaiGroupedToWhatsApp(totalCollected, contributorCount, excelGroups());
 
   const fullReportSections = (): ExportSection[] => [
     {

@@ -1,3 +1,5 @@
+import { formatCurrency } from "@/lib/format";
+
 export type ExportColumn = {
   label: string;
 };
@@ -331,14 +333,14 @@ async function copyTextToClipboard(text: string) {
   }
 }
 
-// A short, WhatsApp-ready summary (*bold* is WhatsApp's own markdown) —
-// group subtotals only, not the full name/phone/address roster, since a
-// "blurb" meant to be pasted into a chat should read as a status update,
-// not a data dump of everyone's contact details.
-export async function copySilaiGroupedSummaryToWhatsApp(
-  totalCollected: string,
+// WhatsApp-ready text (*bold*/_italic_ are WhatsApp's own markdown) with the
+// same per-contributor detail as the other exports — name, phone, address,
+// amount — grouped and subtotaled, so a group leader can paste the whole
+// roster into a chat rather than just a totals summary.
+export async function copySilaiGroupedToWhatsApp(
+  totalCollected: number,
   contributorCount: number,
-  groups: { groupName: string; contributorCount: number; subtotal: string }[]
+  groups: ExcelGroupSection[]
 ) {
   const generatedOn = new Intl.DateTimeFormat("en-IN", { dateStyle: "medium" }).format(new Date());
 
@@ -346,14 +348,24 @@ export async function copySilaiGroupedSummaryToWhatsApp(
     "*Silai by Group Report*",
     "சிலை வைப்பதற்கான நிதி",
     "",
-    `*Total Collected:* ${totalCollected}`,
+    `*Total Collected:* ${formatCurrency(totalCollected)}`,
     `*Contributors:* ${contributorCount}`,
-    "",
-    "*By Group:*",
-    ...groups.map((group, index) => `${index + 1}. ${group.groupName} — ${group.subtotal} (${group.contributorCount})`),
-    "",
-    `_Generated ${generatedOn}_`
+    ""
   ];
+
+  groups.forEach((group) => {
+    lines.push(`*${group.groupName} (${group.rows.length})*`);
+
+    group.rows.forEach((row, index) => {
+      const parts = [row.name, row.phone, row.address].filter((part): part is string => Boolean(part));
+      const amount = row.total > 0 ? formatCurrency(row.total) : "—";
+      lines.push(`${index + 1}. ${parts.join(" - ")} - ${amount}`);
+    });
+
+    lines.push(`*Subtotal:* ${formatCurrency(group.subtotal)}`, "");
+  });
+
+  lines.push(`_Generated ${generatedOn}_`);
 
   await copyTextToClipboard(lines.join("\n"));
 }
