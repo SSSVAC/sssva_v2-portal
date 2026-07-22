@@ -47,7 +47,13 @@ type Member = Pick<CustomerRow, "zoho_customer_id" | "display_name" | "phone" | 
 type Customer = Pick<CustomerRow, "zoho_customer_id" | "display_name" | "billing_address">;
 type SilaiGroupedCustomer = Pick<
   CustomerRow,
-  "zoho_customer_id" | "display_name" | "company_name" | "billing_address" | "customer_group" | "order_number"
+  | "zoho_customer_id"
+  | "display_name"
+  | "company_name"
+  | "billing_address"
+  | "customer_group"
+  | "order_number"
+  | "is_member"
 >;
 type Contribution = Pick<InvoiceRow, "customer_id" | "customer_name" | "total">;
 type DonationInvoice = Pick<InvoiceRow, "customer_id" | "customer_name" | "total" | "date">;
@@ -156,7 +162,7 @@ export default async function ReportsPage() {
       .returns<SilaiBillSource[]>(),
     admin
       .from("zoho_customers")
-      .select("zoho_customer_id, display_name, company_name, billing_address, customer_group, order_number")
+      .select("zoho_customer_id, display_name, company_name, billing_address, customer_group, order_number, is_member")
       .returns<SilaiGroupedCustomer[]>()
   ]);
 
@@ -515,8 +521,11 @@ function buildSilaiGroupedRows(customers: SilaiGroupedCustomer[], contributions:
         address: customer.billing_address,
         group: customer.customer_group,
         orderNumber: customer.order_number,
-        total
+        total,
+        isMember: customer.is_member
       };
     })
-    .filter((row) => row.total > 0);
+    // Members are listed regardless of whether they've contributed;
+    // non-members only show up if they actually gave to the fund.
+    .filter((row) => row.isMember || row.total > 0);
 }

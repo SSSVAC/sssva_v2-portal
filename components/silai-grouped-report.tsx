@@ -13,6 +13,7 @@ export type SilaiGroupedRow = {
   group: string | null;
   orderNumber: number | null;
   total: number;
+  isMember: boolean;
 };
 
 type SilaiGroupedReportProps = {
@@ -21,6 +22,24 @@ type SilaiGroupedReportProps = {
 
 const OTHERS_GROUP_LABEL = "Others";
 const PRINT_TARGET = "silai-grouped";
+
+// Groups are streets/areas with a fixed physical order the temple committee
+// walks in; anything not in this list (a newly-added group not yet added
+// here) sorts after the known ones and before "Others".
+const GROUP_ORDER = [
+  "Ramaiya Nagar",
+  "Kalaignar Nagar 2nd Street",
+  "Kalaignar Nagar 1st Street",
+  "Kalluri Salai",
+  "Kalluri Salai Cross Street",
+  "Balamurugan Nagar"
+];
+
+function groupSortRank(name: string) {
+  if (name === OTHERS_GROUP_LABEL) return Number.POSITIVE_INFINITY;
+  const index = GROUP_ORDER.indexOf(name);
+  return index === -1 ? GROUP_ORDER.length : index;
+}
 
 function sortWithinGroup(rows: SilaiGroupedRow[]) {
   return [...rows].sort((a, b) => {
@@ -43,8 +62,9 @@ export function SilaiGroupedReport({ rows }: SilaiGroupedReportProps) {
     });
 
     const groupNames = Array.from(byGroup.keys()).sort((a, b) => {
-      if (a === OTHERS_GROUP_LABEL) return 1;
-      if (b === OTHERS_GROUP_LABEL) return -1;
+      const rankA = groupSortRank(a);
+      const rankB = groupSortRank(b);
+      if (rankA !== rankB) return rankA - rankB;
       return a.localeCompare(b);
     });
 
@@ -56,11 +76,11 @@ export function SilaiGroupedReport({ rows }: SilaiGroupedReportProps) {
   }, [rows]);
 
   const totalCollected = rows.reduce((sum, row) => sum + row.total, 0);
-  const contributorCount = rows.length;
+  const contributorCount = rows.filter((row) => row.total > 0).length;
 
   const groupExportHeaders = ["Name", "Company", "Address", "Total"];
   const groupExportRows = (groupRows: SilaiGroupedRow[], subtotal: number) => [
-    ...groupRows.map((row) => [row.name, row.company ?? "", row.address ?? "", formatCurrency(row.total)]),
+    ...groupRows.map((row) => [row.name, row.company ?? "", row.address ?? "", row.total > 0 ? formatCurrency(row.total) : ""]),
     ["Subtotal", "", "", formatCurrency(subtotal)]
   ];
 
@@ -129,7 +149,7 @@ export function SilaiGroupedReport({ rows }: SilaiGroupedReportProps) {
                       <td>{row.name}</td>
                       <td>{row.company ?? "—"}</td>
                       <td>{row.address ?? "—"}</td>
-                      <td>{formatCurrency(row.total)}</td>
+                      <td>{row.total > 0 ? formatCurrency(row.total) : "—"}</td>
                     </tr>
                   ))}
                 </tbody>
