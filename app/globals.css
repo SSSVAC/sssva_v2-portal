@@ -586,6 +586,14 @@ input {
     display: table-header-group;
   }
 
+  /* Browsers default <tfoot> to table-footer-group, which repeats it at the
+     bottom of every printed page (like thead repeating at the top). Reports
+     with a subtotal row per table (e.g. Silai by Group) only want it once,
+     right after that table's own rows, so print it as a normal row group. */
+  .data-table tfoot {
+    display: table-row-group;
+  }
+
   .data-table tr {
     break-inside: avoid;
   }
