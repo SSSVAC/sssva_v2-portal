@@ -51,6 +51,7 @@ type SilaiGroupedCustomer = Pick<
   | "zoho_customer_id"
   | "display_name"
   | "company_name"
+  | "phone"
   | "billing_address"
   | "customer_group"
   | "order_number"
@@ -163,7 +164,9 @@ export default async function ReportsPage() {
       .returns<SilaiBillSource[]>(),
     admin
       .from("zoho_customers")
-      .select("zoho_customer_id, display_name, company_name, billing_address, customer_group, order_number, is_member")
+      .select(
+        "zoho_customer_id, display_name, company_name, phone, billing_address, customer_group, order_number, is_member"
+      )
       .returns<SilaiGroupedCustomer[]>()
   ]);
 
@@ -524,6 +527,7 @@ function buildSilaiGroupedRows(customers: SilaiGroupedCustomer[], contributions:
         id: customer.zoho_customer_id,
         name: customer.display_name,
         company: customer.company_name,
+        phone: customer.phone,
         address: customer.billing_address,
         group: customer.customer_group,
         orderNumber: customer.order_number,

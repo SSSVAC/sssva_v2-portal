@@ -171,7 +171,7 @@ export async function exportSectionToImage(target: string, filename: string) {
 
 export type ExcelGroupSection = {
   groupName: string;
-  rows: { name: string; address: string | null; total: number }[];
+  rows: { name: string; phone: string | null; address: string | null; total: number }[];
   subtotal: number;
 };
 
@@ -195,27 +195,28 @@ export async function exportSilaiGroupedToExcel(
 
   sheet.columns = [
     { key: "name", width: 32 },
+    { key: "phone", width: 18 },
     { key: "address", width: 44 },
     { key: "total", width: 16 }
   ];
 
   const titleRow = sheet.addRow(["Silai by Group Report"]);
   titleRow.font = { bold: true, size: 16 };
-  sheet.mergeCells(titleRow.number, 1, titleRow.number, 3);
+  sheet.mergeCells(titleRow.number, 1, titleRow.number, 4);
 
   const generatedRow = sheet.addRow([
     `Generated ${new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(new Date())}`
   ]);
   generatedRow.font = { color: { argb: "FF6B7280" }, italic: true };
-  sheet.mergeCells(generatedRow.number, 1, generatedRow.number, 3);
+  sheet.mergeCells(generatedRow.number, 1, generatedRow.number, 4);
 
   sheet.addRow([]);
 
   metrics.forEach((metric) => {
-    const row = sheet.addRow([metric.label, "", metric.value]);
+    const row = sheet.addRow([metric.label, "", "", metric.value]);
     row.font = { bold: true };
     if (typeof metric.value === "number") {
-      row.getCell(3).numFmt = EXCEL_CURRENCY_FORMAT;
+      row.getCell(4).numFmt = EXCEL_CURRENCY_FORMAT;
     }
   });
 
@@ -227,22 +228,22 @@ export async function exportSilaiGroupedToExcel(
     groupRow.eachCell({ includeEmpty: true }, (cell) => {
       cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: EXCEL_GROUP_FILL } };
     });
-    sheet.mergeCells(groupRow.number, 1, groupRow.number, 3);
+    sheet.mergeCells(groupRow.number, 1, groupRow.number, 4);
 
-    const headerRow = sheet.addRow(["Name", "Address", "Total"]);
+    const headerRow = sheet.addRow(["Name", "Phone", "Address", "Total"]);
     headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
     headerRow.eachCell((cell) => {
       cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: EXCEL_HEADER_FILL } };
     });
 
     group.rows.forEach((row) => {
-      const dataRow = sheet.addRow([row.name, row.address ?? "", row.total]);
-      dataRow.getCell(3).numFmt = EXCEL_CURRENCY_FORMAT;
+      const dataRow = sheet.addRow([row.name, row.phone ?? "", row.address ?? "", row.total]);
+      dataRow.getCell(4).numFmt = EXCEL_CURRENCY_FORMAT;
     });
 
-    const subtotalRow = sheet.addRow(["Subtotal", "", group.subtotal]);
+    const subtotalRow = sheet.addRow(["Subtotal", "", "", group.subtotal]);
     subtotalRow.font = { bold: true };
-    subtotalRow.getCell(3).numFmt = EXCEL_CURRENCY_FORMAT;
+    subtotalRow.getCell(4).numFmt = EXCEL_CURRENCY_FORMAT;
     subtotalRow.eachCell({ includeEmpty: true }, (cell) => {
       cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: EXCEL_SUBTOTAL_FILL } };
     });
