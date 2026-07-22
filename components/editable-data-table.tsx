@@ -341,7 +341,7 @@ export function EditableDataTable({
         onCancel={() => setConfirmDeleteOpen(false)}
       />
 
-      <div className="table-panel-scroll">
+      <div className="table-panel-scroll records-table-wrap">
       <table className="data-table">
         <thead>
           <tr>

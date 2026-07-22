@@ -4,11 +4,18 @@
   --muted: #6b7280;
   --border: #d9dee7;
   --panel: #ffffff;
+  --panel-alt: #f6f8fa;
+  --row-hover: #eef2f6;
   --primary: #0f766e;
   --primary-dark: #115e59;
+  --primary-soft: rgba(15, 118, 110, 0.12);
   --accent: #c2410c;
   --success: #15803d;
   --danger: #b91c1c;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.18);
+  --radius: 10px;
 }
 
 * {
@@ -117,6 +124,16 @@ input {
   padding: 12px 14px;
   background: #fff;
   color: var(--foreground);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input:focus,
+.filter-input:focus,
+.cell-input:focus,
+.sync-target-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
 }
 
 .button {
@@ -132,16 +149,30 @@ input {
   background: var(--primary);
   font-weight: 700;
   cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
 }
 
 .button:hover {
   background: var(--primary-dark);
 }
 
+.button:active {
+  transform: translateY(1px);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: none;
+  transform: none;
+}
+
 .button.secondary {
   border: 1px solid var(--border);
   color: var(--foreground);
   background: #fff;
+  box-shadow: none;
 }
 
 .button.secondary:hover {
@@ -150,6 +181,7 @@ input {
 
 .error-box {
   border: 1px solid #fecaca;
+  border-left: 3px solid var(--danger);
   border-radius: 6px;
   padding: 12px;
   color: var(--danger);
@@ -172,6 +204,7 @@ input {
   padding: 14px 28px;
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-sm);
 }
 
 .brand {
@@ -268,8 +301,9 @@ input {
 .table-panel,
 .report-card {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--panel);
+  box-shadow: var(--shadow-sm);
 }
 
 .report-card {
@@ -292,6 +326,12 @@ input {
   gap: 12px;
   min-height: 132px;
   padding: 18px;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.metric-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 .metric-head {
@@ -331,6 +371,11 @@ input {
   overflow-x: auto;
 }
 
+.records-table-wrap {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
 .panel-head {
   display: flex;
   align-items: center;
@@ -351,7 +396,11 @@ input {
 
 .data-table {
   width: 100%;
-  border-collapse: collapse;
+  /* separate (not collapse) so sticky header cells keep their own borders
+     and background cleanly instead of the collapsed border trick that
+     breaks position: sticky rendering in some browsers. */
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 14px;
 }
 
@@ -365,7 +414,25 @@ input {
 .data-table th {
   color: var(--muted);
   font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
+  background: var(--panel-alt);
+  border-bottom: 1px solid var(--border);
+}
+
+.data-table tbody tr:nth-child(even) {
+  background: var(--panel-alt);
+}
+
+.data-table tbody tr:hover {
+  background: var(--row-hover);
+}
+
+.records-table-wrap thead tr:first-child th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .status-pill {
@@ -374,6 +441,7 @@ input {
   padding: 4px 9px;
   font-size: 12px;
   font-weight: 750;
+  letter-spacing: 0.01em;
 }
 
 .status-paid {
@@ -402,16 +470,19 @@ input {
 .report-tab {
   border: 0;
   border-bottom: 2px solid transparent;
+  border-radius: 6px 6px 0 0;
   background: none;
   padding: 10px 14px;
   color: var(--muted);
   font-weight: 650;
   font-size: 14px;
   cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .report-tab:hover {
   color: var(--foreground);
+  background: var(--primary-soft);
 }
 
 .report-tab-active {
@@ -423,6 +494,7 @@ input {
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
+  transition: color 0.15s ease;
 }
 
 .sortable-header:hover {
@@ -442,21 +514,23 @@ input {
 .filter-input {
   width: 100%;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 6px;
   padding: 5px 7px;
   color: var(--foreground);
   font-size: 13px;
   font-weight: 400;
   text-transform: none;
   background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .editable-cell {
   cursor: text;
+  transition: background-color 0.1s ease;
 }
 
 .editable-cell:hover {
-  background: #f3f4f6;
+  background: var(--primary-soft);
 }
 
 .editable-cell-error {
@@ -550,6 +624,18 @@ input {
   background: var(--foreground);
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25);
   font-size: 14px;
+  animation: toast-in 0.2s ease;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .toast-success {
@@ -576,7 +662,19 @@ input {
   border-radius: 10px;
   padding: 22px;
   background: var(--panel);
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.3);
+  box-shadow: var(--shadow-lg);
+  animation: modal-in 0.15s ease;
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .modal-panel h3 {
@@ -705,6 +803,15 @@ input {
   .data-table td {
     padding: 6px 8px;
     font-size: 12px;
+  }
+
+  /* The screen UI's zebra striping/tinted header are a screen-only
+     affordance; printed reports stay plain to save toner and print
+     consistently regardless of the browser's background-graphics setting. */
+  .data-table th,
+  .data-table tbody tr:nth-child(even),
+  .data-table tbody tr:hover {
+    background: none;
   }
 
   .data-table thead {
