@@ -2,7 +2,7 @@ export type ExportColumn = {
   label: string;
 };
 
-function downloadBlob(filename: string, content: string, mimeType: string) {
+function downloadBlob(filename: string, content: BlobPart, mimeType: string) {
   const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -167,6 +167,97 @@ export async function exportSectionToImage(target: string, filename: string) {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+}
+
+export type ExcelGroupSection = {
+  groupName: string;
+  rows: { name: string; address: string | null; total: number }[];
+  subtotal: number;
+};
+
+const EXCEL_HEADER_FILL = "FF0F766E"; // --primary
+const EXCEL_GROUP_FILL = "FFE6F4F1"; // light tint of --primary
+const EXCEL_SUBTOTAL_FILL = "FFDCFCE7"; // matches .status-paid
+const EXCEL_CURRENCY_FORMAT = '"₹"#,##0;-"₹"#,##0;"—"';
+
+// Builds a real, styled .xlsx (colored group/header/subtotal rows, borders,
+// currency number formatting on actual numeric cells) via ExcelJS, rather
+// than a plain CSV or an HTML-table-as-.xls trick — for a report meant to be
+// printed/handed out, cell-level color and formatting is the point.
+export async function exportSilaiGroupedToExcel(
+  filename: string,
+  metrics: { label: string; value: string | number }[],
+  groups: ExcelGroupSection[]
+) {
+  const ExcelJS = (await import("exceljs")).default;
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("Silai by Group");
+
+  sheet.columns = [
+    { key: "name", width: 32 },
+    { key: "address", width: 44 },
+    { key: "total", width: 16 }
+  ];
+
+  const titleRow = sheet.addRow(["Silai by Group Report"]);
+  titleRow.font = { bold: true, size: 16 };
+  sheet.mergeCells(titleRow.number, 1, titleRow.number, 3);
+
+  const generatedRow = sheet.addRow([
+    `Generated ${new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(new Date())}`
+  ]);
+  generatedRow.font = { color: { argb: "FF6B7280" }, italic: true };
+  sheet.mergeCells(generatedRow.number, 1, generatedRow.number, 3);
+
+  sheet.addRow([]);
+
+  metrics.forEach((metric) => {
+    const row = sheet.addRow([metric.label, "", metric.value]);
+    row.font = { bold: true };
+    if (typeof metric.value === "number") {
+      row.getCell(3).numFmt = EXCEL_CURRENCY_FORMAT;
+    }
+  });
+
+  sheet.addRow([]);
+
+  groups.forEach((group) => {
+    const groupRow = sheet.addRow([`${group.groupName} (${group.rows.length})`]);
+    groupRow.font = { bold: true, color: { argb: "FF115E59" } };
+    groupRow.eachCell({ includeEmpty: true }, (cell) => {
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: EXCEL_GROUP_FILL } };
+    });
+    sheet.mergeCells(groupRow.number, 1, groupRow.number, 3);
+
+    const headerRow = sheet.addRow(["Name", "Address", "Total"]);
+    headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
+    headerRow.eachCell((cell) => {
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: EXCEL_HEADER_FILL } };
+    });
+
+    group.rows.forEach((row) => {
+      const dataRow = sheet.addRow([row.name, row.address ?? "", row.total]);
+      dataRow.getCell(3).numFmt = EXCEL_CURRENCY_FORMAT;
+    });
+
+    const subtotalRow = sheet.addRow(["Subtotal", "", group.subtotal]);
+    subtotalRow.font = { bold: true };
+    subtotalRow.getCell(3).numFmt = EXCEL_CURRENCY_FORMAT;
+    subtotalRow.eachCell({ includeEmpty: true }, (cell) => {
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: EXCEL_SUBTOTAL_FILL } };
+    });
+
+    sheet.addRow([]);
+  });
+
+  sheet.eachRow((row) => {
+    row.eachCell({ includeEmpty: false }, (cell) => {
+      cell.border = { bottom: { style: "thin", color: { argb: "FFE5E7EB" } } };
+    });
+  });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  downloadBlob(filename, buffer, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 }
 
 // Prints only the report section marked with data-print-id="target" by

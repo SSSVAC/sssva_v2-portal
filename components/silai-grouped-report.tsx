@@ -7,6 +7,7 @@ import {
   exportSectionsToCsv,
   exportSectionsToHtml,
   exportSectionToImage,
+  exportSilaiGroupedToExcel,
   printReportSection,
   type ExportSection
 } from "@/lib/export";
@@ -92,6 +93,19 @@ export function SilaiGroupedReport({ rows }: SilaiGroupedReportProps) {
 
   const exportPdf = () => printReportSection(PRINT_TARGET);
   const exportImage = () => exportSectionToImage(PRINT_TARGET, "silai-grouped-report.png");
+  const exportExcel = () =>
+    exportSilaiGroupedToExcel(
+      "silai-grouped-report.xlsx",
+      [
+        { label: "Total Collected", value: totalCollected },
+        { label: "Members Contributed", value: contributorCount }
+      ],
+      groups.map((group) => ({
+        groupName: group.groupName,
+        rows: group.rows.map((row) => ({ name: row.name, address: row.address, total: row.total })),
+        subtotal: group.subtotal
+      }))
+    );
 
   const fullReportSections = (): ExportSection[] => [
     {
@@ -116,6 +130,7 @@ export function SilaiGroupedReport({ rows }: SilaiGroupedReportProps) {
         onExportHtml={() => exportSectionsToHtml("silai-grouped-report.html", "Silai Grouped Report", fullReportSections())}
         onExportPdf={exportPdf}
         onExportImage={exportImage}
+        onExportExcel={exportExcel}
       />
 
       <div className="metric-grid" aria-label="Silai grouped summary">

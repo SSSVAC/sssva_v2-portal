@@ -1,17 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { Download, FileCode, Image as ImageIcon, Printer } from "lucide-react";
+import { Download, FileCode, FileSpreadsheet, Image as ImageIcon, Printer } from "lucide-react";
 
 type ExportToolbarProps = {
   onExportCsv: () => void;
   onExportHtml: () => void;
   onExportPdf: () => void;
   onExportImage: () => Promise<void>;
+  onExportExcel?: () => Promise<void>;
 };
 
-export function ExportToolbar({ onExportCsv, onExportHtml, onExportPdf, onExportImage }: ExportToolbarProps) {
+export function ExportToolbar({ onExportCsv, onExportHtml, onExportPdf, onExportImage, onExportExcel }: ExportToolbarProps) {
   const [generatingImage, setGeneratingImage] = useState(false);
+  const [generatingExcel, setGeneratingExcel] = useState(false);
 
   async function handleExportImage() {
     setGeneratingImage(true);
@@ -22,6 +24,20 @@ export function ExportToolbar({ onExportCsv, onExportHtml, onExportPdf, onExport
       window.alert("Failed to export image. Please try again.");
     } finally {
       setGeneratingImage(false);
+    }
+  }
+
+  async function handleExportExcel() {
+    if (!onExportExcel) return;
+
+    setGeneratingExcel(true);
+    try {
+      await onExportExcel();
+    } catch (error) {
+      console.error("Failed to export Excel file", error);
+      window.alert("Failed to export Excel file. Please try again.");
+    } finally {
+      setGeneratingExcel(false);
     }
   }
 
@@ -48,6 +64,17 @@ export function ExportToolbar({ onExportCsv, onExportHtml, onExportPdf, onExport
         <ImageIcon size={15} />
         {generatingImage ? "Generating…" : "Export Image"}
       </button>
+      {onExportExcel && (
+        <button
+          type="button"
+          className="button secondary"
+          disabled={generatingExcel}
+          onClick={() => void handleExportExcel()}
+        >
+          <FileSpreadsheet size={15} />
+          {generatingExcel ? "Generating…" : "Export Excel"}
+        </button>
+      )}
     </div>
   );
 }
