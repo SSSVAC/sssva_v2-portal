@@ -258,11 +258,13 @@ function buildMemberRows(members: Member[], contributions: Contribution[]): Memb
   for (const contribution of contributions) {
     const amount = Number(contribution.total ?? 0);
 
+    // Name-keyed totals are a fallback for contributions with no
+    // customer_id; skipping id-matched ones here prevents a second
+    // customer record sharing the same display_name from picking up the
+    // same amount again through the name fallback below.
     if (contribution.customer_id) {
       totalsById.set(contribution.customer_id, (totalsById.get(contribution.customer_id) ?? 0) + amount);
-    }
-
-    if (contribution.customer_name) {
+    } else if (contribution.customer_name) {
       const key = contribution.customer_name.trim().toLowerCase();
       totalsByName.set(key, (totalsByName.get(key) ?? 0) + amount);
     }
@@ -317,13 +319,14 @@ function buildDonorDonationRows(
 
     const amount = Number(invoice.total ?? 0);
 
+    // See buildMemberRows above: name-keyed totals only cover invoices
+    // with no customer_id, so a shared display_name never double-counts
+    // an amount already attributed to another customer by id.
     if (invoice.customer_id) {
       const amounts = amountsById.get(invoice.customer_id) ?? {};
       amounts[monthKey] = (amounts[monthKey] ?? 0) + amount;
       amountsById.set(invoice.customer_id, amounts);
-    }
-
-    if (invoice.customer_name) {
+    } else if (invoice.customer_name) {
       const key = invoice.customer_name.trim().toLowerCase();
       const amounts = amountsByName.get(key) ?? {};
       amounts[monthKey] = (amounts[monthKey] ?? 0) + amount;
@@ -365,13 +368,14 @@ function buildDonorContactRows(
 
     const amount = Number(invoice.total ?? 0);
 
+    // See buildMemberRows above: name-keyed totals only cover invoices
+    // with no customer_id, so a shared display_name never double-counts
+    // an amount already attributed to another customer by id.
     if (invoice.customer_id) {
       const amounts = amountsById.get(invoice.customer_id) ?? {};
       amounts[monthKey] = (amounts[monthKey] ?? 0) + amount;
       amountsById.set(invoice.customer_id, amounts);
-    }
-
-    if (invoice.customer_name) {
+    } else if (invoice.customer_name) {
       const key = invoice.customer_name.trim().toLowerCase();
       const amounts = amountsByName.get(key) ?? {};
       amounts[monthKey] = (amounts[monthKey] ?? 0) + amount;
@@ -499,11 +503,12 @@ function buildSilaiGroupedRows(customers: SilaiGroupedCustomer[], contributions:
   for (const contribution of contributions) {
     const amount = Number(contribution.total ?? 0);
 
+    // See buildMemberRows above: name-keyed totals only cover contributions
+    // with no customer_id, so a shared display_name never double-counts
+    // an amount already attributed to another customer by id.
     if (contribution.customer_id) {
       totalsById.set(contribution.customer_id, (totalsById.get(contribution.customer_id) ?? 0) + amount);
-    }
-
-    if (contribution.customer_name) {
+    } else if (contribution.customer_name) {
       const key = contribution.customer_name.trim().toLowerCase();
       totalsByName.set(key, (totalsByName.get(key) ?? 0) + amount);
     }
