@@ -3,7 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { normalizeSyncOptions, runZohoBooksSync } from "@/lib/zoho/sync";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+// Full "Sync All" runs (customers + invoices + expenses + bills, with
+// per-record detail-fetch backfills) can run past 60s; ask for the
+// platform max and let Vercel clamp it to whatever the plan allows.
+export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
   const authorized = await isAuthorized(request);
