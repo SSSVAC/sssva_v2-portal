@@ -157,7 +157,6 @@ export async function fetchZohoInvoices(accessToken: string, existingItemNames =
     return [];
   }
 
-  const invoicesById = new Map<string, Record<string, unknown>>();
   const invoiceIdsForDetail: string[] = [];
 
   invoices.forEach((invoice) => {
@@ -166,8 +165,6 @@ export async function fetchZohoInvoices(accessToken: string, existingItemNames =
       return;
     }
 
-    invoicesById.set(invoiceId, invoice);
-
     // Already-synced invoices skip the detail call entirely to conserve
     // Zoho's daily API limit, even if their item name isn't captured yet.
     if (!hasInvoiceItemName(invoice) && !existingItemNames.has(invoiceId)) {
@@ -175,30 +172,31 @@ export async function fetchZohoInvoices(accessToken: string, existingItemNames =
     }
   });
 
-  if (invoiceIdsForDetail.length === 0) {
-    return invoices.map((invoice) => {
-      const invoiceId = getInvoiceId(invoice);
-      const existingItemName = invoiceId ? existingItemNames.get(invoiceId) : null;
-      return existingItemName ? { ...invoice, item_name: existingItemName } : invoice;
+  // Only the item name is pulled from the detail endpoint and merged in;
+  // the rest of the invoice (total, balance, etc.) always comes from the
+  // list endpoint. Zoho's invoice detail response has been observed
+  // reporting `total` as the net amount actually received rather than the
+  // billed total (matching `payment_made`, not `sub_total`/line items) for
+  // at least one invoice, so it can't be trusted wholesale — the same
+  // reason bills only pull account_name/item_name out of their detail
+  // response instead of replacing the whole record (see
+  // enrichBillWithLineItemDetails below).
+  const detailItemNameById = new Map<string, string | null>();
+
+  if (invoiceIdsForDetail.length > 0) {
+    const detailResults = await mapWithConcurrency(
+      invoiceIdsForDetail,
+      getInvoiceDetailConcurrency(),
+      async (invoiceId) => {
+        const detail = await fetchZohoInvoiceDetail(accessToken, invoiceId);
+        return { invoiceId, itemName: detail ? extractItemNameFromInvoiceDetail(detail) : null };
+      }
+    );
+
+    detailResults.forEach(({ invoiceId, itemName }) => {
+      detailItemNameById.set(invoiceId, itemName);
     });
   }
-
-  const detailedInvoices = await mapWithConcurrency(
-    invoiceIdsForDetail,
-    getInvoiceDetailConcurrency(),
-    async (invoiceId) => {
-      const detailedInvoice = await fetchZohoInvoiceDetail(accessToken, invoiceId);
-      return detailedInvoice ?? invoicesById.get(invoiceId) ?? null;
-    }
-  );
-
-  const detailedInvoicesById = new Map<string, Record<string, unknown>>();
-  detailedInvoices.forEach((invoice) => {
-    const invoiceId = invoice ? getInvoiceId(invoice) : null;
-    if (invoiceId && invoice) {
-      detailedInvoicesById.set(invoiceId, invoice);
-    }
-  });
 
   return invoices.map((invoice) => {
     const invoiceId = getInvoiceId(invoice);
@@ -211,7 +209,8 @@ export async function fetchZohoInvoices(accessToken: string, existingItemNames =
       return { ...invoice, item_name: existingItemName };
     }
 
-    return detailedInvoicesById.get(invoiceId) ?? invoice;
+    const backfilledItemName = detailItemNameById.get(invoiceId);
+    return backfilledItemName ? { ...invoice, item_name: backfilledItemName } : invoice;
   });
 }
 
@@ -546,6 +545,22 @@ function getCustomerId(customer: Record<string, unknown>) {
 function getInvoiceId(invoice: Record<string, unknown>) {
   const candidate = invoice.invoice_id ?? invoice.invoiceId ?? invoice.id;
   return typeof candidate === "string" && candidate.trim() !== "" ? candidate : null;
+}
+
+function extractItemNameFromInvoiceDetail(detail: Record<string, unknown>): string | null {
+  if (typeof detail.item_name === "string" && detail.item_name.trim() !== "") {
+    return detail.item_name;
+  }
+
+  if (!Array.isArray(detail.line_items)) {
+    return null;
+  }
+
+  const firstLineItem = detail.line_items.find(
+    (item): item is Record<string, unknown> => Boolean(item) && typeof item === "object"
+  );
+  const name = firstLineItem?.name;
+  return typeof name === "string" && name.trim() !== "" ? name : null;
 }
 
 function getBillId(bill: Record<string, unknown>) {
