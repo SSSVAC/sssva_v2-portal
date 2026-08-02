@@ -225,42 +225,6 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows }: Mon
           <div className="metric-value">{formatCurrency(balance)}</div>
           <div className="metric-sub">Received minus spends</div>
         </article>
-        <article className="metric-card">
-          <div className="metric-head">
-            <span>Monthly Donations</span>
-          </div>
-          <div className="metric-value">{formatCurrency(totalDonations)}</div>
-        </article>
-        <article className="metric-card">
-          <div className="metric-head">
-            <span>Archanai</span>
-          </div>
-          <div className="metric-value">{formatCurrency(totalArchanai)}</div>
-        </article>
-        <article className="metric-card">
-          <div className="metric-head">
-            <span>Abhishegam</span>
-          </div>
-          <div className="metric-value">{formatCurrency(totalAbhishegam)}</div>
-        </article>
-        <article className="metric-card">
-          <div className="metric-head">
-            <span>Others</span>
-          </div>
-          <div className="metric-value">{formatCurrency(totalOthers)}</div>
-        </article>
-        <article className="metric-card">
-          <div className="metric-head">
-            <span>Expenses</span>
-          </div>
-          <div className="metric-value">{formatCurrency(totalExpenses)}</div>
-        </article>
-        <article className="metric-card">
-          <div className="metric-head">
-            <span>Bills</span>
-          </div>
-          <div className="metric-value">{formatCurrency(totalBills)}</div>
-        </article>
       </div>
 
       <h3>Income</h3>
