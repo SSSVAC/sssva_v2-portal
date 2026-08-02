@@ -41,7 +41,13 @@ export function mapZohoInvoice(raw: Record<string, unknown>): InvoiceInsert {
     status: optionalString(raw, "status") ?? "unknown",
     date: optionalString(raw, "date"),
     due_date: optionalString(raw, "due_date"),
-    total: optionalNumber(raw, "total") ?? 0,
+    // Zoho's own `total` is net of any invoice-level `adjustment` (e.g. a
+    // payment-gateway/bank fee deducted before the amount hits Accounts
+    // Receivable), so it can read lower than what was actually credited to
+    // the invoice's account. Subtracting `adjustment` back out recovers the
+    // real credited amount — `balance` is left as Zoho reports it, since
+    // that fee isn't something the customer still owes.
+    total: (optionalNumber(raw, "total") ?? 0) - (optionalNumber(raw, "adjustment") ?? 0),
     balance: optionalNumber(raw, "balance") ?? 0,
     currency_code: optionalString(raw, "currency_code"),
     item_name: getItemName(raw),
