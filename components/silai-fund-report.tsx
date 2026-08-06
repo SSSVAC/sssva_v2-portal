@@ -167,18 +167,6 @@ export function SilaiFundReport({ contributionRows, expenseRows, billRows }: Sil
           <div className="metric-value">{formatCurrency(balance)}</div>
           <div className="metric-sub">Contributions minus spent</div>
         </article>
-        <article className="metric-card">
-          <div className="metric-head">
-            <span>Expenses</span>
-          </div>
-          <div className="metric-value">{formatCurrency(totalExpenses)}</div>
-        </article>
-        <article className="metric-card">
-          <div className="metric-head">
-            <span>Bills</span>
-          </div>
-          <div className="metric-value">{formatCurrency(totalBills)}</div>
-        </article>
       </div>
 
       <ExportToolbar
