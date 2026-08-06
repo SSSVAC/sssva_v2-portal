@@ -7,7 +7,7 @@ export type ExportColumn = {
 // A plain string/number renders as-is. The object form additionally colors
 // the cell's background in HTML exports (CSV/Excel ignore `highlight` and
 // just use the value) — e.g. flagging amounts that cross a threshold.
-export type ExportCell = string | number | { value: string | number; highlight?: "success" | "warning" };
+export type ExportCell = string | number | { value: string | number; highlight?: "success" | "warning" | "danger" };
 
 function cellValue(cell: ExportCell): string | number {
   return typeof cell === "object" ? cell.value : cell;
@@ -132,6 +132,7 @@ function buildHtmlDocument(title: string, bodyHtml: string) {
   tbody tr:last-child td { border-bottom: none; }
   .cell-success { background: #dcfce7; color: #166534; font-weight: 700; }
   .cell-warning { background: #fef3c7; color: #854d0e; font-weight: 700; }
+  .cell-danger { background: #fee2e2; color: #991b1b; font-weight: 700; }
   @media (max-width: 640px) {
     body { padding: 16px; }
     h1 { font-size: 18px; }

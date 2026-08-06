@@ -10,6 +10,7 @@ import {
   exportSectionsToHtml,
   exportSectionToImage,
   printReportSection,
+  type ExportCell,
   type ExportSection
 } from "@/lib/export";
 import { groupKeyFor, sortGroupNames } from "@/lib/silai-groups";
@@ -18,9 +19,26 @@ export type SilaiContributionRow = {
   donorName: string | null;
   group: string | null;
   address: string | null;
-  date: string | null;
   total: number;
 };
+
+// Matches the per-member Silai fund minimum used elsewhere (Members Silai
+// Contributions' fully-paid threshold): full (green) at/above it, partial
+// (yellow) below it, none (red) at zero.
+const FULL_AMOUNT_THRESHOLD = 3000;
+
+function amountClass(total: number) {
+  if (total >= FULL_AMOUNT_THRESHOLD) return "cell-success";
+  if (total > 0) return "cell-warning";
+  return "cell-danger";
+}
+
+function amountCell(total: number): ExportCell {
+  const value = formatCurrency(total);
+  if (total >= FULL_AMOUNT_THRESHOLD) return { value, highlight: "success" };
+  if (total > 0) return { value, highlight: "warning" };
+  return { value, highlight: "danger" };
+}
 
 export type SilaiExpenseRow = {
   id: string;
@@ -87,15 +105,10 @@ export function SilaiFundReport({ contributionRows, expenseRows, billRows }: Sil
     ["Bills", formatCurrency(totalBills)]
   ];
 
-  const contributionExportHeaders = ["Donor", "Address", "Date", "Amount"];
-  const contributionGroupExportRows = (rows: SilaiContributionRow[], subtotal: number) => [
-    ...rows.map((row) => [
-      row.donorName ?? "",
-      row.address ?? "",
-      row.date ? formatDateOnly(row.date) : "",
-      formatCurrency(row.total)
-    ]),
-    ["Subtotal", "", "", formatCurrency(subtotal)]
+  const contributionExportHeaders = ["Donor", "Address", "Amount"];
+  const contributionGroupExportRows = (rows: SilaiContributionRow[], subtotal: number): ExportCell[][] => [
+    ...rows.map((row) => [row.donorName ?? "", row.address ?? "", amountCell(row.total)]),
+    ["Subtotal", "", amountCell(subtotal)]
   ];
   const contributionExportSections = (): ExportSection[] =>
     contributionGroups.map((group) => ({
@@ -188,23 +201,21 @@ export function SilaiFundReport({ contributionRows, expenseRows, billRows }: Sil
                   <tr>
                     <th>Donor</th>
                     <th>Address</th>
-                    <th>Date</th>
                     <th>Amount</th>
                   </tr>
                 </thead>
                 <tbody>
                   {group.rows.map((row, index) => (
-                    <tr key={`${row.donorName ?? "unknown"}-${row.date ?? "unknown"}-${index}`}>
+                    <tr key={`${row.donorName ?? "unknown"}-${index}`}>
                       <td>{row.donorName ?? "—"}</td>
                       <td>{row.address ?? "—"}</td>
-                      <td>{row.date ? formatDateOnly(row.date) : "—"}</td>
-                      <td>{formatCurrency(row.total)}</td>
+                      <td className={amountClass(row.total)}>{formatCurrency(row.total)}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td colSpan={3}>Subtotal</td>
+                    <td colSpan={2}>Subtotal</td>
                     <td>{formatCurrency(group.subtotal)}</td>
                   </tr>
                 </tfoot>

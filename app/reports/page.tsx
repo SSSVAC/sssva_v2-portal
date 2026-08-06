@@ -445,9 +445,12 @@ function buildMonthlyBillRows(bills: MonthlyBillSource[]): MonthlyBillRow[] {
     }));
 }
 
-// Sorted (not grouped/sub-tabled) into the same street walking order as
-// Silai by Group / Silai Follow-up, so field-collection staff can read this
-// list in the order they'd actually visit donors.
+// One row per customer (multiple contribution invoices from the same
+// customer are summed into a single total — see buildMemberRows above for
+// why the name fallback only applies to invoices with no customer_id),
+// sorted (not grouped/sub-tabled here) into the same street walking order
+// as Silai by Group / Silai Follow-up, so field-collection staff can read
+// this list in the order they'd actually visit donors.
 function buildSilaiContributionRows(
   invoices: SilaiContributionInvoice[],
   customers: SilaiGroupedCustomer[]
@@ -460,19 +463,52 @@ function buildSilaiContributionRows(
     customerByName.set(customer.display_name.trim().toLowerCase(), customer);
   });
 
-  const rowsWithGroup = invoices.map((invoice) => {
-    const customer =
-      (invoice.customer_id ? customerById.get(invoice.customer_id) : undefined) ??
-      (invoice.customer_name ? customerByName.get(invoice.customer_name.trim().toLowerCase()) : undefined);
+  const totalsById = new Map<string, number>();
+  const nameById = new Map<string, string>();
+  const totalsByName = new Map<string, number>();
 
-    return {
-      name: invoice.customer_name ?? "",
+  invoices.forEach((invoice) => {
+    const amount = Number(invoice.total ?? 0);
+
+    if (invoice.customer_id) {
+      totalsById.set(invoice.customer_id, (totalsById.get(invoice.customer_id) ?? 0) + amount);
+      if (invoice.customer_name && !nameById.has(invoice.customer_id)) {
+        nameById.set(invoice.customer_id, invoice.customer_name);
+      }
+    } else if (invoice.customer_name) {
+      const key = invoice.customer_name.trim().toLowerCase();
+      totalsByName.set(key, (totalsByName.get(key) ?? 0) + amount);
+    }
+  });
+
+  const rowsWithGroup: {
+    name: string;
+    address: string | null;
+    group: string | null;
+    orderNumber: number | null;
+    total: number;
+  }[] = [];
+
+  totalsById.forEach((total, customerId) => {
+    const customer = customerById.get(customerId);
+    rowsWithGroup.push({
+      name: nameById.get(customerId) ?? customer?.display_name ?? "",
       address: customer?.billing_address ?? null,
       group: customer?.customer_group ?? null,
       orderNumber: customer?.order_number ?? null,
-      date: invoice.date,
-      total: Number(invoice.total ?? 0)
-    };
+      total
+    });
+  });
+
+  totalsByName.forEach((total, nameKey) => {
+    const customer = customerByName.get(nameKey);
+    rowsWithGroup.push({
+      name: customer?.display_name ?? nameKey,
+      address: customer?.billing_address ?? null,
+      group: customer?.customer_group ?? null,
+      orderNumber: customer?.order_number ?? null,
+      total
+    });
   });
 
   return groupByStreet(rowsWithGroup)
@@ -481,7 +517,6 @@ function buildSilaiContributionRows(
       donorName: row.name || null,
       group: row.group,
       address: row.address,
-      date: row.date,
       total: row.total
     }));
 }
