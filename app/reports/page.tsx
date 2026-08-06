@@ -479,6 +479,7 @@ function buildSilaiContributionRows(
     .flatMap((group) => group.rows)
     .map((row) => ({
       donorName: row.name || null,
+      group: row.group,
       address: row.address,
       date: row.date,
       total: row.total

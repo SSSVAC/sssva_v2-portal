@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { formatCurrency, formatDateOnly } from "@/lib/format";
 import { ExportToolbar } from "@/components/export-toolbar";
 import {
@@ -11,9 +12,11 @@ import {
   printReportSection,
   type ExportSection
 } from "@/lib/export";
+import { groupKeyFor, sortGroupNames } from "@/lib/silai-groups";
 
 export type SilaiContributionRow = {
   donorName: string | null;
+  group: string | null;
   address: string | null;
   date: string | null;
   total: number;
@@ -53,6 +56,25 @@ export function SilaiFundReport({ contributionRows, expenseRows, billRows }: Sil
   const totalSpent = totalExpenses + totalBills;
   const balance = totalContributions - totalSpent;
 
+  // contributionRows already arrive sorted in street walking order (see
+  // buildSilaiContributionRows in app/reports/page.tsx), so bucketing here
+  // by group preserves the correct order within each section too.
+  const contributionGroups = useMemo(() => {
+    const byGroup = new Map<string, SilaiContributionRow[]>();
+
+    contributionRows.forEach((row) => {
+      const key = groupKeyFor(row.group);
+      const list = byGroup.get(key) ?? [];
+      list.push(row);
+      byGroup.set(key, list);
+    });
+
+    return sortGroupNames(Array.from(byGroup.keys())).map((groupName) => {
+      const rows = byGroup.get(groupName) ?? [];
+      return { groupName, rows, subtotal: sumTotals(rows) };
+    });
+  }, [contributionRows]);
+
   const exportPdf = () => printReportSection(PRINT_TARGET);
   const exportImage = () => exportSectionToImage(PRINT_TARGET, "silai-fund-report.png");
 
@@ -66,15 +88,21 @@ export function SilaiFundReport({ contributionRows, expenseRows, billRows }: Sil
   ];
 
   const contributionExportHeaders = ["Donor", "Address", "Date", "Amount"];
-  const contributionExportRows = () => [
-    ...contributionRows.map((row) => [
+  const contributionGroupExportRows = (rows: SilaiContributionRow[], subtotal: number) => [
+    ...rows.map((row) => [
       row.donorName ?? "",
       row.address ?? "",
       row.date ? formatDateOnly(row.date) : "",
       formatCurrency(row.total)
     ]),
-    ["Total", "", "", formatCurrency(totalContributions)]
+    ["Subtotal", "", "", formatCurrency(subtotal)]
   ];
+  const contributionExportSections = (): ExportSection[] =>
+    contributionGroups.map((group) => ({
+      title: `${group.groupName} (${group.rows.length})`,
+      headers: contributionExportHeaders,
+      rows: contributionGroupExportRows(group.rows, group.subtotal)
+    }));
 
   const expenseExportHeaders = ["Item", "Date", "Amount"];
   const expenseExportRows = () => [
@@ -90,7 +118,7 @@ export function SilaiFundReport({ contributionRows, expenseRows, billRows }: Sil
 
   const fullReportSections = (): ExportSection[] => [
     { title: "Metrics", headers: metricsExportHeaders, rows: metricsExportRows() },
-    { title: "Contributions", headers: contributionExportHeaders, rows: contributionExportRows() },
+    ...contributionExportSections(),
     { title: "Expenses", headers: expenseExportHeaders, rows: expenseExportRows() },
     { title: "Bills", headers: billExportHeaders, rows: billExportRows() }
   ];
@@ -140,44 +168,50 @@ export function SilaiFundReport({ contributionRows, expenseRows, billRows }: Sil
         </article>
       </div>
 
-      <h3>Contributions</h3>
       <ExportToolbar
-        onExportCsv={() => exportToCsv("silai-fund-contributions.csv", contributionExportHeaders, contributionExportRows())}
+        onExportCsv={() => exportSectionsToCsv("silai-fund-contributions.csv", contributionExportSections())}
         onExportHtml={() =>
-          exportToHtml("silai-fund-contributions.html", "Silai Fund — Contributions", contributionExportHeaders, contributionExportRows())
+          exportSectionsToHtml("silai-fund-contributions.html", "Silai Fund — Contributions", contributionExportSections())
         }
         onExportPdf={exportPdf}
         onExportImage={exportImage}
       />
-      {contributionRows.length > 0 ? (
-        <div className="table-panel table-panel-scroll">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Donor</th>
-                <th>Address</th>
-                <th>Date</th>
-                <th>Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {contributionRows.map((row, index) => (
-                <tr key={`${row.donorName ?? "unknown"}-${row.date ?? "unknown"}-${index}`}>
-                  <td>{row.donorName ?? "—"}</td>
-                  <td>{row.address ?? "—"}</td>
-                  <td>{row.date ? formatDateOnly(row.date) : "—"}</td>
-                  <td>{formatCurrency(row.total)}</td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colSpan={3}>Total Contributions</td>
-                <td>{formatCurrency(totalContributions)}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+      {contributionGroups.length > 0 ? (
+        contributionGroups.map((group) => (
+          <div key={group.groupName}>
+            <h3>
+              {group.groupName} ({group.rows.length})
+            </h3>
+            <div className="table-panel table-panel-scroll">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Donor</th>
+                    <th>Address</th>
+                    <th>Date</th>
+                    <th>Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {group.rows.map((row, index) => (
+                    <tr key={`${row.donorName ?? "unknown"}-${row.date ?? "unknown"}-${index}`}>
+                      <td>{row.donorName ?? "—"}</td>
+                      <td>{row.address ?? "—"}</td>
+                      <td>{row.date ? formatDateOnly(row.date) : "—"}</td>
+                      <td>{formatCurrency(row.total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td colSpan={3}>Subtotal</td>
+                    <td>{formatCurrency(group.subtotal)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        ))
       ) : (
         <div className="empty-state">
           <p>No contributions recorded.</p>
