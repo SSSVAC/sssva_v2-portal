@@ -8,6 +8,7 @@ import type { MonthlyIncomeCategory, MonthlyIncomeRow, MonthlyExpenseRow, Monthl
 import type { SilaiContributionRow, SilaiExpenseRow, SilaiBillRow } from "@/components/silai-fund-report";
 import type { SilaiGroupedRow } from "@/components/silai-grouped-report";
 import { createClient } from "@/lib/supabase/server";
+import { groupByStreet } from "@/lib/silai-groups";
 import type { Database } from "@/types/database";
 
 export const dynamic = "force-dynamic";
@@ -65,7 +66,7 @@ type DonationInvoice = Pick<InvoiceRow, "customer_id" | "customer_name" | "total
 type MonthlyIncomeInvoice = Pick<InvoiceRow, "date" | "total" | "item_name" | "customer_name">;
 type MonthlyExpenseSource = Pick<ExpenseRow, "id" | "description" | "account_name" | "date" | "total">;
 type MonthlyBillSource = Pick<BillRow, "id" | "bill_number" | "vendor_name" | "account_name" | "date" | "total">;
-type SilaiContributionInvoice = Pick<InvoiceRow, "customer_name" | "date" | "total">;
+type SilaiContributionInvoice = Pick<InvoiceRow, "customer_id" | "customer_name" | "date" | "total">;
 type SilaiExpenseSource = Pick<ExpenseRow, "id" | "description" | "date" | "total">;
 type SilaiBillSource = Pick<BillRow, "id" | "bill_number" | "vendor_name" | "date" | "total">;
 
@@ -146,7 +147,7 @@ export default async function ReportsPage() {
       .returns<MonthlyBillSource[]>(),
     supabase
       .from("zoho_invoices")
-      .select("customer_name, date, total")
+      .select("customer_id, customer_name, date, total")
       .or(FUND_ITEM_NAMES.map((name) => `item_name.ilike.%${name}%`).join(","))
       .order("date", { ascending: false })
       .returns<SilaiContributionInvoice[]>(),
@@ -184,7 +185,7 @@ export default async function ReportsPage() {
   const monthlyReportExpenseRows = buildMonthlyExpenseRows(monthlyExpenses ?? []);
   const monthlyReportBillRows = buildMonthlyBillRows(monthlyBills ?? []);
 
-  const silaiFundContributionRows = buildSilaiContributionRows(silaiContributionInvoices ?? []);
+  const silaiFundContributionRows = buildSilaiContributionRows(silaiContributionInvoices ?? [], silaiGroupedCustomers ?? []);
   const silaiFundExpenseRows = buildSilaiExpenseRows(silaiExpenses ?? []);
   const silaiFundBillRows = buildSilaiBillRows(silaiBills ?? []);
 
@@ -444,12 +445,44 @@ function buildMonthlyBillRows(bills: MonthlyBillSource[]): MonthlyBillRow[] {
     }));
 }
 
-function buildSilaiContributionRows(invoices: SilaiContributionInvoice[]): SilaiContributionRow[] {
-  return invoices.map((invoice) => ({
-    donorName: invoice.customer_name,
-    date: invoice.date,
-    total: Number(invoice.total ?? 0)
-  }));
+// Sorted (not grouped/sub-tabled) into the same street walking order as
+// Silai by Group / Silai Follow-up, so field-collection staff can read this
+// list in the order they'd actually visit donors.
+function buildSilaiContributionRows(
+  invoices: SilaiContributionInvoice[],
+  customers: SilaiGroupedCustomer[]
+): SilaiContributionRow[] {
+  const customerById = new Map<string, SilaiGroupedCustomer>();
+  const customerByName = new Map<string, SilaiGroupedCustomer>();
+
+  customers.forEach((customer) => {
+    customerById.set(customer.zoho_customer_id, customer);
+    customerByName.set(customer.display_name.trim().toLowerCase(), customer);
+  });
+
+  const rowsWithGroup = invoices.map((invoice) => {
+    const customer =
+      (invoice.customer_id ? customerById.get(invoice.customer_id) : undefined) ??
+      (invoice.customer_name ? customerByName.get(invoice.customer_name.trim().toLowerCase()) : undefined);
+
+    return {
+      name: invoice.customer_name ?? "",
+      address: customer?.billing_address ?? null,
+      group: customer?.customer_group ?? null,
+      orderNumber: customer?.order_number ?? null,
+      date: invoice.date,
+      total: Number(invoice.total ?? 0)
+    };
+  });
+
+  return groupByStreet(rowsWithGroup)
+    .flatMap((group) => group.rows)
+    .map((row) => ({
+      donorName: row.name || null,
+      address: row.address,
+      date: row.date,
+      total: row.total
+    }));
 }
 
 function buildSilaiExpenseRows(expenses: SilaiExpenseSource[]): SilaiExpenseRow[] {

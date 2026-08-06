@@ -14,6 +14,7 @@ import {
 
 export type SilaiContributionRow = {
   donorName: string | null;
+  address: string | null;
   date: string | null;
   total: number;
 };
@@ -64,10 +65,15 @@ export function SilaiFundReport({ contributionRows, expenseRows, billRows }: Sil
     ["Bills", formatCurrency(totalBills)]
   ];
 
-  const contributionExportHeaders = ["Donor", "Date", "Amount"];
+  const contributionExportHeaders = ["Donor", "Address", "Date", "Amount"];
   const contributionExportRows = () => [
-    ...contributionRows.map((row) => [row.donorName ?? "", row.date ? formatDateOnly(row.date) : "", formatCurrency(row.total)]),
-    ["Total", "", formatCurrency(totalContributions)]
+    ...contributionRows.map((row) => [
+      row.donorName ?? "",
+      row.address ?? "",
+      row.date ? formatDateOnly(row.date) : "",
+      formatCurrency(row.total)
+    ]),
+    ["Total", "", "", formatCurrency(totalContributions)]
   ];
 
   const expenseExportHeaders = ["Item", "Date", "Amount"];
@@ -149,6 +155,7 @@ export function SilaiFundReport({ contributionRows, expenseRows, billRows }: Sil
             <thead>
               <tr>
                 <th>Donor</th>
+                <th>Address</th>
                 <th>Date</th>
                 <th>Amount</th>
               </tr>
@@ -157,6 +164,7 @@ export function SilaiFundReport({ contributionRows, expenseRows, billRows }: Sil
               {contributionRows.map((row, index) => (
                 <tr key={`${row.donorName ?? "unknown"}-${row.date ?? "unknown"}-${index}`}>
                   <td>{row.donorName ?? "—"}</td>
+                  <td>{row.address ?? "—"}</td>
                   <td>{row.date ? formatDateOnly(row.date) : "—"}</td>
                   <td>{formatCurrency(row.total)}</td>
                 </tr>
@@ -164,7 +172,7 @@ export function SilaiFundReport({ contributionRows, expenseRows, billRows }: Sil
             </tbody>
             <tfoot>
               <tr>
-                <td colSpan={2}>Total Contributions</td>
+                <td colSpan={3}>Total Contributions</td>
                 <td>{formatCurrency(totalContributions)}</td>
               </tr>
             </tfoot>
