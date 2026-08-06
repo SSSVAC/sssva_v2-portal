@@ -136,45 +136,72 @@ function buildHtmlDocument(title: string, bodyHtml: string) {
   @media (max-width: 640px) {
     body { padding: 16px; }
     h1 { font-size: 18px; }
-    h2 { font-size: 14px; margin: 20px 0 6px; }
+    /* Section/group headings get a visible "chip" treatment on mobile so
+       they read as clear dividers while scrolling a long card list,
+       instead of blending in with the card text below them. */
+    h2 {
+      font-size: 14px;
+      margin: 22px 0 10px;
+      padding: 7px 12px;
+      background: #eef2f6;
+      border-left: 3px solid #0f766e;
+      border-radius: 0 6px 6px 0;
+      color: #18202f;
+    }
+    h2:first-of-type { margin-top: 0; }
     /* Card layout: a shrunk or horizontally-scrolling table is unreadable
-       on a phone, so each row becomes its own card with label: value
-       lines instead (data-label set per cell in renderHtmlTable). */
+       on a phone. Instead of uniform "LABEL: value" lines for every
+       column, hierarchy comes from text size/weight: the first column
+       (name/donor/metric) is the card's title, the last column (amount)
+       sits beside it at the same visual weight, and any remaining columns
+       become smaller, muted detail lines underneath — via flex order, not
+       by changing the markup renderHtmlTable already emits. */
     .table-wrap { overflow-x: visible; border: none; border-radius: 0; background: none; }
     table, tbody { display: block; width: 100%; min-width: 0; }
     thead { display: none; }
     tr {
-      display: block;
-      margin-bottom: 12px;
-      padding: 4px 12px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      column-gap: 12px;
+      margin-bottom: 10px;
+      padding: 12px 14px;
       background: #ffffff;
       border: 1px solid #d9dee7;
       border-radius: 8px;
     }
     tbody tr:nth-child(even) { background: #ffffff; }
     td {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      gap: 16px;
-      padding: 8px 0;
-      border-bottom: 1px solid #f1f3f5;
-      font-size: 14px;
-      white-space: normal;
-      text-align: right;
-    }
-    td:last-child { border-bottom: none; }
-    td::before {
-      content: attr(data-label);
-      flex-shrink: 0;
+      padding: 0;
+      border-bottom: none;
+      font-size: 13px;
       color: #6b7280;
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.02em;
-      text-align: left;
+      white-space: normal;
     }
     td:empty { display: none; }
+    td:first-child {
+      order: 1;
+      flex: 1 1 auto;
+      font-size: 16px;
+      font-weight: 700;
+      color: #18202f;
+    }
+    td:last-child {
+      order: 2;
+      flex: 0 0 auto;
+      font-size: 15px;
+      font-weight: 700;
+      text-align: right;
+    }
+    td:not(:first-child):not(:last-child) {
+      order: 3;
+      flex: 0 0 100%;
+      margin-top: 2px;
+    }
+    td:not(:first-child):not(:last-child)::before {
+      content: attr(data-label) ": ";
+      color: #9ca3af;
+    }
   }
   @media print {
     body { background: #fff; padding: 0; }
