@@ -461,23 +461,18 @@ input {
 
 /* Amount-cell coloring for on-screen tables (matches .cell-success/
    .cell-warning/.cell-danger used by HTML exports in lib/export.ts) —
-   e.g. flagging a contribution total against the Silai fund minimum. */
+   e.g. flagging a contribution total against the Silai fund minimum.
+   Font color only, kept subtle rather than a bold filled background. */
 .cell-success {
   color: #166534;
-  background: #dcfce7;
-  font-weight: 700;
 }
 
 .cell-warning {
   color: #854d0e;
-  background: #fef3c7;
-  font-weight: 700;
 }
 
 .cell-danger {
   color: #991b1b;
-  background: #fee2e2;
-  font-weight: 700;
 }
 
 .report-tablist {

@@ -130,9 +130,9 @@ function buildHtmlDocument(title: string, bodyHtml: string) {
   }
   tbody tr:nth-child(even) { background: #fafafa; }
   tbody tr:last-child td { border-bottom: none; }
-  .cell-success { background: #dcfce7; color: #166534; font-weight: 700; }
-  .cell-warning { background: #fef3c7; color: #854d0e; font-weight: 700; }
-  .cell-danger { background: #fee2e2; color: #991b1b; font-weight: 700; }
+  .cell-success { color: #166534; }
+  .cell-warning { color: #854d0e; }
+  .cell-danger { color: #991b1b; }
   @media (max-width: 640px) {
     body { padding: 16px; }
     h1 { font-size: 18px; }
