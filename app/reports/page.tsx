@@ -486,6 +486,7 @@ function buildSilaiContributionRows(
 
   const rowsWithGroup: {
     name: string;
+    phone: string | null;
     address: string | null;
     group: string | null;
     orderNumber: number | null;
@@ -499,6 +500,7 @@ function buildSilaiContributionRows(
     seenCustomerIds.add(customerId);
     rowsWithGroup.push({
       name: nameById.get(customerId) ?? customer?.display_name ?? "",
+      phone: customer?.phone ?? null,
       address: customer?.billing_address ?? null,
       group: customer?.customer_group ?? null,
       orderNumber: customer?.order_number ?? null,
@@ -513,6 +515,7 @@ function buildSilaiContributionRows(
     if (customer) seenCustomerIds.add(customer.zoho_customer_id);
     rowsWithGroup.push({
       name: customer?.display_name ?? nameKey,
+      phone: customer?.phone ?? null,
       address: customer?.billing_address ?? null,
       group: customer?.customer_group ?? null,
       orderNumber: customer?.order_number ?? null,
@@ -525,6 +528,7 @@ function buildSilaiContributionRows(
     if (customer.is_member && !seenCustomerIds.has(customer.zoho_customer_id)) {
       rowsWithGroup.push({
         name: customer.display_name,
+        phone: customer.phone,
         address: customer.billing_address,
         group: customer.customer_group,
         orderNumber: customer.order_number,
@@ -539,6 +543,7 @@ function buildSilaiContributionRows(
     .map((row) => ({
       donorName: row.name || null,
       group: row.group,
+      phone: row.phone,
       address: row.address,
       isMember: row.isMember,
       total: row.total

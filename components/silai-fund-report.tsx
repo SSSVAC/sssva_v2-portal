@@ -18,6 +18,7 @@ import { groupKeyFor, sortGroupNames } from "@/lib/silai-groups";
 export type SilaiContributionRow = {
   donorName: string | null;
   group: string | null;
+  phone: string | null;
   address: string | null;
   isMember: boolean;
   total: number;
@@ -116,10 +117,10 @@ export function SilaiFundReport({ contributionRows, expenseRows, billRows }: Sil
     ["Bills", formatCurrency(totalBills)]
   ];
 
-  const contributionExportHeaders = ["Donor", "Address", "Amount"];
+  const contributionExportHeaders = ["Donor", "Phone", "Address", "Amount"];
   const contributionGroupExportRows = (rows: SilaiContributionRow[], subtotal: number): ExportCell[][] => [
-    ...rows.map((row) => [row.donorName ?? "", row.address ?? "", amountCell(row.total)]),
-    ["Subtotal", "", amountCell(subtotal)]
+    ...rows.map((row) => [row.donorName ?? "", row.phone ?? "", row.address ?? "", amountCell(row.total)]),
+    ["Subtotal", "", "", amountCell(subtotal)]
   ];
   const contributionExportSections = (): ExportSection[] =>
     contributionGroups.map((group) => ({
@@ -210,6 +211,7 @@ export function SilaiFundReport({ contributionRows, expenseRows, billRows }: Sil
                 <thead>
                   <tr>
                     <th>Donor</th>
+                    <th>Phone</th>
                     <th>Address</th>
                     <th>Amount</th>
                   </tr>
@@ -218,6 +220,7 @@ export function SilaiFundReport({ contributionRows, expenseRows, billRows }: Sil
                   {group.rows.map((row, index) => (
                     <tr key={`${row.donorName ?? "unknown"}-${index}`}>
                       <td>{row.donorName ?? "—"}</td>
+                      <td>{row.phone ?? "—"}</td>
                       <td>{row.address ?? "—"}</td>
                       <td className={amountClass(row.total)}>{formatCurrency(row.total)}</td>
                     </tr>
@@ -225,7 +228,7 @@ export function SilaiFundReport({ contributionRows, expenseRows, billRows }: Sil
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td colSpan={2}>Subtotal</td>
+                    <td colSpan={3}>Subtotal</td>
                     <td>{formatCurrency(group.subtotal)}</td>
                   </tr>
                 </tfoot>
