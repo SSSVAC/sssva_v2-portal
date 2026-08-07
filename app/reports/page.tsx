@@ -450,7 +450,10 @@ function buildMonthlyBillRows(bills: MonthlyBillSource[]): MonthlyBillRow[] {
 // why the name fallback only applies to invoices with no customer_id),
 // sorted (not grouped/sub-tabled here) into the same street walking order
 // as Silai by Group / Silai Follow-up, so field-collection staff can read
-// this list in the order they'd actually visit donors.
+// this list in the order they'd actually visit donors. Members who haven't
+// contributed at all are included too (total: 0, isMember: true) so the
+// "Show all members" toggle in SilaiFundReport can reveal them — the
+// component filters them out by default.
 function buildSilaiContributionRows(
   invoices: SilaiContributionInvoice[],
   customers: SilaiGroupedCustomer[]
@@ -486,29 +489,49 @@ function buildSilaiContributionRows(
     address: string | null;
     group: string | null;
     orderNumber: number | null;
+    isMember: boolean;
     total: number;
   }[] = [];
+  const seenCustomerIds = new Set<string>();
 
   totalsById.forEach((total, customerId) => {
     const customer = customerById.get(customerId);
+    seenCustomerIds.add(customerId);
     rowsWithGroup.push({
       name: nameById.get(customerId) ?? customer?.display_name ?? "",
       address: customer?.billing_address ?? null,
       group: customer?.customer_group ?? null,
       orderNumber: customer?.order_number ?? null,
+      isMember: customer?.is_member ?? false,
       total
     });
   });
 
   totalsByName.forEach((total, nameKey) => {
     const customer = customerByName.get(nameKey);
+    if (customer && seenCustomerIds.has(customer.zoho_customer_id)) return;
+    if (customer) seenCustomerIds.add(customer.zoho_customer_id);
     rowsWithGroup.push({
       name: customer?.display_name ?? nameKey,
       address: customer?.billing_address ?? null,
       group: customer?.customer_group ?? null,
       orderNumber: customer?.order_number ?? null,
+      isMember: customer?.is_member ?? false,
       total
     });
+  });
+
+  customers.forEach((customer) => {
+    if (customer.is_member && !seenCustomerIds.has(customer.zoho_customer_id)) {
+      rowsWithGroup.push({
+        name: customer.display_name,
+        address: customer.billing_address,
+        group: customer.customer_group,
+        orderNumber: customer.order_number,
+        isMember: true,
+        total: 0
+      });
+    }
   });
 
   return groupByStreet(rowsWithGroup)
@@ -517,6 +540,7 @@ function buildSilaiContributionRows(
       donorName: row.name || null,
       group: row.group,
       address: row.address,
+      isMember: row.isMember,
       total: row.total
     }));
 }

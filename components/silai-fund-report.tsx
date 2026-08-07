@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { formatCurrency, formatDateOnly } from "@/lib/format";
 import { ExportToolbar } from "@/components/export-toolbar";
 import {
@@ -19,6 +19,7 @@ export type SilaiContributionRow = {
   donorName: string | null;
   group: string | null;
   address: string | null;
+  isMember: boolean;
   total: number;
 };
 
@@ -68,19 +69,29 @@ function sumTotals<T extends { total: number }>(rows: T[]) {
 const PRINT_TARGET = "silai-fund";
 
 export function SilaiFundReport({ contributionRows, expenseRows, billRows }: SilaiFundReportProps) {
+  const [showAllMembers, setShowAllMembers] = useState(false);
+
+  // contributionRows includes every member (even those with total: 0) so
+  // this toggle can reveal who hasn't paid yet; off by default keeps the
+  // report showing only actual contributors, matching its original shape.
+  const visibleContributionRows = useMemo(
+    () => (showAllMembers ? contributionRows : contributionRows.filter((row) => row.total > 0)),
+    [contributionRows, showAllMembers]
+  );
+
   const totalContributions = sumTotals(contributionRows);
   const totalExpenses = sumTotals(expenseRows);
   const totalBills = sumTotals(billRows);
   const totalSpent = totalExpenses + totalBills;
   const balance = totalContributions - totalSpent;
 
-  // contributionRows already arrive sorted in street walking order (see
-  // buildSilaiContributionRows in app/reports/page.tsx), so bucketing here
-  // by group preserves the correct order within each section too.
+  // visibleContributionRows already arrive sorted in street walking order
+  // (see buildSilaiContributionRows in app/reports/page.tsx), so bucketing
+  // here by group preserves the correct order within each section too.
   const contributionGroups = useMemo(() => {
     const byGroup = new Map<string, SilaiContributionRow[]>();
 
-    contributionRows.forEach((row) => {
+    visibleContributionRows.forEach((row) => {
       const key = groupKeyFor(row.group);
       const list = byGroup.get(key) ?? [];
       list.push(row);
@@ -91,7 +102,7 @@ export function SilaiFundReport({ contributionRows, expenseRows, billRows }: Sil
       const rows = byGroup.get(groupName) ?? [];
       return { groupName, rows, subtotal: sumTotals(rows) };
     });
-  }, [contributionRows]);
+  }, [visibleContributionRows]);
 
   const exportPdf = () => printReportSection(PRINT_TARGET);
   const exportImage = () => exportSectionToImage(PRINT_TARGET, "silai-fund-report.png");
@@ -169,6 +180,17 @@ export function SilaiFundReport({ contributionRows, expenseRows, billRows }: Sil
         </article>
       </div>
 
+      <div className="filter-banner no-print" style={{ justifyContent: "flex-start", gap: 10 }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <input
+            type="checkbox"
+            checked={showAllMembers}
+            onChange={(event) => setShowAllMembers(event.target.checked)}
+          />
+          Show all members (including not yet paid)
+        </label>
+      </div>
+
       <ExportToolbar
         onExportCsv={() => exportSectionsToCsv("silai-fund-contributions.csv", contributionExportSections())}
         onExportHtml={() =>
@@ -213,7 +235,7 @@ export function SilaiFundReport({ contributionRows, expenseRows, billRows }: Sil
         ))
       ) : (
         <div className="empty-state">
-          <p>No contributions recorded.</p>
+          <p>{showAllMembers ? "No members found." : "No contributions recorded."}</p>
         </div>
       )}
 
