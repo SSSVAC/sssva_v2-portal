@@ -110,8 +110,8 @@ export function DonorContactReport({ months, donors }: DonorContactReportProps) 
       <ExportToolbar
         onExportCsv={() => exportSectionsToCsv("monthly-donors.csv", exportSections())}
         onExportHtml={() => exportSectionsToHtml("monthly-donors.html", "Monthly Donors", exportSections())}
-        onExportPdf={() => printReportSection("donor-contacts")}
-        onExportImage={() => exportSectionToImage("donor-contacts", "monthly-donors.png")}
+        onExportPdf={() => printReportSection("monthly-donors")}
+        onExportImage={() => exportSectionToImage("monthly-donors", "monthly-donors.png")}
       />
 
       <input

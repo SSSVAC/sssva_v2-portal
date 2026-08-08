@@ -475,6 +475,22 @@ input {
   color: #991b1b;
 }
 
+.breadcrumb {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.breadcrumb a:hover {
+  color: var(--foreground);
+  text-decoration: underline;
+}
+
+.report-gallery-card {
+  cursor: pointer;
+  text-decoration: none;
+}
+
 .report-tablist {
   display: flex;
   flex-wrap: wrap;
@@ -753,12 +769,12 @@ input {
     display: none !important;
   }
 
-  body[data-print-target="silai"] .report-card[data-print-id="silai"],
-  body[data-print-target="donations"] .report-card[data-print-id="donations"],
-  body[data-print-target="donor-contacts"] .report-card[data-print-id="donor-contacts"],
+  body[data-print-target="silai-contributions"] .report-card[data-print-id="silai-contributions"],
+  body[data-print-target="member-monthly-donation"] .report-card[data-print-id="member-monthly-donation"],
+  body[data-print-target="monthly-donors"] .report-card[data-print-id="monthly-donors"],
   body[data-print-target="monthly-report"] .report-card[data-print-id="monthly-report"],
   body[data-print-target="silai-fund"] .report-card[data-print-id="silai-fund"],
-  body[data-print-target="silai-grouped"] .report-card[data-print-id="silai-grouped"],
+  body[data-print-target="silai-by-group"] .report-card[data-print-id="silai-by-group"],
   body[data-print-target="silai-followup"] .report-card[data-print-id="silai-followup"],
   body[data-print-target="ugadi"] .report-card[data-print-id="ugadi"],
   body[data-print-target="varushabishegam"] .report-card[data-print-id="varushabishegam"],

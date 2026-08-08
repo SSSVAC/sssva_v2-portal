@@ -121,8 +121,8 @@ export function MonthlyDonationsReport({ months, donors }: MonthlyDonationsRepor
       <ExportToolbar
         onExportCsv={() => exportSectionsToCsv("member-monthly-donation.csv", exportSections())}
         onExportHtml={() => exportSectionsToHtml("member-monthly-donation.html", "Member Monthly Donation", exportSections())}
-        onExportPdf={() => printReportSection("donations")}
-        onExportImage={() => exportSectionToImage("donations", "member-monthly-donation.png")}
+        onExportPdf={() => printReportSection("member-monthly-donation")}
+        onExportImage={() => exportSectionToImage("member-monthly-donation", "member-monthly-donation.png")}
       />
 
       <input

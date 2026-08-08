@@ -139,8 +139,8 @@ export function FundStatusTable({ members, minimumAmount }: FundStatusTableProps
       <ExportToolbar
         onExportCsv={() => exportSectionsToCsv("members-silai-contributions.csv", exportSections())}
         onExportHtml={() => exportSectionsToHtml("members-silai-contributions.html", "Members Silai Contributions", exportSections())}
-        onExportPdf={() => printReportSection("silai")}
-        onExportImage={() => exportSectionToImage("silai", "members-silai-contributions.png")}
+        onExportPdf={() => printReportSection("silai-contributions")}
+        onExportImage={() => exportSectionToImage("silai-contributions", "members-silai-contributions.png")}
       />
 
       <div className="report-tablist no-print" role="tablist" aria-label="Member fund status">

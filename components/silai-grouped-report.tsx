@@ -31,7 +31,7 @@ type SilaiGroupedReportProps = {
   rows: SilaiGroupedRow[];
 };
 
-const PRINT_TARGET = "silai-grouped";
+const PRINT_TARGET = "silai-by-group";
 
 // Matches the per-member Silai fund minimum used elsewhere (Members Silai
 // Contributions' fully-paid threshold). Only affects the HTML export's cell
