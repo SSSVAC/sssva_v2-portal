@@ -58,6 +58,10 @@ export type SilaiBillRow = {
 };
 
 type SilaiFundReportProps = {
+  title?: string;
+  subtitle?: string;
+  fileSlug?: string;
+  printTarget?: string;
   contributionRows: SilaiContributionRow[];
   expenseRows: SilaiExpenseRow[];
   billRows: SilaiBillRow[];
@@ -67,9 +71,15 @@ function sumTotals<T extends { total: number }>(rows: T[]) {
   return rows.reduce((sum, row) => sum + row.total, 0);
 }
 
-const PRINT_TARGET = "silai-fund";
-
-export function SilaiFundReport({ contributionRows, expenseRows, billRows }: SilaiFundReportProps) {
+export function SilaiFundReport({
+  title = "Silai Fund Report",
+  subtitle = "சிலை வைப்பதற்கான நிதி — all time",
+  fileSlug = "silai-fund",
+  printTarget = "silai-fund",
+  contributionRows,
+  expenseRows,
+  billRows
+}: SilaiFundReportProps) {
   const [showAllMembers, setShowAllMembers] = useState(false);
 
   // contributionRows includes every member (even those with total: 0) so
@@ -105,8 +115,8 @@ export function SilaiFundReport({ contributionRows, expenseRows, billRows }: Sil
     });
   }, [visibleContributionRows]);
 
-  const exportPdf = () => printReportSection(PRINT_TARGET);
-  const exportImage = () => exportSectionToImage(PRINT_TARGET, "silai-fund-report.png");
+  const exportPdf = () => printReportSection(printTarget);
+  const exportImage = () => exportSectionToImage(printTarget, `${fileSlug}-report.png`);
 
   const metricsExportHeaders = ["Metric", "Value"];
   const metricsExportRows = () => [
@@ -151,19 +161,19 @@ export function SilaiFundReport({ contributionRows, expenseRows, billRows }: Sil
   return (
     <div>
       <ExportToolbar
-        onExportCsv={() => exportSectionsToCsv("silai-fund-report.csv", fullReportSections())}
-        onExportHtml={() => exportSectionsToHtml("silai-fund-report.html", "Silai Fund Report", fullReportSections())}
+        onExportCsv={() => exportSectionsToCsv(`${fileSlug}-report.csv`, fullReportSections())}
+        onExportHtml={() => exportSectionsToHtml(`${fileSlug}-report.html`, title, fullReportSections())}
         onExportPdf={exportPdf}
         onExportImage={exportImage}
       />
 
-      <div className="metric-grid" aria-label="Silai fund summary">
+      <div className="metric-grid" aria-label={`${title} summary`}>
         <article className="metric-card">
           <div className="metric-head">
             <span>Total Contributions</span>
           </div>
           <div className="metric-value">{formatCurrency(totalContributions)}</div>
-          <div className="metric-sub">சிலை வைப்பதற்கான நிதி — all time</div>
+          <div className="metric-sub">{subtitle}</div>
         </article>
         <article className="metric-card">
           <div className="metric-head">
@@ -193,9 +203,9 @@ export function SilaiFundReport({ contributionRows, expenseRows, billRows }: Sil
       </div>
 
       <ExportToolbar
-        onExportCsv={() => exportSectionsToCsv("silai-fund-contributions.csv", contributionExportSections())}
+        onExportCsv={() => exportSectionsToCsv(`${fileSlug}-contributions.csv`, contributionExportSections())}
         onExportHtml={() =>
-          exportSectionsToHtml("silai-fund-contributions.html", "Silai Fund — Contributions", contributionExportSections())
+          exportSectionsToHtml(`${fileSlug}-contributions.html`, `${title} — Contributions`, contributionExportSections())
         }
         onExportPdf={exportPdf}
         onExportImage={exportImage}
@@ -244,8 +254,8 @@ export function SilaiFundReport({ contributionRows, expenseRows, billRows }: Sil
 
       <h3>Expenses</h3>
       <ExportToolbar
-        onExportCsv={() => exportToCsv("silai-fund-expenses.csv", expenseExportHeaders, expenseExportRows())}
-        onExportHtml={() => exportToHtml("silai-fund-expenses.html", "Silai Fund — Expenses", expenseExportHeaders, expenseExportRows())}
+        onExportCsv={() => exportToCsv(`${fileSlug}-expenses.csv`, expenseExportHeaders, expenseExportRows())}
+        onExportHtml={() => exportToHtml(`${fileSlug}-expenses.html`, `${title} — Expenses`, expenseExportHeaders, expenseExportRows())}
         onExportPdf={exportPdf}
         onExportImage={exportImage}
       />
@@ -284,8 +294,8 @@ export function SilaiFundReport({ contributionRows, expenseRows, billRows }: Sil
 
       <h3>Bills</h3>
       <ExportToolbar
-        onExportCsv={() => exportToCsv("silai-fund-bills.csv", billExportHeaders, billExportRows())}
-        onExportHtml={() => exportToHtml("silai-fund-bills.html", "Silai Fund — Bills", billExportHeaders, billExportRows())}
+        onExportCsv={() => exportToCsv(`${fileSlug}-bills.csv`, billExportHeaders, billExportRows())}
+        onExportHtml={() => exportToHtml(`${fileSlug}-bills.html`, `${title} — Bills`, billExportHeaders, billExportRows())}
         onExportPdf={exportPdf}
         onExportImage={exportImage}
       />
