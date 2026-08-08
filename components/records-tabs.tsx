@@ -47,7 +47,8 @@ const INVOICE_COLUMNS: RecordColumn[] = [
   { key: "total", label: "Total", type: "number", editable: true },
   { key: "balance", label: "Balance", type: "number", editable: true },
   { key: "currency_code", label: "Currency", type: "text", editable: true },
-  { key: "item_name", label: "Item", type: "text", editable: true }
+  { key: "item_name", label: "Item", type: "text", editable: true },
+  { key: "subject", label: "Subject", type: "text", editable: true }
 ];
 
 const EXPENSE_COLUMNS: RecordColumn[] = [

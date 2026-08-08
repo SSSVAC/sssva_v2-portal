@@ -593,7 +593,8 @@ function extractItemNameFromInvoiceDetail(detail: Record<string, unknown>): stri
 }
 
 function extractSubjectFromInvoiceDetail(detail: Record<string, unknown>): string | null {
-  return typeof detail.subject === "string" && detail.subject.trim() !== "" ? detail.subject : null;
+  // Zoho's field is "subject_content" (a templated field), not "subject".
+  return typeof detail.subject_content === "string" && detail.subject_content.trim() !== "" ? detail.subject_content : null;
 }
 
 // A direct/non-cash ubhayam is recorded as a zero-total invoice with the

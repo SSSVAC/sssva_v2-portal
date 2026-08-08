@@ -53,8 +53,11 @@ export function mapZohoInvoice(raw: Record<string, unknown>): InvoiceInsert {
     item_name: getItemName(raw),
     // Only meaningfully populated for zero-total invoices (a direct/
     // non-cash ubhayam, where the subject line records what was donated
-    // instead of an amount) — see fetchZohoInvoices in lib/zoho/client.ts.
-    subject: optionalString(raw, "subject"),
+    // instead of an amount). Zoho's own field is "subject_content"; the
+    // main sync's fetchZohoInvoices backfill normalizes it to "subject"
+    // before this mapper runs, but resyncZohoRecords calls this mapper
+    // directly on Zoho's raw detail response, so both keys are checked.
+    subject: optionalString(raw, "subject") ?? optionalString(raw, "subject_content"),
     raw: raw as Json,
     synced_at: new Date().toISOString()
   };

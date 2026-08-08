@@ -27,7 +27,8 @@ const EDITABLE_TABLES = {
     "total",
     "balance",
     "currency_code",
-    "item_name"
+    "item_name",
+    "subject"
   ],
   zoho_expenses: [
     "expense_number",
