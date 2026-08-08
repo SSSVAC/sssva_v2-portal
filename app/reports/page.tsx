@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Topbar } from "@/components/topbar";
 import { ReportsTabs } from "@/components/reports-tabs";
@@ -203,6 +204,17 @@ export default async function ReportsPage() {
           <div>
             <h1>Reports</h1>
             <p className="muted">Reports for SSSVA Portal staff.</p>
+          </div>
+          <div className="hero-actions">
+            <Link href="/reports/ugadi" className="button secondary">
+              Ugadi
+            </Link>
+            <Link href="/reports/varushabishegam" className="button secondary">
+              Varushabishegam
+            </Link>
+            <Link href="/reports/marghazhi-poojai" className="button secondary">
+              Marghazhi Poojai
+            </Link>
           </div>
         </section>
 
