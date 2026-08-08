@@ -772,6 +772,7 @@ input {
   body[data-print-target="silai-contributions"] .report-card[data-print-id="silai-contributions"],
   body[data-print-target="member-monthly-donation"] .report-card[data-print-id="member-monthly-donation"],
   body[data-print-target="monthly-donors"] .report-card[data-print-id="monthly-donors"],
+  body[data-print-target="registration"] .report-card[data-print-id="registration"],
   body[data-print-target="monthly-report"] .report-card[data-print-id="monthly-report"],
   body[data-print-target="silai-fund"] .report-card[data-print-id="silai-fund"],
   body[data-print-target="silai-by-group"] .report-card[data-print-id="silai-by-group"],

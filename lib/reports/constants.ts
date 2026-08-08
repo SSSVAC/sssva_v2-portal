@@ -40,9 +40,15 @@ export const VARUSHABISHEGAM_EXPENSE_ACCOUNT = "Varushabishekam Expenses";
 // differs once one is recorded.
 export const MARGHAZHI_POOJAI_EXPENSE_ACCOUNT = "Marghazhi Poojai";
 
+// Income item name for one-time association registration fees, and the
+// matching expense/bill account for registration-related costs.
+export const REGISTRATION_ITEM_NAME = "Association Registration Fund";
+export const REGISTRATION_EXPENSE_ACCOUNT = "Temple Registration Expenses";
+
 export const MONTHLY_REPORT_EXCLUDED_ACCOUNTS = [
   SILAI_EXPENSE_ACCOUNT_NAME,
   UGADI_EXPENSE_ACCOUNT,
   VARUSHABISHEGAM_EXPENSE_ACCOUNT,
-  MARGHAZHI_POOJAI_EXPENSE_ACCOUNT
+  MARGHAZHI_POOJAI_EXPENSE_ACCOUNT,
+  REGISTRATION_EXPENSE_ACCOUNT
 ];

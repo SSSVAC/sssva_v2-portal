@@ -2,6 +2,7 @@ import type { ReportCategory, ReportDefinition } from "./types";
 import { monthlyReport } from "./definitions/financial/monthly-report";
 import { memberMonthlyDonation } from "./definitions/financial/member-monthly-donation";
 import { monthlyDonors } from "./definitions/financial/monthly-donors";
+import { registration } from "./definitions/financial/registration";
 import { silaiContributions } from "./definitions/silai/silai-contributions";
 import { silaiFund } from "./definitions/silai/silai-fund";
 import { silaiByGroup } from "./definitions/silai/silai-by-group";
@@ -15,6 +16,7 @@ export const REPORT_REGISTRY: ReportDefinition[] = [
   monthlyReport,
   memberMonthlyDonation,
   monthlyDonors,
+  registration,
   silaiContributions,
   silaiFund,
   silaiByGroup,
