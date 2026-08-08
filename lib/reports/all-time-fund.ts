@@ -13,6 +13,7 @@ export type AllTimeFundInvoice = {
 
 export type NonCashDonationRow = {
   donorName: string | null;
+  address: string | null;
   detail: string;
 };
 
@@ -142,13 +143,31 @@ export function buildAllTimeContributionRows(
 // from buildAllTimeContributionRows rather than folded into a customer's
 // cash total, since there's nothing to sum — the donation is the note
 // itself.
-export function buildNonCashDonationRows(invoices: AllTimeFundInvoice[]): NonCashDonationRow[] {
+export function buildNonCashDonationRows(
+  invoices: AllTimeFundInvoice[],
+  customers: ReportCustomer[]
+): NonCashDonationRow[] {
+  const customerById = new Map<string, ReportCustomer>();
+  const customerByName = new Map<string, ReportCustomer>();
+
+  customers.forEach((customer) => {
+    customerById.set(customer.zoho_customer_id, customer);
+    customerByName.set(customer.display_name.trim().toLowerCase(), customer);
+  });
+
   return invoices
     .filter((invoice) => Number(invoice.total ?? 0) === 0 && invoice.subject && invoice.subject.trim() !== "")
-    .map((invoice) => ({
-      donorName: invoice.customer_name,
-      detail: (invoice.subject as string).trim()
-    }));
+    .map((invoice) => {
+      const customer =
+        (invoice.customer_id ? customerById.get(invoice.customer_id) : undefined) ??
+        (invoice.customer_name ? customerByName.get(invoice.customer_name.trim().toLowerCase()) : undefined);
+
+      return {
+        donorName: invoice.customer_name,
+        address: customer?.billing_address ?? null,
+        detail: (invoice.subject as string).trim()
+      };
+    });
 }
 
 export function buildAllTimeExpenseRows(expenses: AllTimeFundExpense[]): SilaiExpenseRow[] {
@@ -205,7 +224,7 @@ export async function fetchAllTimeFundReportData(
 
   return {
     contributionRows: buildAllTimeContributionRows(invoices ?? [], customers),
-    nonCashDonationRows: buildNonCashDonationRows(invoices ?? []),
+    nonCashDonationRows: buildNonCashDonationRows(invoices ?? [], customers),
     expenseRows: buildAllTimeExpenseRows(expenses ?? []),
     billRows: buildAllTimeBillRows(bills ?? [])
   };

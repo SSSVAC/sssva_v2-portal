@@ -142,8 +142,8 @@ export function SilaiFundReport({
       rows: contributionGroupExportRows(group.rows, group.subtotal)
     }));
 
-  const nonCashExportHeaders = ["Donor", "Detail"];
-  const nonCashExportRows = () => nonCashDonationRows.map((row) => [row.donorName ?? "", row.detail]);
+  const nonCashExportHeaders = ["Donor", "Address", "Detail"];
+  const nonCashExportRows = () => nonCashDonationRows.map((row) => [row.donorName ?? "", row.address ?? "", row.detail]);
 
   const expenseExportHeaders = ["Item", "Date", "Amount"];
   const expenseExportRows = () => [
@@ -277,6 +277,7 @@ export function SilaiFundReport({
               <thead>
                 <tr>
                   <th>Donor</th>
+                  <th>Address</th>
                   <th>Detail</th>
                 </tr>
               </thead>
@@ -284,6 +285,7 @@ export function SilaiFundReport({
                 {nonCashDonationRows.map((row, index) => (
                   <tr key={`${row.donorName ?? "unknown"}-${index}`}>
                     <td>{row.donorName ?? "—"}</td>
+                    <td>{row.address ?? "—"}</td>
                     <td>{row.detail}</td>
                   </tr>
                 ))}
