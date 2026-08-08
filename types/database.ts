@@ -59,6 +59,7 @@ export type Database = {
           balance: number;
           currency_code: string | null;
           item_name: string | null;
+          subject: string | null;
           raw: Json;
           synced_at: string;
           created_at: string;
@@ -77,6 +78,7 @@ export type Database = {
           balance?: number;
           currency_code?: string | null;
           item_name?: string | null;
+          subject?: string | null;
           raw?: Json;
           synced_at?: string;
           created_at?: string;

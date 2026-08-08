@@ -37,6 +37,13 @@ create table if not exists public.zoho_invoices (
 alter table public.zoho_invoices
 add column if not exists item_name text;
 
+-- Zoho's invoice "subject" field, used to record what was donated on a
+-- zero-total invoice (a direct/non-cash ubhayam) — populated by the same
+-- detail-fetch backfill pattern as item_name, but only for total = 0
+-- invoices, so it doesn't cost a detail call for every ordinary invoice.
+alter table public.zoho_invoices
+add column if not exists subject text;
+
 alter table public.zoho_customers
 add column if not exists is_member boolean not null default false;
 

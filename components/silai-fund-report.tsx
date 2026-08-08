@@ -14,6 +14,7 @@ import {
   type ExportSection
 } from "@/lib/export";
 import { groupKeyFor, sortGroupNames } from "@/lib/silai-groups";
+import type { NonCashDonationRow } from "@/lib/reports/all-time-fund";
 
 export type SilaiContributionRow = {
   donorName: string | null;
@@ -63,6 +64,7 @@ type SilaiFundReportProps = {
   fileSlug?: string;
   printTarget?: string;
   contributionRows: SilaiContributionRow[];
+  nonCashDonationRows?: NonCashDonationRow[];
   expenseRows: SilaiExpenseRow[];
   billRows: SilaiBillRow[];
 };
@@ -77,6 +79,7 @@ export function SilaiFundReport({
   fileSlug = "silai-fund",
   printTarget = "silai-fund",
   contributionRows,
+  nonCashDonationRows = [],
   expenseRows,
   billRows
 }: SilaiFundReportProps) {
@@ -139,6 +142,9 @@ export function SilaiFundReport({
       rows: contributionGroupExportRows(group.rows, group.subtotal)
     }));
 
+  const nonCashExportHeaders = ["Donor", "Detail"];
+  const nonCashExportRows = () => nonCashDonationRows.map((row) => [row.donorName ?? "", row.detail]);
+
   const expenseExportHeaders = ["Item", "Date", "Amount"];
   const expenseExportRows = () => [
     ...expenseRows.map((row) => [row.itemName ?? "", row.date ? formatDateOnly(row.date) : "", formatCurrency(row.total)]),
@@ -154,6 +160,9 @@ export function SilaiFundReport({
   const fullReportSections = (): ExportSection[] => [
     { title: "Metrics", headers: metricsExportHeaders, rows: metricsExportRows() },
     ...contributionExportSections(),
+    ...(nonCashDonationRows.length > 0
+      ? [{ title: "Non-Cash Donations", headers: nonCashExportHeaders, rows: nonCashExportRows() }]
+      : []),
     { title: "Expenses", headers: expenseExportHeaders, rows: expenseExportRows() },
     { title: "Bills", headers: billExportHeaders, rows: billExportRows() }
   ];
@@ -250,6 +259,38 @@ export function SilaiFundReport({
         <div className="empty-state">
           <p>{showAllMembers ? "No members found." : "No contributions recorded."}</p>
         </div>
+      )}
+
+      {nonCashDonationRows.length > 0 && (
+        <>
+          <h3>Non-Cash Donations</h3>
+          <ExportToolbar
+            onExportCsv={() => exportToCsv(`${fileSlug}-non-cash-donations.csv`, nonCashExportHeaders, nonCashExportRows())}
+            onExportHtml={() =>
+              exportToHtml(`${fileSlug}-non-cash-donations.html`, `${title} — Non-Cash Donations`, nonCashExportHeaders, nonCashExportRows())
+            }
+            onExportPdf={exportPdf}
+            onExportImage={exportImage}
+          />
+          <div className="table-panel table-panel-scroll">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Donor</th>
+                  <th>Detail</th>
+                </tr>
+              </thead>
+              <tbody>
+                {nonCashDonationRows.map((row, index) => (
+                  <tr key={`${row.donorName ?? "unknown"}-${index}`}>
+                    <td>{row.donorName ?? "—"}</td>
+                    <td>{row.detail}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       <h3>Expenses</h3>

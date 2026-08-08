@@ -149,7 +149,11 @@ export async function fetchZohoCustomers(
   return detailedCustomers.filter((customer): customer is Record<string, unknown> => Boolean(customer));
 }
 
-export async function fetchZohoInvoices(accessToken: string, existingItemNames = new Map<string, string | null>()) {
+export async function fetchZohoInvoices(
+  accessToken: string,
+  existingItemNames = new Map<string, string | null>(),
+  existingSubjects = new Map<string, string>()
+) {
   const payload = await fetchZohoList(accessToken, "invoices");
   const invoices = InvoiceResponse.parse(payload).invoices;
 
@@ -157,7 +161,7 @@ export async function fetchZohoInvoices(accessToken: string, existingItemNames =
     return [];
   }
 
-  const invoiceIdsForDetail: string[] = [];
+  const invoiceIdsForDetail = new Set<string>();
 
   invoices.forEach((invoice) => {
     const invoiceId = getInvoiceId(invoice);
@@ -168,33 +172,46 @@ export async function fetchZohoInvoices(accessToken: string, existingItemNames =
     // Already-synced invoices skip the detail call entirely to conserve
     // Zoho's daily API limit, even if their item name isn't captured yet.
     if (!hasInvoiceItemName(invoice) && !existingItemNames.has(invoiceId)) {
-      invoiceIdsForDetail.push(invoiceId);
+      invoiceIdsForDetail.add(invoiceId);
+    }
+
+    // A zero-total invoice is a direct/non-cash ubhayam whose subject line
+    // records what was donated — worth a detail call regardless of item
+    // name, but only until a subject is actually captured (existingSubjects
+    // only contains invoices that already have one, so this keeps retrying
+    // otherwise, same as bills' account_name/item_name backfill).
+    if (isZeroTotalInvoice(invoice) && !existingSubjects.has(invoiceId)) {
+      invoiceIdsForDetail.add(invoiceId);
     }
   });
 
-  // Only the item name is pulled from the detail endpoint and merged in;
-  // the rest of the invoice (total, balance, etc.) always comes from the
-  // list endpoint. Zoho's invoice detail response has been observed
+  // Only item_name/subject are pulled from the detail endpoint and merged
+  // in; the rest of the invoice (total, balance, etc.) always comes from
+  // the list endpoint. Zoho's invoice detail response has been observed
   // reporting `total` as the net amount actually received rather than the
   // billed total (matching `payment_made`, not `sub_total`/line items) for
   // at least one invoice, so it can't be trusted wholesale — the same
   // reason bills only pull account_name/item_name out of their detail
   // response instead of replacing the whole record (see
   // enrichBillWithLineItemDetails below).
-  const detailItemNameById = new Map<string, string | null>();
+  const detailById = new Map<string, { itemName: string | null; subject: string | null }>();
 
-  if (invoiceIdsForDetail.length > 0) {
+  if (invoiceIdsForDetail.size > 0) {
     const detailResults = await mapWithConcurrency(
-      invoiceIdsForDetail,
+      Array.from(invoiceIdsForDetail),
       getInvoiceDetailConcurrency(),
       async (invoiceId) => {
         const detail = await fetchZohoInvoiceDetail(accessToken, invoiceId);
-        return { invoiceId, itemName: detail ? extractItemNameFromInvoiceDetail(detail) : null };
+        return {
+          invoiceId,
+          itemName: detail ? extractItemNameFromInvoiceDetail(detail) : null,
+          subject: detail ? extractSubjectFromInvoiceDetail(detail) : null
+        };
       }
     );
 
-    detailResults.forEach(({ invoiceId, itemName }) => {
-      detailItemNameById.set(invoiceId, itemName);
+    detailResults.forEach(({ invoiceId, itemName, subject }) => {
+      detailById.set(invoiceId, { itemName, subject });
     });
   }
 
@@ -204,13 +221,25 @@ export async function fetchZohoInvoices(accessToken: string, existingItemNames =
       return invoice;
     }
 
+    const patch: Record<string, unknown> = {};
+
     const existingItemName = existingItemNames.get(invoiceId);
+    const backfilledItemName = detailById.get(invoiceId)?.itemName;
     if (existingItemName) {
-      return { ...invoice, item_name: existingItemName };
+      patch.item_name = existingItemName;
+    } else if (backfilledItemName) {
+      patch.item_name = backfilledItemName;
     }
 
-    const backfilledItemName = detailItemNameById.get(invoiceId);
-    return backfilledItemName ? { ...invoice, item_name: backfilledItemName } : invoice;
+    const existingSubject = existingSubjects.get(invoiceId);
+    const backfilledSubject = detailById.get(invoiceId)?.subject;
+    if (existingSubject) {
+      patch.subject = existingSubject;
+    } else if (backfilledSubject) {
+      patch.subject = backfilledSubject;
+    }
+
+    return Object.keys(patch).length > 0 ? { ...invoice, ...patch } : invoice;
   });
 }
 
@@ -561,6 +590,17 @@ function extractItemNameFromInvoiceDetail(detail: Record<string, unknown>): stri
   );
   const name = firstLineItem?.name;
   return typeof name === "string" && name.trim() !== "" ? name : null;
+}
+
+function extractSubjectFromInvoiceDetail(detail: Record<string, unknown>): string | null {
+  return typeof detail.subject === "string" && detail.subject.trim() !== "" ? detail.subject : null;
+}
+
+// A direct/non-cash ubhayam is recorded as a zero-total invoice with the
+// donation detail in the subject line instead of an amount.
+function isZeroTotalInvoice(invoice: Record<string, unknown>) {
+  const total = invoice.total;
+  return typeof total === "number" ? total === 0 : Number(total ?? 0) === 0;
 }
 
 function getBillId(bill: Record<string, unknown>) {

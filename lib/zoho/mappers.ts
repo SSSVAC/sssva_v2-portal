@@ -51,6 +51,10 @@ export function mapZohoInvoice(raw: Record<string, unknown>): InvoiceInsert {
     balance: optionalNumber(raw, "balance") ?? 0,
     currency_code: optionalString(raw, "currency_code"),
     item_name: getItemName(raw),
+    // Only meaningfully populated for zero-total invoices (a direct/
+    // non-cash ubhayam, where the subject line records what was donated
+    // instead of an amount) — see fetchZohoInvoices in lib/zoho/client.ts.
+    subject: optionalString(raw, "subject"),
     raw: raw as Json,
     synced_at: new Date().toISOString()
   };

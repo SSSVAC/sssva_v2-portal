@@ -8,6 +8,12 @@ export type AllTimeFundInvoice = {
   customer_name: string | null;
   date: string | null;
   total: number;
+  subject: string | null;
+};
+
+export type NonCashDonationRow = {
+  donorName: string | null;
+  detail: string;
 };
 
 export type AllTimeFundExpense = {
@@ -130,6 +136,21 @@ export function buildAllTimeContributionRows(
     }));
 }
 
+// A direct/non-cash ubhayam: a zero-total invoice whose subject line
+// records what was donated instead of an amount (see fetchZohoInvoices in
+// lib/zoho/client.ts for how `subject` gets backfilled). Kept separate
+// from buildAllTimeContributionRows rather than folded into a customer's
+// cash total, since there's nothing to sum — the donation is the note
+// itself.
+export function buildNonCashDonationRows(invoices: AllTimeFundInvoice[]): NonCashDonationRow[] {
+  return invoices
+    .filter((invoice) => Number(invoice.total ?? 0) === 0 && invoice.subject && invoice.subject.trim() !== "")
+    .map((invoice) => ({
+      donorName: invoice.customer_name,
+      detail: (invoice.subject as string).trim()
+    }));
+}
+
 export function buildAllTimeExpenseRows(expenses: AllTimeFundExpense[]): SilaiExpenseRow[] {
   return expenses.map((expense) => ({
     id: expense.id,
@@ -151,6 +172,7 @@ export function buildAllTimeBillRows(bills: AllTimeFundBill[]): SilaiBillRow[] {
 
 export type AllTimeFundReportData = {
   contributionRows: SilaiContributionRow[];
+  nonCashDonationRows: NonCashDonationRow[];
   expenseRows: SilaiExpenseRow[];
   billRows: SilaiBillRow[];
 };
@@ -163,7 +185,7 @@ export async function fetchAllTimeFundReportData(
     getAllCustomers(supabase),
     supabase
       .from("zoho_invoices")
-      .select("customer_id, customer_name, date, total")
+      .select("customer_id, customer_name, date, total, subject")
       .or(config.incomeItemNames.map((name) => `item_name.ilike.%${name}%`).join(","))
       .order("date", { ascending: false })
       .returns<AllTimeFundInvoice[]>(),
@@ -183,6 +205,7 @@ export async function fetchAllTimeFundReportData(
 
   return {
     contributionRows: buildAllTimeContributionRows(invoices ?? [], customers),
+    nonCashDonationRows: buildNonCashDonationRows(invoices ?? []),
     expenseRows: buildAllTimeExpenseRows(expenses ?? []),
     billRows: buildAllTimeBillRows(bills ?? [])
   };

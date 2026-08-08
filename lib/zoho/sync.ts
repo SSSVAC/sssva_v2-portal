@@ -84,9 +84,10 @@ export async function runZohoBooksSync(options: ZohoSyncOptions = DEFAULT_SYNC_O
     // rate limits. Only brand-new customers/invoices/bills pay for a detail
     // lookup; bills still missing account_name or item_name from a prior
     // sync keep getting retried until Zoho's line items backfill them.
-    const [existingCustomerFields, existingItemNames, existingBillDetails] = await Promise.all([
+    const [existingCustomerFields, existingItemNames, existingSubjects, existingBillDetails] = await Promise.all([
       resolvedOptions.customers ? loadExistingCustomerFields(supabase) : Promise.resolve(new Map<string, CustomerFieldOverride>()),
       resolvedOptions.invoices ? loadExistingInvoiceItemNames(supabase) : Promise.resolve(new Map<string, string | null>()),
+      resolvedOptions.invoices ? loadExistingInvoiceSubjects(supabase) : Promise.resolve(new Map<string, string>()),
       resolvedOptions.bills ? loadExistingBillDetails(supabase) : Promise.resolve(new Map<string, BillDetail>())
     ]);
 
@@ -94,7 +95,7 @@ export async function runZohoBooksSync(options: ZohoSyncOptions = DEFAULT_SYNC_O
       resolvedOptions.customers
         ? fetchZohoCustomers(accessToken, undefined, existingCustomerFields)
         : Promise.resolve([]),
-      resolvedOptions.invoices ? fetchZohoInvoices(accessToken, existingItemNames) : Promise.resolve([]),
+      resolvedOptions.invoices ? fetchZohoInvoices(accessToken, existingItemNames, existingSubjects) : Promise.resolve([]),
       resolvedOptions.expenses ? fetchZohoExpenses(accessToken) : Promise.resolve([]),
       resolvedOptions.bills ? fetchZohoBills(accessToken, existingBillDetails) : Promise.resolve([])
     ]);
@@ -356,6 +357,26 @@ async function loadExistingInvoiceItemNames(supabase: ReturnType<typeof createAd
 
   for (const row of data) {
     map.set(row.zoho_invoice_id, row.item_name);
+  }
+
+  return map;
+}
+
+// Only invoices that already have a subject are cached; a zero-total
+// invoice still missing one is retried on every sync until Zoho's detail
+// endpoint returns it (same pattern as loadExistingBillDetails below).
+async function loadExistingInvoiceSubjects(supabase: ReturnType<typeof createAdminClient>) {
+  const map = new Map<string, string>();
+  const { data, error } = await supabase.from("zoho_invoices").select("zoho_invoice_id, subject").not("subject", "is", null);
+
+  if (error || !data) {
+    return map;
+  }
+
+  for (const row of data) {
+    if (row.subject) {
+      map.set(row.zoho_invoice_id, row.subject);
+    }
   }
 
   return map;
