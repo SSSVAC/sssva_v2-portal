@@ -39,7 +39,10 @@ const MONTHLY_REPORT_MONTHS_SHOWN = 24;
 // Zoho expense/bill account name used for statue-fund costs. Excluded from
 // the general Monthly Report (tracked separately there) and used as the
 // positive match for the dedicated Silai Fund Report below.
-const SILAI_EXPENSE_ACCOUNT_NAME = "சிலை வைப்பதற்கான செலவுகல்";
+const SILAI_EXPENSE_ACCOUNT_NAME = "Prathishta Consecration Expenses";
+
+const UGADI_EXPENSE_ACCOUNT = "Ugadi";
+const VARUSHABISHEGAM_EXPENSE_ACCOUNT = "Varushabishekam Expenses";
 
 type CustomerRow = Database["public"]["Tables"]["zoho_customers"]["Row"];
 type InvoiceRow = Database["public"]["Tables"]["zoho_invoices"]["Row"];
@@ -422,7 +425,7 @@ function buildMonthlyIncomeRows(invoices: MonthlyIncomeInvoice[]): MonthlyIncome
 
 function buildMonthlyExpenseRows(expenses: MonthlyExpenseSource[]): MonthlyExpenseRow[] {
   return expenses
-    .filter((expense) => expense.account_name !== SILAI_EXPENSE_ACCOUNT_NAME)
+    .filter((expense) => expense.account_name !== SILAI_EXPENSE_ACCOUNT_NAME && expense.account_name !== UGADI_EXPENSE_ACCOUNT && expense.account_name !== VARUSHABISHEGAM_EXPENSE_ACCOUNT)
     .map((expense) => ({
       id: expense.id,
       itemName: expense.description,
@@ -434,7 +437,7 @@ function buildMonthlyExpenseRows(expenses: MonthlyExpenseSource[]): MonthlyExpen
 
 function buildMonthlyBillRows(bills: MonthlyBillSource[]): MonthlyBillRow[] {
   return bills
-    .filter((bill) => bill.account_name !== SILAI_EXPENSE_ACCOUNT_NAME)
+    .filter((bill) => bill.account_name !== SILAI_EXPENSE_ACCOUNT_NAME && bill.account_name !== UGADI_EXPENSE_ACCOUNT && bill.account_name !== VARUSHABISHEGAM_EXPENSE_ACCOUNT)
     .map((bill) => ({
       id: bill.id,
       number: bill.bill_number,
