@@ -194,3 +194,17 @@ export async function fetchEventFundReportData(
     billRows: buildEventBillRows(bills ?? [])
   };
 }
+
+// Picks the year to preselect from the URL's `?year=` param, falling back
+// to undefined (component then defaults to the most recent year) when the
+// param is missing or doesn't match any year actually present in the data.
+export function pickInitialEventYear(data: EventFundReportData, requestedYear: string | undefined): string | undefined {
+  if (!requestedYear) return undefined;
+
+  const years = new Set<string>();
+  data.contributionRows.forEach((row) => years.add(row.year));
+  data.expenseRows.forEach((row) => years.add(row.year));
+  data.billRows.forEach((row) => years.add(row.year));
+
+  return years.has(requestedYear) ? requestedYear : undefined;
+}

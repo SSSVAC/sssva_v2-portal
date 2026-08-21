@@ -1,6 +1,6 @@
 import { EventFundReport, type EventBillRow, type EventContributionRow, type EventExpenseRow } from "@/components/event-fund-report";
 import type { ReportDefinition, ReportLoaderContext } from "@/lib/reports/types";
-import { fetchEventFundReportData } from "@/lib/event-fund";
+import { fetchEventFundReportData, pickInitialEventYear } from "@/lib/event-fund";
 
 type Props = {
   title: string;
@@ -10,11 +10,13 @@ type Props = {
   contributionRows: EventContributionRow[];
   expenseRows: EventExpenseRow[];
   billRows: EventBillRow[];
+  initialYear?: string;
+  initialShowAllMembers?: boolean;
 };
 
 // "வருஷாபிஷேகம்" (Varusha Abhishegam, the annual one) is distinct from the
 // regular "Abishegam" item — see lib/reports/constants.ts.
-async function loadVarushabishegam({ supabase }: ReportLoaderContext): Promise<Props> {
+async function loadVarushabishegam({ supabase, searchParams }: ReportLoaderContext): Promise<Props> {
   const data = await fetchEventFundReportData(supabase, {
     incomeItemNames: ["வருஷாபிஷேகம்"],
     expenseAccountNames: ["Varushabishekam Expenses"]
@@ -25,7 +27,9 @@ async function loadVarushabishegam({ supabase }: ReportLoaderContext): Promise<P
     subtitle: "வருஷாபிஷேகம்",
     fileSlug: "varushabishegam-report",
     printTarget: "varushabishegam",
-    ...data
+    ...data,
+    initialYear: pickInitialEventYear(data, searchParams.year),
+    initialShowAllMembers: searchParams.all === "1"
   };
 }
 

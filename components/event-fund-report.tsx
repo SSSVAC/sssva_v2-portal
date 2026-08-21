@@ -14,6 +14,7 @@ import {
   type ExportSection
 } from "@/lib/export";
 import { groupKeyFor, sortGroupNames } from "@/lib/silai-groups";
+import { useUrlParamSetter } from "@/lib/reports/use-url-param";
 
 export type EventContributionRow = {
   year: string;
@@ -71,6 +72,8 @@ type EventFundReportProps = {
   contributionRows: EventContributionRow[];
   expenseRows: EventExpenseRow[];
   billRows: EventBillRow[];
+  initialYear?: string;
+  initialShowAllMembers?: boolean;
 };
 
 export function EventFundReport({
@@ -80,7 +83,9 @@ export function EventFundReport({
   printTarget,
   contributionRows,
   expenseRows,
-  billRows
+  billRows,
+  initialYear,
+  initialShowAllMembers = false
 }: EventFundReportProps) {
   const years = useMemo(() => {
     const set = new Set<string>();
@@ -90,8 +95,19 @@ export function EventFundReport({
     return Array.from(set).sort((a, b) => b.localeCompare(a));
   }, [contributionRows, expenseRows, billRows]);
 
-  const [selectedYear, setSelectedYear] = useState(years[0] ?? "");
-  const [showAllMembers, setShowAllMembers] = useState(false);
+  const [selectedYear, setSelectedYear] = useState(initialYear ?? years[0] ?? "");
+  const [showAllMembers, setShowAllMembers] = useState(initialShowAllMembers);
+  const setUrlParams = useUrlParamSetter();
+
+  const handleYearChange = (year: string) => {
+    setSelectedYear(year);
+    setUrlParams({ year });
+  };
+
+  const handleShowAllMembersChange = (checked: boolean) => {
+    setShowAllMembers(checked);
+    setUrlParams({ all: checked ? "1" : null });
+  };
 
   const yearContributionRows = useMemo(
     () => contributionRows.filter((row) => row.year === selectedYear),
@@ -187,7 +203,7 @@ export function EventFundReport({
           className="filter-input"
           style={{ maxWidth: 160 }}
           value={selectedYear}
-          onChange={(event) => setSelectedYear(event.target.value)}
+          onChange={(event) => handleYearChange(event.target.value)}
         >
           {years.map((year) => (
             <option key={year} value={year}>
@@ -233,7 +249,7 @@ export function EventFundReport({
           <input
             type="checkbox"
             checked={showAllMembers}
-            onChange={(event) => setShowAllMembers(event.target.checked)}
+            onChange={(event) => handleShowAllMembersChange(event.target.checked)}
           />
           Show all members (including not yet paid)
         </label>

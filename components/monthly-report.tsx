@@ -12,6 +12,7 @@ import {
   printReportSection,
   type ExportSection
 } from "@/lib/export";
+import { useUrlParamSetter } from "@/lib/reports/use-url-param";
 import type { DonationMonth } from "@/components/monthly-donations-report";
 
 export type MonthlyIncomeCategory = "donations" | "archanai" | "abhishegam" | "others";
@@ -45,6 +46,7 @@ type MonthlyReportProps = {
   incomeRows: MonthlyIncomeRow[];
   expenseRows: MonthlyExpenseRow[];
   billRows: MonthlyBillRow[];
+  initialMonth?: string;
 };
 
 const INCOME_CATEGORY_LABELS: Record<MonthlyIncomeCategory, string> = {
@@ -73,11 +75,17 @@ function buildDonorRowsForCategory(rows: MonthlyIncomeRow[], category: MonthlyIn
     .sort((a, b) => a.donorName.localeCompare(b.donorName));
 }
 
-export function MonthlyReport({ months, incomeRows, expenseRows, billRows }: MonthlyReportProps) {
+export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initialMonth }: MonthlyReportProps) {
   const defaultMonth = months.length > 0 ? months[months.length - 1].key : "";
-  const [selectedMonth, setSelectedMonth] = useState(defaultMonth);
+  const [selectedMonth, setSelectedMonth] = useState(initialMonth ?? defaultMonth);
+  const setUrlParams = useUrlParamSetter();
 
   const selectedMonthLabel = months.find((month) => month.key === selectedMonth)?.label ?? selectedMonth;
+
+  const handleMonthChange = (month: string) => {
+    setSelectedMonth(month);
+    setUrlParams({ month });
+  };
 
   const monthIncomeRows = useMemo(
     () => incomeRows.filter((row) => row.date.slice(0, 7) === selectedMonth),
@@ -182,7 +190,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows }: Mon
           className="filter-input"
           style={{ maxWidth: 200 }}
           value={selectedMonth}
-          onChange={(event) => setSelectedMonth(event.target.value)}
+          onChange={(event) => handleMonthChange(event.target.value)}
         >
           {[...months].reverse().map((month) => (
             <option key={month.key} value={month.key}>

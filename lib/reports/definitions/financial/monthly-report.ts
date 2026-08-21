@@ -30,6 +30,7 @@ type Props = {
   incomeRows: MonthlyIncomeRow[];
   expenseRows: MonthlyExpenseRow[];
   billRows: MonthlyBillRow[];
+  initialMonth?: string;
 };
 
 // Archanai is checked before Abhishegam, and both before the general
@@ -47,8 +48,9 @@ function categorizeIncomeItemName(itemName: string | null): MonthlyIncomeCategor
   return null;
 }
 
-async function loadMonthlyReport({ supabase }: ReportLoaderContext): Promise<Props> {
+async function loadMonthlyReport({ supabase, searchParams }: ReportLoaderContext): Promise<Props> {
   const months = getLastNMonths(MONTHLY_REPORT_MONTHS_SHOWN);
+  const initialMonth = months.some((month) => month.key === searchParams.month) ? searchParams.month : undefined;
   const rangeStart = `${months[0].key}-01`;
   const incomeItemNamePatterns = [DONATION_ITEM_NAME, ...ARCHANAI_ITEM_NAMES, ...ABHISHEGAM_ITEM_NAMES, ...OTHERS_ITEM_NAMES];
 
@@ -102,7 +104,7 @@ async function loadMonthlyReport({ supabase }: ReportLoaderContext): Promise<Pro
       total: Number(bill.total ?? 0)
     }));
 
-  return { months, incomeRows, expenseRows, billRows };
+  return { months, incomeRows, expenseRows, billRows, initialMonth };
 }
 
 export const monthlyReport: ReportDefinition<Props> = {

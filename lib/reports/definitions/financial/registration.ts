@@ -8,12 +8,13 @@ type Props = AllTimeFundReportData & {
   subtitle: string;
   fileSlug: string;
   printTarget: string;
+  initialShowAllMembers?: boolean;
 };
 
 // One-time per-member activity (not annual), so this uses the all-time
 // fund pattern (like Silai Fund Report) instead of the year-dropdown
 // EventFundReport the other financial/event reports use.
-async function loadRegistration({ supabase }: ReportLoaderContext): Promise<Props> {
+async function loadRegistration({ supabase, searchParams }: ReportLoaderContext): Promise<Props> {
   const data = await fetchAllTimeFundReportData(supabase, {
     incomeItemNames: [REGISTRATION_ITEM_NAME],
     expenseAccountNames: [REGISTRATION_EXPENSE_ACCOUNT]
@@ -24,7 +25,8 @@ async function loadRegistration({ supabase }: ReportLoaderContext): Promise<Prop
     subtitle: "Association Registration Fund — all time",
     fileSlug: "registration",
     printTarget: "registration",
-    ...data
+    ...data,
+    initialShowAllMembers: searchParams.all === "1"
   };
 }
 

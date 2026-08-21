@@ -14,6 +14,7 @@ import {
   type ExportSection
 } from "@/lib/export";
 import { groupKeyFor, sortGroupNames } from "@/lib/silai-groups";
+import { useUrlParamSetter } from "@/lib/reports/use-url-param";
 import type { NonCashDonationRow } from "@/lib/reports/all-time-fund";
 
 export type SilaiContributionRow = {
@@ -67,6 +68,7 @@ type SilaiFundReportProps = {
   nonCashDonationRows?: NonCashDonationRow[];
   expenseRows: SilaiExpenseRow[];
   billRows: SilaiBillRow[];
+  initialShowAllMembers?: boolean;
 };
 
 function sumTotals<T extends { total: number }>(rows: T[]) {
@@ -81,9 +83,16 @@ export function SilaiFundReport({
   contributionRows,
   nonCashDonationRows = [],
   expenseRows,
-  billRows
+  billRows,
+  initialShowAllMembers = false
 }: SilaiFundReportProps) {
-  const [showAllMembers, setShowAllMembers] = useState(false);
+  const [showAllMembers, setShowAllMembers] = useState(initialShowAllMembers);
+  const setUrlParams = useUrlParamSetter();
+
+  const handleShowAllMembersChange = (checked: boolean) => {
+    setShowAllMembers(checked);
+    setUrlParams({ all: checked ? "1" : null });
+  };
 
   // contributionRows includes every member (even those with total: 0) so
   // this toggle can reveal who hasn't paid yet; off by default keeps the
@@ -205,7 +214,7 @@ export function SilaiFundReport({
           <input
             type="checkbox"
             checked={showAllMembers}
-            onChange={(event) => setShowAllMembers(event.target.checked)}
+            onChange={(event) => handleShowAllMembersChange(event.target.checked)}
           />
           Show all members (including not yet paid)
         </label>

@@ -24,6 +24,7 @@ type Row = Record<string, unknown>;
 
 const ADD_NEW_OPTION_VALUE = "__add_new__";
 const EMPTY_FILTER_VALUE = "__empty__";
+const PAGE_SIZE = 50;
 
 type ActionColumn = {
   label: string;
@@ -58,6 +59,7 @@ export function EditableDataTable({
 
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [sort, setSort] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
+  const [page, setPage] = useState(1);
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [addingOptionCell, setAddingOptionCell] = useState<string | null>(null);
@@ -146,6 +148,17 @@ export function EditableDataTable({
     });
   }, [filteredRows, sort, columns]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [filters, sort]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedRows.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedRows = useMemo(
+    () => sortedRows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [sortedRows, currentPage]
+  );
+
   function toggleSort(key: string) {
     setSort((prev) => {
       if (!prev || prev.key !== key) return { key, direction: "asc" };
@@ -222,7 +235,7 @@ export function EditableDataTable({
   }
 
   function toggleSelectAllVisible() {
-    const visibleIds = sortedRows.map((row) => String(row.id));
+    const visibleIds = pagedRows.map((row) => String(row.id));
     const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
 
     setSelectedIds((prev) => {
@@ -305,7 +318,7 @@ export function EditableDataTable({
     }
   }
 
-  const visibleIds = sortedRows.map((row) => String(row.id));
+  const visibleIds = pagedRows.map((row) => String(row.id));
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
 
   return (
@@ -424,7 +437,7 @@ export function EditableDataTable({
           </tr>
         </thead>
         <tbody>
-          {sortedRows.map((row) => {
+          {pagedRows.map((row) => {
             const rowId = String(row.id);
 
             return (
@@ -557,6 +570,36 @@ export function EditableDataTable({
       {sortedRows.length === 0 && (
         <div className="empty-state">
           <p>No matching rows.</p>
+        </div>
+      )}
+
+      {sortedRows.length > 0 && (
+        <div className="filter-banner no-print" style={{ justifyContent: "space-between" }}>
+          <span className="muted">
+            Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, sortedRows.length)} of{" "}
+            {sortedRows.length}
+          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button
+              type="button"
+              className="button secondary"
+              disabled={currentPage <= 1}
+              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+            >
+              Previous
+            </button>
+            <span className="muted">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              type="button"
+              className="button secondary"
+              disabled={currentPage >= totalPages}
+              onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
     </div>

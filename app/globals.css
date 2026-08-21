@@ -771,25 +771,10 @@ input {
     display: none !important;
   }
 
-  body[data-print-target] .report-card {
-    display: none !important;
-  }
-
-  body[data-print-target="silai-contributions"] .report-card[data-print-id="silai-contributions"],
-  body[data-print-target="member-monthly-donation"] .report-card[data-print-id="member-monthly-donation"],
-  body[data-print-target="monthly-donors"] .report-card[data-print-id="monthly-donors"],
-  body[data-print-target="registration"] .report-card[data-print-id="registration"],
-  body[data-print-target="monthly-report"] .report-card[data-print-id="monthly-report"],
-  body[data-print-target="silai-fund"] .report-card[data-print-id="silai-fund"],
-  body[data-print-target="silai-by-group"] .report-card[data-print-id="silai-by-group"],
-  body[data-print-target="silai-followup"] .report-card[data-print-id="silai-followup"],
-  body[data-print-target="ugadi"] .report-card[data-print-id="ugadi"],
-  body[data-print-target="varushabishegam"] .report-card[data-print-id="varushabishegam"],
-  body[data-print-target="marghazhi-poojai"] .report-card[data-print-id="marghazhi-poojai"] {
-    display: block !important;
-  }
-
-  body[data-print-target] .report-card[data-print-id] {
+  /* Each report now lives on its own page (app/reports/[category]/[slug]),
+     so exactly one .report-card is ever in the DOM at a time — no need to
+     hide/allowlist by data-print-target/data-print-id anymore. */
+  .report-card {
     border: none;
     padding: 0;
   }

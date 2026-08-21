@@ -3,14 +3,18 @@ import type { ReportDefinition, ReportLoaderContext } from "@/lib/reports/types"
 import { fetchAllTimeFundReportData, type AllTimeFundReportData } from "@/lib/reports/all-time-fund";
 import { FUND_ITEM_NAMES, SILAI_EXPENSE_ACCOUNT_NAME } from "@/lib/reports/constants";
 
-async function loadSilaiFund({ supabase }: ReportLoaderContext): Promise<AllTimeFundReportData> {
-  return fetchAllTimeFundReportData(supabase, {
+type Props = AllTimeFundReportData & { initialShowAllMembers?: boolean };
+
+async function loadSilaiFund({ supabase, searchParams }: ReportLoaderContext): Promise<Props> {
+  const data = await fetchAllTimeFundReportData(supabase, {
     incomeItemNames: FUND_ITEM_NAMES,
     expenseAccountNames: [SILAI_EXPENSE_ACCOUNT_NAME]
   });
+
+  return { ...data, initialShowAllMembers: searchParams.all === "1" };
 }
 
-export const silaiFund: ReportDefinition<AllTimeFundReportData> = {
+export const silaiFund: ReportDefinition<Props> = {
   slug: "silai-fund",
   category: "silai",
   title: "Silai Fund Report",
