@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CalendarClock, CircleDollarSign, FileText, RefreshCw } from "lucide-react";
 import { Topbar } from "@/components/topbar";
@@ -5,11 +6,13 @@ import { DashboardCharts } from "@/components/dashboard-charts";
 import { SyncForm } from "@/components/sync-form";
 import { createClient } from "@/lib/supabase/server";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { CATEGORY_META, CATEGORY_ORDER, getReportsByCategory } from "@/lib/reports/registry";
 import type { Database } from "@/types/database";
 
 export const dynamic = "force-dynamic";
 
 type InvoiceRow = Database["public"]["Tables"]["zoho_invoices"]["Row"];
+type InvoiceStats = Pick<InvoiceRow, "total" | "balance" | "status">;
 type MonthlyRevenueRow = Database["public"]["Views"]["dashboard_monthly_revenue"]["Row"];
 type SyncRunRow = Database["public"]["Tables"]["sync_runs"]["Row"];
 
@@ -28,7 +31,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     redirect("/login");
   }
 
-  const [{ data: invoices }, { data: monthlyRevenue }, { data: syncRuns }] =
+  const [{ data: recentInvoices }, { data: allInvoiceStats }, { data: monthlyRevenue }, { data: syncRuns }] =
     await Promise.all([
       supabase
         .from("zoho_invoices")
@@ -36,6 +39,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         .order("date", { ascending: false })
         .limit(10)
         .returns<InvoiceRow[]>(),
+      // Unlimited, narrow select — drives the metric cards and status
+      // chart off every invoice instead of just the 10 shown below, which
+      // previously made Revenue/Outstanding/Invoices read like recent-only
+      // numbers without saying so.
+      supabase.from("zoho_invoices").select("total, balance, status").returns<InvoiceStats[]>(),
       supabase
         .from("dashboard_monthly_revenue")
         .select("*")
@@ -51,10 +59,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         .returns<SyncRunRow[]>()
     ]);
 
-  const safeInvoices = invoices ?? [];
-  const totalRevenue = safeInvoices.reduce((sum, invoice) => sum + Number(invoice.total), 0);
-  const outstanding = safeInvoices.reduce((sum, invoice) => sum + Number(invoice.balance), 0);
-  const overdue = safeInvoices.filter((invoice) => invoice.status === "overdue").length;
+  const safeRecentInvoices = recentInvoices ?? [];
+  const safeInvoiceStats = allInvoiceStats ?? [];
+  const totalRevenue = safeInvoiceStats.reduce((sum, invoice) => sum + Number(invoice.total), 0);
+  const outstanding = safeInvoiceStats.reduce((sum, invoice) => sum + Number(invoice.balance), 0);
+  const overdue = safeInvoiceStats.filter((invoice) => invoice.status === "overdue").length;
   const latestSync = syncRuns?.[0];
 
   return (
@@ -86,13 +95,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             icon={<CircleDollarSign size={20} />}
             label="Revenue"
             value={formatCurrency(totalRevenue)}
-            detail="From recent synced invoices"
+            detail="All invoices, all time"
           />
           <MetricCard
             icon={<FileText size={20} />}
             label="Invoices"
-            value={String(safeInvoices.length)}
-            detail="Latest invoice records"
+            value={String(safeInvoiceStats.length)}
+            detail="Total invoice records"
           />
           <MetricCard
             icon={<CalendarClock size={20} />}
@@ -123,17 +132,17 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 month: item.month ?? "",
                 revenue: Number(item.revenue ?? 0)
               }))}
-              invoiceStatus={buildStatusCounts(safeInvoices)}
+              invoiceStatus={buildStatusCounts(safeInvoiceStats)}
             />
           </div>
 
           <div className="table-panel">
             <div className="panel-head">
               <h2>Recent Invoices</h2>
-              <span className="muted">{safeInvoices.length} shown</span>
+              <span className="muted">{safeRecentInvoices.length} shown</span>
             </div>
 
-            {safeInvoices.length > 0 ? (
+            {safeRecentInvoices.length > 0 ? (
               <table className="data-table">
                 <thead>
                   <tr>
@@ -144,7 +153,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                   </tr>
                 </thead>
                 <tbody>
-                  {safeInvoices.map((invoice) => (
+                  {safeRecentInvoices.map((invoice) => (
                     <tr key={invoice.id}>
                       <td>{invoice.invoice_number ?? invoice.zoho_invoice_id}</td>
                       <td>{invoice.customer_name ?? "Unknown"}</td>
@@ -163,6 +172,32 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 <p>Run the Zoho sync after adding your environment variables.</p>
               </div>
             )}
+          </div>
+        </section>
+
+        <section aria-labelledby="dashboard-reports-heading">
+          <div className="panel-head">
+            <h2 id="dashboard-reports-heading">Reports</h2>
+            <Link href="/reports" className="muted">
+              View all →
+            </Link>
+          </div>
+
+          <div className="metric-grid">
+            {CATEGORY_ORDER.map((category) => {
+              const meta = CATEGORY_META[category];
+              const reportCount = getReportsByCategory(category).length;
+
+              return (
+                <Link key={category} href={`/reports/${category}`} className="metric-card report-gallery-card">
+                  <div className="metric-head">
+                    <span>{meta.label}</span>
+                  </div>
+                  <div className="metric-value">{reportCount}</div>
+                  <div className="metric-sub">{meta.description}</div>
+                </Link>
+              );
+            })}
           </div>
         </section>
       </div>
