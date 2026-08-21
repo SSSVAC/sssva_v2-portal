@@ -1,8 +1,21 @@
 "use client";
 
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { formatCurrency } from "@/lib/format";
 
-const STATUS_COLORS = ["var(--primary)", "var(--accent)", "#2563eb", "#9333ea", "var(--muted)"];
+const INVOICE_STATUS_COLORS = ["var(--primary)", "var(--accent)", "#2563eb", "#9333ea", "var(--muted)"];
+const SILAI_STATUS_COLORS: Record<string, string> = {
+  not_paid: "var(--danger)",
+  partially_paid: "var(--accent)",
+  fully_paid: "var(--success)"
+};
+
+const TOOLTIP_STYLE = {
+  background: "var(--panel)",
+  border: "1px solid var(--border)",
+  borderRadius: 8,
+  fontSize: 13
+};
 
 type DashboardChartsProps = {
   monthlyRevenue: {
@@ -13,106 +26,99 @@ type DashboardChartsProps = {
     status: string;
     count: number;
   }[];
+  silaiFundStatus: {
+    status: string;
+    label: string;
+    count: number;
+  }[];
 };
 
-export function DashboardCharts({ monthlyRevenue, invoiceStatus }: DashboardChartsProps) {
-  const maxRevenue = Math.max(...monthlyRevenue.map((item) => item.revenue), 1);
-  const totalCount = Math.max(
-    invoiceStatus.reduce((sum, item) => sum + item.count, 0),
-    1
-  );
-
-  let offset = 0;
+export function DashboardCharts({ monthlyRevenue, invoiceStatus, silaiFundStatus }: DashboardChartsProps) {
+  const hasSilaiData = silaiFundStatus.some((entry) => entry.count > 0);
 
   return (
-    <div className="dashboard-grid">
-      <div className="chart-box">
-        <div style={{ height: 260, display: "flex", alignItems: "flex-end", gap: 12 }}>
+    <>
+      <div className="chart-panel">
+        <div className="panel-head">
+          <h2>Revenue Trend</h2>
+          <span className="muted">Monthly</span>
+        </div>
+        <div className="chart-box">
           {monthlyRevenue.length > 0 ? (
-            monthlyRevenue.map((item) => {
-              const height = Math.max(8, (item.revenue / maxRevenue) * 100);
-
-              return (
-                <div
-                  key={item.month}
-                  style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}
-                >
-                  <div style={{ height: 180, width: "100%", display: "flex", alignItems: "flex-end" }}>
-                    <div
-                      style={{
-                        width: "100%",
-                        height: `${height}%`,
-                        minHeight: 8,
-                        backgroundColor: "var(--primary)",
-                        borderRadius: "6px 6px 0 0"
-                      }}
-                    />
-                  </div>
-                  <span style={{ fontSize: 12, color: "var(--muted)" }}>{item.month}</span>
-                </div>
-              );
-            })
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={monthlyRevenue} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                <XAxis dataKey="month" tick={{ fontSize: 12, fill: "var(--muted)" }} axisLine={false} tickLine={false} />
+                <YAxis
+                  tickFormatter={(value: number) => formatCurrency(value)}
+                  tick={{ fontSize: 11, fill: "var(--muted)" }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={72}
+                />
+                <Tooltip formatter={(value: number) => formatCurrency(value)} contentStyle={TOOLTIP_STYLE} />
+                <Bar dataKey="revenue" fill="var(--primary)" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           ) : (
-            <div style={{ width: "100%", textAlign: "center", color: "var(--muted)" }}>
-              No revenue data yet.
+            <div className="empty-state">
+              <p>No revenue data yet.</p>
             </div>
           )}
         </div>
       </div>
 
-      <div className="chart-box">
-        <div style={{ height: 260, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
-          <svg width="220" height="220" viewBox="0 0 120 120" aria-label="Invoice status breakdown">
-            <circle cx="60" cy="60" r="42" fill="none" stroke="var(--border)" strokeWidth="18" />
-            {invoiceStatus.map((entry, index) => {
-              const radius = 42;
-              const circumference = 2 * Math.PI * radius;
-              const segmentLength = (entry.count / totalCount) * circumference;
-              const strokeDasharray = `${segmentLength} ${circumference - segmentLength}`;
-              const strokeDashoffset = -offset;
-              offset += segmentLength;
-
-              return (
-                <circle
-                  key={entry.status}
-                  cx="60"
-                  cy="60"
-                  r={radius}
-                  fill="none"
-                  stroke={STATUS_COLORS[index % STATUS_COLORS.length]}
-                  strokeWidth="18"
-                  strokeLinecap="round"
-                  strokeDasharray={strokeDasharray}
-                  strokeDashoffset={strokeDashoffset}
-                  transform="rotate(-90 60 60)"
-                />
-              );
-            })}
-          </svg>
-
-          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8 }}>
-            {invoiceStatus.length > 0 ? (
-              invoiceStatus.map((entry, index) => (
-                <div key={entry.status} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span
-                    style={{
-                      width: 10,
-                      height: 10,
-                      borderRadius: "999px",
-                      backgroundColor: STATUS_COLORS[index % STATUS_COLORS.length]
-                    }}
-                  />
-                  <span style={{ fontSize: 12, color: "var(--muted)" }}>
-                    {entry.status} ({entry.count})
-                  </span>
-                </div>
-              ))
-            ) : (
-              <span style={{ fontSize: 12, color: "var(--muted)" }}>No invoice status data yet.</span>
-            )}
-          </div>
+      <div className="chart-panel">
+        <div className="panel-head">
+          <h2>Invoice Status</h2>
+          <span className="muted">All invoices</span>
+        </div>
+        <div className="chart-box">
+          {invoiceStatus.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={invoiceStatus} dataKey="count" nameKey="status" innerRadius="55%" outerRadius="80%" paddingAngle={2}>
+                  {invoiceStatus.map((entry, index) => (
+                    <Cell key={entry.status} fill={INVOICE_STATUS_COLORS[index % INVOICE_STATUS_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={TOOLTIP_STYLE} />
+                <Legend wrapperStyle={{ fontSize: 12, color: "var(--muted)" }} />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="empty-state">
+              <p>No invoice status data yet.</p>
+            </div>
+          )}
         </div>
       </div>
-    </div>
+
+      <div className="chart-panel">
+        <div className="panel-head">
+          <h2>Silai Fund Status</h2>
+          <span className="muted">Members</span>
+        </div>
+        <div className="chart-box">
+          {hasSilaiData ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={silaiFundStatus} dataKey="count" nameKey="label" innerRadius="55%" outerRadius="80%" paddingAngle={2}>
+                  {silaiFundStatus.map((entry) => (
+                    <Cell key={entry.status} fill={SILAI_STATUS_COLORS[entry.status] ?? "var(--muted)"} />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={TOOLTIP_STYLE} />
+                <Legend wrapperStyle={{ fontSize: 12, color: "var(--muted)" }} />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="empty-state">
+              <p>No members tracked yet.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
   );
 }

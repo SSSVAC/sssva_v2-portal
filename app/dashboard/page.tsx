@@ -7,6 +7,8 @@ import { SyncForm } from "@/components/sync-form";
 import { createClient } from "@/lib/supabase/server";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { CATEGORY_META, CATEGORY_ORDER, getReportsByCategory } from "@/lib/reports/registry";
+import { getAllCustomers } from "@/lib/reports/shared-queries";
+import { buildMemberRows, fetchContributions } from "@/lib/reports/definitions/silai/member-rows";
 import type { Database } from "@/types/database";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +33,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     redirect("/login");
   }
 
-  const [{ data: recentInvoices }, { data: allInvoiceStats }, { data: monthlyRevenue }, { data: syncRuns }] =
+  const [{ data: recentInvoices }, { data: allInvoiceStats }, { data: monthlyRevenue }, { data: syncRuns }, customers, contributions] =
     await Promise.all([
       supabase
         .from("zoho_invoices")
@@ -56,7 +58,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         .eq("provider", "zoho_books")
         .order("started_at", { ascending: false })
         .limit(1)
-        .returns<SyncRunRow[]>()
+        .returns<SyncRunRow[]>(),
+      getAllCustomers(supabase),
+      fetchContributions(supabase)
     ]);
 
   const safeRecentInvoices = recentInvoices ?? [];
@@ -65,6 +69,17 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const outstanding = safeInvoiceStats.reduce((sum, invoice) => sum + Number(invoice.balance), 0);
   const overdue = safeInvoiceStats.filter((invoice) => invoice.status === "overdue").length;
   const latestSync = syncRuns?.[0];
+
+  const memberRows = buildMemberRows(customers, contributions);
+  const silaiFundStatus = [
+    { status: "not_paid", label: "Not Paid", count: memberRows.filter((member) => member.status === "not_paid").length },
+    {
+      status: "partially_paid",
+      label: "Partially Paid",
+      count: memberRows.filter((member) => member.status === "partially_paid").length
+    },
+    { status: "fully_paid", label: "Fully Paid", count: memberRows.filter((member) => member.status === "fully_paid").length }
+  ];
 
   return (
     <main className="shell">
@@ -121,58 +136,53 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           />
         </section>
 
-        <section className="dashboard-grid">
-          <div className="chart-panel">
-            <div className="panel-head">
-              <h2>Revenue Trend</h2>
-              <span className="muted">Monthly</span>
-            </div>
-            <DashboardCharts
-              monthlyRevenue={(monthlyRevenue ?? []).map((item) => ({
-                month: item.month ?? "",
-                revenue: Number(item.revenue ?? 0)
-              }))}
-              invoiceStatus={buildStatusCounts(safeInvoiceStats)}
-            />
+        <section className="chart-grid" aria-label="Dashboard charts">
+          <DashboardCharts
+            monthlyRevenue={(monthlyRevenue ?? []).map((item) => ({
+              month: item.month ?? "",
+              revenue: Number(item.revenue ?? 0)
+            }))}
+            invoiceStatus={buildStatusCounts(safeInvoiceStats)}
+            silaiFundStatus={silaiFundStatus}
+          />
+        </section>
+
+        <section className="table-panel">
+          <div className="panel-head">
+            <h2>Recent Invoices</h2>
+            <span className="muted">{safeRecentInvoices.length} shown</span>
           </div>
 
-          <div className="table-panel">
-            <div className="panel-head">
-              <h2>Recent Invoices</h2>
-              <span className="muted">{safeRecentInvoices.length} shown</span>
-            </div>
-
-            {safeRecentInvoices.length > 0 ? (
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Invoice</th>
-                    <th>Customer</th>
-                    <th>Status</th>
-                    <th>Total</th>
+          {safeRecentInvoices.length > 0 ? (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Invoice</th>
+                  <th>Customer</th>
+                  <th>Status</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {safeRecentInvoices.map((invoice) => (
+                  <tr key={invoice.id}>
+                    <td>{invoice.invoice_number ?? invoice.zoho_invoice_id}</td>
+                    <td>{invoice.customer_name ?? "Unknown"}</td>
+                    <td>
+                      <span className={`status-pill ${statusClass(invoice.status)}`}>
+                        {invoice.status}
+                      </span>
+                    </td>
+                    <td>{formatCurrency(Number(invoice.total))}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {safeRecentInvoices.map((invoice) => (
-                    <tr key={invoice.id}>
-                      <td>{invoice.invoice_number ?? invoice.zoho_invoice_id}</td>
-                      <td>{invoice.customer_name ?? "Unknown"}</td>
-                      <td>
-                        <span className={`status-pill ${statusClass(invoice.status)}`}>
-                          {invoice.status}
-                        </span>
-                      </td>
-                      <td>{formatCurrency(Number(invoice.total))}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div className="empty-state">
-                <p>Run the Zoho sync after adding your environment variables.</p>
-              </div>
-            )}
-          </div>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="empty-state">
+              <p>Run the Zoho sync after adding your environment variables.</p>
+            </div>
+          )}
         </section>
 
         <section aria-labelledby="dashboard-reports-heading">

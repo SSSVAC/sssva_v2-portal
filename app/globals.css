@@ -360,6 +360,12 @@ input {
   gap: 16px;
 }
 
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
 .chart-panel,
 .table-panel {
   min-width: 0;
