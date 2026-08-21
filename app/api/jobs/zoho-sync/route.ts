@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { normalizeSyncOptions, runZohoBooksSync } from "@/lib/zoho/sync";
+import { checkRateLimit, getClientIp, rateLimitResponseInit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 // Full "Sync All" runs (customers + invoices + expenses + bills, with
@@ -18,6 +19,21 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // A full sync makes many outbound Zoho calls and can run for minutes —
+  // cap how often one client can kick it off so a stuck retry loop or
+  // repeated button-mashing can't pile up overlapping runs.
+  const rateLimit = checkRateLimit(`zoho-sync:${getClientIp(request)}`, { max: 5, windowMs: 5 * 60_000 });
+  if (!rateLimit.allowed) {
+    if (wantsHtml) {
+      return NextResponse.redirect(
+        new URL(`/dashboard?sync_error=${encodeURIComponent("Too many sync requests — please wait a few minutes.")}`, request.url),
+        303
+      );
+    }
+
+    return NextResponse.json({ error: "Too many requests" }, rateLimitResponseInit(rateLimit));
   }
 
   try {

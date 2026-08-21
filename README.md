@@ -20,6 +20,8 @@ Authorization: Bearer $SYNC_JOB_SECRET
 
 Sync is triggered manually (e.g. the "Sync now" action on the dashboard, or a direct call to the endpoint above) rather than on a schedule. Set `SYNC_JOB_SECRET` as an environment variable for non-interactive calls.
 
+To get notified when a sync fails, set `SYNC_ALERT_WEBHOOK_URL` to a Slack or Discord incoming-webhook URL. Leave it unset to disable notifications (this is the default — nothing changes if you don't configure it).
+
 ## Admin access
 
 Every logged-in staff account can view and edit records. Bulk delete and Zoho resync are restricted to admins, controlled by an `is_admin` flag on the Supabase auth user (not a database table, so it can't be self-granted from the app). Grant it by running the following in the Supabase SQL editor:

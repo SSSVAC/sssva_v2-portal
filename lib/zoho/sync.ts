@@ -13,6 +13,7 @@ import {
   type CustomerFieldOverride
 } from "@/lib/zoho/client";
 import { mapZohoBill, mapZohoCustomer, mapZohoExpense, mapZohoInvoice } from "@/lib/zoho/mappers";
+import { notifySyncFailure } from "@/lib/alerts";
 
 export const ZOHO_SYNC_RESOURCES = ["customers", "invoices", "expenses", "bills"] as const;
 export type ZohoSyncResource = (typeof ZOHO_SYNC_RESOURCES)[number];
@@ -235,6 +236,8 @@ export async function runZohoBooksSync(options: ZohoSyncOptions = DEFAULT_SYNC_O
         error: message
       })
       .eq("id", run.id);
+
+    await notifySyncFailure(message);
 
     throw new Error(message);
   }

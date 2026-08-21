@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resyncZohoRecords } from "@/lib/zoho/sync";
+import { checkRateLimit, getClientIp, rateLimitResponseInit } from "@/lib/rate-limit";
 import type { Json } from "@/types/database";
 
 const EDITABLE_TABLES = {
@@ -100,6 +101,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const rateLimit = checkRateLimit(`records:patch:${getClientIp(request)}`, { max: 90, windowMs: 60_000 });
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Too many requests" }, rateLimitResponseInit(rateLimit));
+  }
+
   const body = await request.json().catch(() => null);
   const id = body?.id;
   const column = body?.column;
@@ -155,6 +161,11 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   }
 
+  const rateLimit = checkRateLimit(`records:delete:${getClientIp(request)}`, { max: 20, windowMs: 60_000 });
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Too many requests" }, rateLimitResponseInit(rateLimit));
+  }
+
   const body = await request.json().catch(() => null);
   const ids = body?.ids;
 
@@ -193,6 +204,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   if (user.app_metadata?.is_admin !== true) {
     return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+  }
+
+  const rateLimit = checkRateLimit(`records:resync:${getClientIp(request)}`, { max: 10, windowMs: 60_000 });
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Too many requests" }, rateLimitResponseInit(rateLimit));
   }
 
   const body = await request.json().catch(() => null);
