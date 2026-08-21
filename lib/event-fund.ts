@@ -29,6 +29,7 @@ export type EventFundBill = {
   vendor_name: string | null;
   date: string | null;
   total: number;
+  balance: number;
 };
 
 function yearOf(date: string | null) {
@@ -146,7 +147,8 @@ export function buildEventBillRows(bills: EventFundBill[]): EventBillRow[] {
     vendorName: bill.vendor_name,
     date: bill.date,
     year: yearOf(bill.date),
-    total: Number(bill.total ?? 0)
+    total: Number(bill.total ?? 0),
+    balance: Number(bill.balance ?? 0)
   }));
 }
 
@@ -178,7 +180,7 @@ export async function fetchEventFundReportData(
       .returns<EventFundExpense[]>(),
     supabase
       .from("zoho_bills")
-      .select("id, bill_number, vendor_name, date, total")
+      .select("id, bill_number, vendor_name, date, total, balance")
       .in("account_name", config.expenseAccountNames)
       .order("date", { ascending: false })
       .returns<EventFundBill[]>(),

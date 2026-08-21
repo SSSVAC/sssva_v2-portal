@@ -41,6 +41,7 @@ export type EventBillRow = {
   vendorName: string | null;
   date: string | null;
   total: number;
+  balance: number;
 };
 
 // Matches the per-member Silai fund minimum used elsewhere as a general
@@ -58,6 +59,10 @@ function amountCell(total: number): ExportCell {
   if (total >= FULL_AMOUNT_THRESHOLD) return { value, highlight: "success" };
   if (total > 0) return { value, highlight: "warning" };
   return { value, highlight: "danger" };
+}
+
+function dueClass(balance: number) {
+  return balance > 0 ? "cell-danger" : "cell-success";
 }
 
 function sumTotals<T extends { total: number }>(rows: T[]) {
@@ -126,6 +131,8 @@ export function EventFundReport({
   const totalContributions = sumTotals(yearContributionRows);
   const totalExpenses = sumTotals(yearExpenseRows);
   const totalBills = sumTotals(yearBillRows);
+  const totalBillsDue = yearBillRows.reduce((sum, row) => sum + row.balance, 0);
+  const totalBillsPaid = totalBills - totalBillsDue;
   const totalSpent = totalExpenses + totalBills;
   const balance = totalContributions - totalSpent;
 
@@ -152,7 +159,9 @@ export function EventFundReport({
   const metricsExportRows = () => [
     ["Total Contributions", formatCurrency(totalContributions)],
     ["Total Spent", formatCurrency(totalSpent)],
-    ["Balance", formatCurrency(balance)]
+    ["Balance", formatCurrency(balance)],
+    ["Bills Paid", formatCurrency(totalBillsPaid)],
+    ["Bills Due", formatCurrency(totalBillsDue)]
   ];
 
   const contributionExportHeaders = ["Donor", "Phone", "Address", "Amount"];
@@ -173,10 +182,17 @@ export function EventFundReport({
     ["Total", "", formatCurrency(totalExpenses)]
   ];
 
-  const billExportHeaders = ["Bill #", "Vendor", "Date", "Amount"];
-  const billExportRows = () => [
-    ...yearBillRows.map((row) => [row.number ?? "", row.vendorName ?? "", row.date ? formatDateOnly(row.date) : "", formatCurrency(row.total)]),
-    ["Total", "", "", formatCurrency(totalBills)]
+  const billExportHeaders = ["Bill #", "Vendor", "Date", "Total", "Paid", "Due"];
+  const billExportRows = (): ExportCell[][] => [
+    ...yearBillRows.map((row) => [
+      row.number ?? "",
+      row.vendorName ?? "",
+      row.date ? formatDateOnly(row.date) : "",
+      formatCurrency(row.total),
+      formatCurrency(row.total - row.balance),
+      { value: formatCurrency(row.balance), highlight: row.balance > 0 ? "danger" : "success" } as ExportCell
+    ]),
+    ["Total", "", "", formatCurrency(totalBills), formatCurrency(totalBillsPaid), formatCurrency(totalBillsDue)]
   ];
 
   const fullReportSections = (): ExportSection[] => [
@@ -241,6 +257,15 @@ export function EventFundReport({
           </div>
           <div className="metric-value">{formatCurrency(balance)}</div>
           <div className="metric-sub">Contributions minus spent</div>
+        </article>
+        <article className="metric-card">
+          <div className="metric-head">
+            <span>Bills Due</span>
+          </div>
+          <div className={`metric-value ${totalBillsDue > 0 ? "cell-danger" : "cell-success"}`}>
+            {formatCurrency(totalBillsDue)}
+          </div>
+          <div className="metric-sub">{formatCurrency(totalBillsPaid)} paid of {formatCurrency(totalBills)}</div>
         </article>
       </div>
 
@@ -362,7 +387,9 @@ export function EventFundReport({
                 <th>Bill #</th>
                 <th>Vendor</th>
                 <th>Date</th>
-                <th>Amount</th>
+                <th>Total</th>
+                <th>Paid</th>
+                <th>Due</th>
               </tr>
             </thead>
             <tbody>
@@ -372,6 +399,8 @@ export function EventFundReport({
                   <td>{row.vendorName ?? "—"}</td>
                   <td>{row.date ? formatDateOnly(row.date) : "—"}</td>
                   <td>{formatCurrency(row.total)}</td>
+                  <td>{formatCurrency(row.total - row.balance)}</td>
+                  <td className={dueClass(row.balance)}>{formatCurrency(row.balance)}</td>
                 </tr>
               ))}
             </tbody>
@@ -379,6 +408,8 @@ export function EventFundReport({
               <tr>
                 <td colSpan={3}>Total Bills</td>
                 <td>{formatCurrency(totalBills)}</td>
+                <td>{formatCurrency(totalBillsPaid)}</td>
+                <td>{formatCurrency(totalBillsDue)}</td>
               </tr>
             </tfoot>
           </table>

@@ -30,6 +30,7 @@ export type AllTimeFundBill = {
   vendor_name: string | null;
   date: string | null;
   total: number;
+  balance: number;
 };
 
 // Shared by any all-time (not year-filtered) fund report — Silai Fund,
@@ -185,7 +186,8 @@ export function buildAllTimeBillRows(bills: AllTimeFundBill[]): SilaiBillRow[] {
     number: bill.bill_number,
     vendorName: bill.vendor_name,
     date: bill.date,
-    total: Number(bill.total ?? 0)
+    total: Number(bill.total ?? 0),
+    balance: Number(bill.balance ?? 0)
   }));
 }
 
@@ -216,7 +218,7 @@ export async function fetchAllTimeFundReportData(
       .returns<AllTimeFundExpense[]>(),
     supabase
       .from("zoho_bills")
-      .select("id, bill_number, vendor_name, date, total")
+      .select("id, bill_number, vendor_name, date, total, balance")
       .in("account_name", config.expenseAccountNames)
       .order("date", { ascending: false })
       .returns<AllTimeFundBill[]>()

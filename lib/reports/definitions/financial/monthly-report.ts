@@ -23,7 +23,7 @@ type ExpenseRow = Database["public"]["Tables"]["zoho_expenses"]["Row"];
 type BillRow = Database["public"]["Tables"]["zoho_bills"]["Row"];
 type MonthlyIncomeInvoice = Pick<InvoiceRow, "date" | "total" | "item_name" | "customer_name">;
 type MonthlyExpenseSource = Pick<ExpenseRow, "id" | "description" | "account_name" | "date" | "total">;
-type MonthlyBillSource = Pick<BillRow, "id" | "bill_number" | "vendor_name" | "account_name" | "date" | "total">;
+type MonthlyBillSource = Pick<BillRow, "id" | "bill_number" | "vendor_name" | "account_name" | "date" | "total" | "balance">;
 
 type Props = {
   months: DonationMonth[];
@@ -69,7 +69,7 @@ async function loadMonthlyReport({ supabase, searchParams }: ReportLoaderContext
       .returns<MonthlyExpenseSource[]>(),
     supabase
       .from("zoho_bills")
-      .select("id, bill_number, vendor_name, account_name, date, total")
+      .select("id, bill_number, vendor_name, account_name, date, total, balance")
       .gte("date", rangeStart)
       .order("date", { ascending: false })
       .returns<MonthlyBillSource[]>()
@@ -101,7 +101,8 @@ async function loadMonthlyReport({ supabase, searchParams }: ReportLoaderContext
       vendorName: bill.vendor_name,
       accountName: bill.account_name,
       date: bill.date,
-      total: Number(bill.total ?? 0)
+      total: Number(bill.total ?? 0),
+      balance: Number(bill.balance ?? 0)
     }));
 
   return { months, incomeRows, expenseRows, billRows, initialMonth };

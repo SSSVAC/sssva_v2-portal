@@ -10,6 +10,7 @@ import {
   exportSectionsToHtml,
   exportSectionToImage,
   printReportSection,
+  type ExportCell,
   type ExportSection
 } from "@/lib/export";
 import { useUrlParamSetter } from "@/lib/reports/use-url-param";
@@ -39,7 +40,12 @@ export type MonthlyBillRow = {
   accountName: string | null;
   date: string | null;
   total: number;
+  balance: number;
 };
+
+function dueClass(balance: number) {
+  return balance > 0 ? "cell-danger" : "cell-success";
+}
 
 type MonthlyReportProps = {
   months: DonationMonth[];
@@ -108,6 +114,8 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
 
   const totalExpenses = sumTotals(monthExpenseRows);
   const totalBills = sumTotals(monthBillRows);
+  const totalBillsDue = monthBillRows.reduce((sum, row) => sum + row.balance, 0);
+  const totalBillsPaid = totalBills - totalBillsDue;
   const totalSpends = totalExpenses + totalBills;
 
   const balance = totalReceived - totalSpends;
@@ -125,7 +133,9 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
     ["Abhishegam", formatCurrency(totalAbhishegam)],
     ["Others", formatCurrency(totalOthers)],
     ["Expenses", formatCurrency(totalExpenses)],
-    ["Bills", formatCurrency(totalBills)]
+    ["Bills", formatCurrency(totalBills)],
+    ["Bills Paid", formatCurrency(totalBillsPaid)],
+    ["Bills Due", formatCurrency(totalBillsDue)]
   ];
 
   const incomeExportHeaders = ["Category", "Amount"];
@@ -158,14 +168,16 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
       formatCurrency(row.total)
     ]);
 
-  const billExportHeaders = ["Bill #", "Vendor", "Account", "Date", "Amount"];
-  const billExportRows = () =>
+  const billExportHeaders = ["Bill #", "Vendor", "Account", "Date", "Total", "Paid", "Due"];
+  const billExportRows = (): ExportCell[][] =>
     monthBillRows.map((row) => [
       row.number ?? "",
       row.vendorName ?? "",
       row.accountName ?? "",
       row.date ? formatDateOnly(row.date) : "",
-      formatCurrency(row.total)
+      formatCurrency(row.total),
+      formatCurrency(row.total - row.balance),
+      { value: formatCurrency(row.balance), highlight: row.balance > 0 ? "danger" : "success" } as ExportCell
     ]);
 
   const exportPdf = () => printReportSection("monthly-report");
@@ -232,6 +244,15 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
           </div>
           <div className="metric-value">{formatCurrency(balance)}</div>
           <div className="metric-sub">Received minus spends</div>
+        </article>
+        <article className="metric-card">
+          <div className="metric-head">
+            <span>Bills Due</span>
+          </div>
+          <div className={`metric-value ${totalBillsDue > 0 ? "cell-danger" : "cell-success"}`}>
+            {formatCurrency(totalBillsDue)}
+          </div>
+          <div className="metric-sub">{formatCurrency(totalBillsPaid)} paid of {formatCurrency(totalBills)}</div>
         </article>
       </div>
 
@@ -433,7 +454,9 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
                 <th>Vendor</th>
                 <th>Account</th>
                 <th>Date</th>
-                <th>Amount</th>
+                <th>Total</th>
+                <th>Paid</th>
+                <th>Due</th>
               </tr>
             </thead>
             <tbody>
@@ -444,6 +467,8 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
                   <td>{row.accountName ?? "—"}</td>
                   <td>{row.date ? formatDateOnly(row.date) : "—"}</td>
                   <td>{formatCurrency(row.total)}</td>
+                  <td>{formatCurrency(row.total - row.balance)}</td>
+                  <td className={dueClass(row.balance)}>{formatCurrency(row.balance)}</td>
                 </tr>
               ))}
             </tbody>
@@ -451,6 +476,8 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
               <tr>
                 <td colSpan={4}>Total Bills</td>
                 <td>{formatCurrency(totalBills)}</td>
+                <td>{formatCurrency(totalBillsPaid)}</td>
+                <td>{formatCurrency(totalBillsDue)}</td>
               </tr>
             </tfoot>
           </table>

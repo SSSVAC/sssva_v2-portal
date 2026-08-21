@@ -57,7 +57,12 @@ export type SilaiBillRow = {
   vendorName: string | null;
   date: string | null;
   total: number;
+  balance: number;
 };
+
+function dueClass(balance: number) {
+  return balance > 0 ? "cell-danger" : "cell-success";
+}
 
 type SilaiFundReportProps = {
   title?: string;
@@ -105,6 +110,8 @@ export function SilaiFundReport({
   const totalContributions = sumTotals(contributionRows);
   const totalExpenses = sumTotals(expenseRows);
   const totalBills = sumTotals(billRows);
+  const totalBillsDue = billRows.reduce((sum, row) => sum + row.balance, 0);
+  const totalBillsPaid = totalBills - totalBillsDue;
   const totalSpent = totalExpenses + totalBills;
   const balance = totalContributions - totalSpent;
 
@@ -136,7 +143,9 @@ export function SilaiFundReport({
     ["Total Spent", formatCurrency(totalSpent)],
     ["Balance", formatCurrency(balance)],
     ["Expenses", formatCurrency(totalExpenses)],
-    ["Bills", formatCurrency(totalBills)]
+    ["Bills", formatCurrency(totalBills)],
+    ["Bills Paid", formatCurrency(totalBillsPaid)],
+    ["Bills Due", formatCurrency(totalBillsDue)]
   ];
 
   const contributionExportHeaders = ["Donor", "Phone", "Address", "Amount"];
@@ -160,10 +169,17 @@ export function SilaiFundReport({
     ["Total", "", formatCurrency(totalExpenses)]
   ];
 
-  const billExportHeaders = ["Bill #", "Vendor", "Date", "Amount"];
-  const billExportRows = () => [
-    ...billRows.map((row) => [row.number ?? "", row.vendorName ?? "", row.date ? formatDateOnly(row.date) : "", formatCurrency(row.total)]),
-    ["Total", "", "", formatCurrency(totalBills)]
+  const billExportHeaders = ["Bill #", "Vendor", "Date", "Total", "Paid", "Due"];
+  const billExportRows = (): ExportCell[][] => [
+    ...billRows.map((row) => [
+      row.number ?? "",
+      row.vendorName ?? "",
+      row.date ? formatDateOnly(row.date) : "",
+      formatCurrency(row.total),
+      formatCurrency(row.total - row.balance),
+      { value: formatCurrency(row.balance), highlight: row.balance > 0 ? "danger" : "success" } as ExportCell
+    ]),
+    ["Total", "", "", formatCurrency(totalBills), formatCurrency(totalBillsPaid), formatCurrency(totalBillsDue)]
   ];
 
   const fullReportSections = (): ExportSection[] => [
@@ -206,6 +222,15 @@ export function SilaiFundReport({
           </div>
           <div className="metric-value">{formatCurrency(balance)}</div>
           <div className="metric-sub">Contributions minus spent</div>
+        </article>
+        <article className="metric-card">
+          <div className="metric-head">
+            <span>Bills Due</span>
+          </div>
+          <div className={`metric-value ${totalBillsDue > 0 ? "cell-danger" : "cell-success"}`}>
+            {formatCurrency(totalBillsDue)}
+          </div>
+          <div className="metric-sub">{formatCurrency(totalBillsPaid)} paid of {formatCurrency(totalBills)}</div>
         </article>
       </div>
 
@@ -359,7 +384,9 @@ export function SilaiFundReport({
                 <th>Bill #</th>
                 <th>Vendor</th>
                 <th>Date</th>
-                <th>Amount</th>
+                <th>Total</th>
+                <th>Paid</th>
+                <th>Due</th>
               </tr>
             </thead>
             <tbody>
@@ -369,6 +396,8 @@ export function SilaiFundReport({
                   <td>{row.vendorName ?? "—"}</td>
                   <td>{row.date ? formatDateOnly(row.date) : "—"}</td>
                   <td>{formatCurrency(row.total)}</td>
+                  <td>{formatCurrency(row.total - row.balance)}</td>
+                  <td className={dueClass(row.balance)}>{formatCurrency(row.balance)}</td>
                 </tr>
               ))}
             </tbody>
@@ -376,6 +405,8 @@ export function SilaiFundReport({
               <tr>
                 <td colSpan={3}>Total Bills</td>
                 <td>{formatCurrency(totalBills)}</td>
+                <td>{formatCurrency(totalBillsPaid)}</td>
+                <td>{formatCurrency(totalBillsDue)}</td>
               </tr>
             </tfoot>
           </table>
