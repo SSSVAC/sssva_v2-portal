@@ -64,6 +64,30 @@ function dueClass(balance: number) {
   return balance > 0 ? "cell-danger" : "cell-success";
 }
 
+export type SilaiVendorRow = {
+  vendorName: string;
+  billCount: number;
+  total: number;
+  paid: number;
+  due: number;
+};
+
+function buildVendorRows(billRows: SilaiBillRow[]): SilaiVendorRow[] {
+  const byVendor = new Map<string, SilaiVendorRow>();
+
+  billRows.forEach((row) => {
+    const vendorName = row.vendorName ?? "Unknown Vendor";
+    const existing = byVendor.get(vendorName) ?? { vendorName, billCount: 0, total: 0, paid: 0, due: 0 };
+    existing.billCount += 1;
+    existing.total += row.total;
+    existing.paid += row.total - row.balance;
+    existing.due += row.balance;
+    byVendor.set(vendorName, existing);
+  });
+
+  return Array.from(byVendor.values()).sort((a, b) => b.total - a.total);
+}
+
 type SilaiFundReportProps = {
   title?: string;
   subtitle?: string;
@@ -113,7 +137,10 @@ export function SilaiFundReport({
   const totalBillsDue = billRows.reduce((sum, row) => sum + row.balance, 0);
   const totalBillsPaid = totalBills - totalBillsDue;
   const totalSpent = totalExpenses + totalBills;
+  const totalPaid = totalExpenses + totalBillsPaid;
   const balance = totalContributions - totalSpent;
+
+  const vendorRows = useMemo(() => buildVendorRows(billRows), [billRows]);
 
   // visibleContributionRows already arrive sorted in street walking order
   // (see buildSilaiContributionRows in app/reports/page.tsx), so bucketing
@@ -141,6 +168,7 @@ export function SilaiFundReport({
   const metricsExportRows = () => [
     ["Total Contributions", formatCurrency(totalContributions)],
     ["Total Spent", formatCurrency(totalSpent)],
+    ["Total Paid", formatCurrency(totalPaid)],
     ["Balance", formatCurrency(balance)],
     ["Expenses", formatCurrency(totalExpenses)],
     ["Bills", formatCurrency(totalBills)],
@@ -182,6 +210,18 @@ export function SilaiFundReport({
     ["Total", "", "", formatCurrency(totalBills), formatCurrency(totalBillsPaid), formatCurrency(totalBillsDue)]
   ];
 
+  const vendorExportHeaders = ["Vendor", "Bills", "Total", "Paid", "Due"];
+  const vendorExportRows = (): ExportCell[][] => [
+    ...vendorRows.map((row) => [
+      row.vendorName,
+      String(row.billCount),
+      formatCurrency(row.total),
+      formatCurrency(row.paid),
+      { value: formatCurrency(row.due), highlight: row.due > 0 ? "danger" : "success" } as ExportCell
+    ]),
+    ["Total", "", formatCurrency(totalBills), formatCurrency(totalBillsPaid), formatCurrency(totalBillsDue)]
+  ];
+
   const fullReportSections = (): ExportSection[] => [
     { title: "Metrics", headers: metricsExportHeaders, rows: metricsExportRows() },
     ...contributionExportSections(),
@@ -189,7 +229,8 @@ export function SilaiFundReport({
       ? [{ title: "Non-Cash Donations", headers: nonCashExportHeaders, rows: nonCashExportRows() }]
       : []),
     { title: "Expenses", headers: expenseExportHeaders, rows: expenseExportRows() },
-    { title: "Bills", headers: billExportHeaders, rows: billExportRows() }
+    { title: "Bills", headers: billExportHeaders, rows: billExportRows() },
+    { title: "Vendor Payments", headers: vendorExportHeaders, rows: vendorExportRows() }
   ];
 
   return (
@@ -215,6 +256,13 @@ export function SilaiFundReport({
           </div>
           <div className="metric-value">{formatCurrency(totalSpent)}</div>
           <div className="metric-sub">Expenses + Bills</div>
+        </article>
+        <article className="metric-card">
+          <div className="metric-head">
+            <span>Total Paid</span>
+          </div>
+          <div className="metric-value">{formatCurrency(totalPaid)}</div>
+          <div className="metric-sub">Expenses + Bills Paid</div>
         </article>
         <article className="metric-card">
           <div className="metric-head">
@@ -414,6 +462,54 @@ export function SilaiFundReport({
       ) : (
         <div className="empty-state">
           <p>No bills recorded.</p>
+        </div>
+      )}
+
+      <h3>Vendor Payments</h3>
+      <ExportToolbar
+        onExportCsv={() => exportToCsv(`${fileSlug}-vendor-payments.csv`, vendorExportHeaders, vendorExportRows())}
+        onExportHtml={() =>
+          exportToHtml(`${fileSlug}-vendor-payments.html`, `${title} — Vendor Payments`, vendorExportHeaders, vendorExportRows())
+        }
+        onExportPdf={exportPdf}
+        onExportImage={exportImage}
+      />
+      {vendorRows.length > 0 ? (
+        <div className="table-panel table-panel-scroll">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Vendor</th>
+                <th>Bills</th>
+                <th>Total</th>
+                <th>Paid</th>
+                <th>Due</th>
+              </tr>
+            </thead>
+            <tbody>
+              {vendorRows.map((row) => (
+                <tr key={row.vendorName}>
+                  <td>{row.vendorName}</td>
+                  <td>{row.billCount}</td>
+                  <td>{formatCurrency(row.total)}</td>
+                  <td>{formatCurrency(row.paid)}</td>
+                  <td className={dueClass(row.due)}>{formatCurrency(row.due)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={2}>Total</td>
+                <td>{formatCurrency(totalBills)}</td>
+                <td>{formatCurrency(totalBillsPaid)}</td>
+                <td>{formatCurrency(totalBillsDue)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      ) : (
+        <div className="empty-state">
+          <p>No vendor payments recorded.</p>
         </div>
       )}
     </div>
