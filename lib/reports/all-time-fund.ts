@@ -19,6 +19,7 @@ export type NonCashDonationRow = {
 
 export type AllTimeFundExpense = {
   id: string;
+  vendor_name: string | null;
   description: string | null;
   date: string | null;
   total: number;
@@ -174,6 +175,7 @@ export function buildNonCashDonationRows(
 export function buildAllTimeExpenseRows(expenses: AllTimeFundExpense[]): SilaiExpenseRow[] {
   return expenses.map((expense) => ({
     id: expense.id,
+    vendorName: expense.vendor_name,
     itemName: expense.description,
     date: expense.date,
     total: Number(expense.total ?? 0)
@@ -212,7 +214,7 @@ export async function fetchAllTimeFundReportData(
       .returns<AllTimeFundInvoice[]>(),
     supabase
       .from("zoho_expenses")
-      .select("id, description, date, total")
+      .select("id, vendor_name, description, date, total")
       .in("account_name", config.expenseAccountNames)
       .order("date", { ascending: false })
       .returns<AllTimeFundExpense[]>(),

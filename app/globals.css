@@ -5,13 +5,24 @@
   --border: #d9dee7;
   --panel: #ffffff;
   --panel-alt: #f6f8fa;
-  --row-hover: #eef2f6;
+  --row-hover: rgba(15, 118, 110, 0.06);
   --primary: #0f766e;
   --primary-dark: #115e59;
   --primary-soft: rgba(15, 118, 110, 0.12);
   --accent: #c2410c;
+  --accent-soft: rgba(194, 65, 12, 0.12);
+  --accent-blue: #2563eb;
+  --accent-blue-soft: rgba(37, 99, 235, 0.12);
+  --accent-purple: #7c3aed;
+  --accent-purple-soft: rgba(124, 58, 237, 0.12);
+  --accent-amber: #d97706;
+  --accent-amber-soft: rgba(217, 119, 6, 0.12);
   --success: #15803d;
+  --success-soft: #dcfce7;
+  --warning: #b45309;
+  --warning-soft: #fef3c7;
   --danger: #b91c1c;
+  --danger-soft: #fee2e2;
   --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
   --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.08);
   --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.18);
@@ -304,6 +315,13 @@ input {
   border-radius: var(--radius);
   background: var(--panel);
   box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.15s ease;
+}
+
+.chart-panel:hover,
+.table-panel:hover,
+.report-card:hover {
+  box-shadow: var(--shadow-md);
 }
 
 .report-card {
@@ -326,7 +344,23 @@ input {
   gap: 12px;
   min-height: 132px;
   padding: 18px;
+  border-top: 3px solid var(--metric-accent, var(--primary));
   transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+/* Cycle a small accent palette across metric tiles in source order so a
+   row of stat cards reads with distinct color hierarchy at a glance,
+   without every report having to pick colors per tile itself. */
+.metric-grid .metric-card:nth-child(4n + 2) {
+  --metric-accent: var(--accent-blue);
+}
+
+.metric-grid .metric-card:nth-child(4n + 3) {
+  --metric-accent: var(--accent-purple);
+}
+
+.metric-grid .metric-card:nth-child(4n + 4) {
+  --metric-accent: var(--accent-amber);
 }
 
 .metric-card:hover {
@@ -375,6 +409,18 @@ input {
 .table-panel-scroll {
   min-width: 0;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  /* Fades the table edges under the scroll container so a table wider than
+     its panel visibly hints "more content this way" on touch screens,
+     where there's no hover/scrollbar affordance to notice otherwise. */
+  background:
+    linear-gradient(to right, var(--panel) 0%, rgba(255, 255, 255, 0) 12px),
+    linear-gradient(to left, var(--panel) 0%, rgba(255, 255, 255, 0) 12px) 100% 0,
+    linear-gradient(to right, rgba(15, 23, 42, 0.1), rgba(15, 23, 42, 0)) 0 0,
+    linear-gradient(to left, rgba(15, 23, 42, 0.1), rgba(15, 23, 42, 0)) 100% 0;
+  background-repeat: no-repeat;
+  background-size: 24px 100%, 24px 100%, 10px 100%, 10px 100%;
+  background-attachment: local, local, scroll, scroll;
 }
 
 .records-table-wrap {
@@ -413,18 +459,18 @@ input {
 .data-table th,
 .data-table td {
   border-bottom: 1px solid var(--border);
-  padding: 12px 8px;
+  padding: 9px 10px;
   text-align: left;
 }
 
 .data-table th {
   color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   background: var(--panel-alt);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 2px solid var(--primary-soft);
 }
 
 .data-table tbody tr:nth-child(even) {
@@ -468,17 +514,53 @@ input {
 /* Amount-cell coloring for on-screen tables (matches .cell-success/
    .cell-warning/.cell-danger used by HTML exports in lib/export.ts) —
    e.g. flagging a contribution total against the Silai fund minimum.
-   Font color only, kept subtle rather than a bold filled background. */
+   Applied directly to <td> elements, so styling stays text-only (a
+   leading dot via ::before) rather than changing display/layout, which
+   would break table row flow. */
+.data-table .cell-success,
+.data-table .cell-warning,
+.data-table .cell-danger {
+  font-weight: 700;
+}
+
+/* The leading dot is a table-row affordance only — .cell-success/-warning/
+   -danger are also reused on .metric-value (e.g. Bills Due), where a dot
+   in front of a 30px figure reads as a stray mark rather than a status
+   indicator, so scope it to table cells. */
+.data-table .cell-success::before,
+.data-table .cell-warning::before,
+.data-table .cell-danger::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
 .cell-success {
   color: #166534;
+}
+
+.cell-success::before {
+  background: var(--success);
 }
 
 .cell-warning {
   color: #854d0e;
 }
 
+.cell-warning::before {
+  background: var(--warning);
+}
+
 .cell-danger {
   color: #991b1b;
+}
+
+.cell-danger::before {
+  background: var(--danger);
 }
 
 .breadcrumb {
@@ -800,6 +882,7 @@ input {
     min-height: 0;
     gap: 4px;
     padding: 8px 10px;
+    border-top: 1px solid var(--border);
     break-inside: avoid;
   }
 
@@ -871,6 +954,10 @@ input {
   .metric-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .filter-banner {
+    flex-wrap: wrap;
+  }
 }
 
 @media (max-width: 640px) {
@@ -887,7 +974,32 @@ input {
   }
 
   .metric-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .metric-card {
+    min-height: 0;
+    gap: 6px;
+    padding: 14px;
+  }
+
+  .metric-value {
+    font-size: 24px;
+  }
+
+  .data-table {
+    font-size: 12px;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 7px 8px;
+  }
+
+  .panel-head {
+    flex-wrap: wrap;
+    gap: 10px;
   }
 
   .nav-toggle {
@@ -923,5 +1035,11 @@ input {
 
   .table-panel-scroll {
     overflow-x: auto;
+  }
+}
+
+@media (max-width: 420px) {
+  .metric-grid {
+    grid-template-columns: 1fr;
   }
 }

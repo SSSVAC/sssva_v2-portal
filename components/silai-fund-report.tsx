@@ -46,6 +46,7 @@ function amountCell(total: number): ExportCell {
 
 export type SilaiExpenseRow = {
   id: string;
+  vendorName?: string | null;
   itemName: string | null;
   date: string | null;
   total: number;
@@ -67,22 +68,36 @@ function dueClass(balance: number) {
 export type SilaiVendorRow = {
   vendorName: string;
   billCount: number;
+  expenseCount: number;
   total: number;
   paid: number;
   due: number;
 };
 
-function buildVendorRows(billRows: SilaiBillRow[]): SilaiVendorRow[] {
+function buildVendorRows(billRows: SilaiBillRow[], expenseRows: SilaiExpenseRow[]): SilaiVendorRow[] {
   const byVendor = new Map<string, SilaiVendorRow>();
 
-  billRows.forEach((row) => {
-    const vendorName = row.vendorName ?? "Unknown Vendor";
-    const existing = byVendor.get(vendorName) ?? { vendorName, billCount: 0, total: 0, paid: 0, due: 0 };
-    existing.billCount += 1;
-    existing.total += row.total;
-    existing.paid += row.total - row.balance;
-    existing.due += row.balance;
+  const getEntry = (vendorName: string) => {
+    const existing = byVendor.get(vendorName) ?? { vendorName, billCount: 0, expenseCount: 0, total: 0, paid: 0, due: 0 };
     byVendor.set(vendorName, existing);
+    return existing;
+  };
+
+  billRows.forEach((row) => {
+    const entry = getEntry(row.vendorName ?? "Unknown Vendor");
+    entry.billCount += 1;
+    entry.total += row.total;
+    entry.paid += row.total - row.balance;
+    entry.due += row.balance;
+  });
+
+  // Expenses don't carry a balance in this report (they're recorded as
+  // already paid), so the full amount counts toward paid.
+  expenseRows.forEach((row) => {
+    const entry = getEntry(row.vendorName ?? "Unknown Vendor");
+    entry.expenseCount += 1;
+    entry.total += row.total;
+    entry.paid += row.total;
   });
 
   return Array.from(byVendor.values()).sort((a, b) => b.total - a.total);
@@ -140,7 +155,15 @@ export function SilaiFundReport({
   const totalPaid = totalExpenses + totalBillsPaid;
   const balance = totalContributions - totalSpent;
 
-  const vendorRows = useMemo(() => buildVendorRows(billRows), [billRows]);
+  const vendorRows = useMemo(() => buildVendorRows(billRows, expenseRows), [billRows, expenseRows]);
+  const vendorTotals = useMemo(
+    () =>
+      vendorRows.reduce(
+        (sum, row) => ({ total: sum.total + row.total, paid: sum.paid + row.paid, due: sum.due + row.due }),
+        { total: 0, paid: 0, due: 0 }
+      ),
+    [vendorRows]
+  );
 
   // visibleContributionRows already arrive sorted in street walking order
   // (see buildSilaiContributionRows in app/reports/page.tsx), so bucketing
@@ -210,16 +233,17 @@ export function SilaiFundReport({
     ["Total", "", "", formatCurrency(totalBills), formatCurrency(totalBillsPaid), formatCurrency(totalBillsDue)]
   ];
 
-  const vendorExportHeaders = ["Vendor", "Bills", "Total", "Paid", "Due"];
+  const vendorExportHeaders = ["Vendor", "Bills", "Expenses", "Total", "Paid", "Due"];
   const vendorExportRows = (): ExportCell[][] => [
     ...vendorRows.map((row) => [
       row.vendorName,
       String(row.billCount),
+      String(row.expenseCount),
       formatCurrency(row.total),
       formatCurrency(row.paid),
       { value: formatCurrency(row.due), highlight: row.due > 0 ? "danger" : "success" } as ExportCell
     ]),
-    ["Total", "", formatCurrency(totalBills), formatCurrency(totalBillsPaid), formatCurrency(totalBillsDue)]
+    ["Total", "", "", formatCurrency(vendorTotals.total), formatCurrency(vendorTotals.paid), formatCurrency(vendorTotals.due)]
   ];
 
   const fullReportSections = (): ExportSection[] => [
@@ -481,6 +505,7 @@ export function SilaiFundReport({
               <tr>
                 <th>Vendor</th>
                 <th>Bills</th>
+                <th>Expenses</th>
                 <th>Total</th>
                 <th>Paid</th>
                 <th>Due</th>
@@ -491,6 +516,7 @@ export function SilaiFundReport({
                 <tr key={row.vendorName}>
                   <td>{row.vendorName}</td>
                   <td>{row.billCount}</td>
+                  <td>{row.expenseCount}</td>
                   <td>{formatCurrency(row.total)}</td>
                   <td>{formatCurrency(row.paid)}</td>
                   <td className={dueClass(row.due)}>{formatCurrency(row.due)}</td>
@@ -499,10 +525,10 @@ export function SilaiFundReport({
             </tbody>
             <tfoot>
               <tr>
-                <td colSpan={2}>Total</td>
-                <td>{formatCurrency(totalBills)}</td>
-                <td>{formatCurrency(totalBillsPaid)}</td>
-                <td>{formatCurrency(totalBillsDue)}</td>
+                <td colSpan={3}>Total</td>
+                <td>{formatCurrency(vendorTotals.total)}</td>
+                <td>{formatCurrency(vendorTotals.paid)}</td>
+                <td>{formatCurrency(vendorTotals.due)}</td>
               </tr>
             </tfoot>
           </table>
