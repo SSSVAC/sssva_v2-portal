@@ -168,7 +168,7 @@ export function FundStatusTable({ members, minimumAmount }: FundStatusTableProps
       />
 
       {sortedMembers.length > 0 ? (
-        <table className="data-table">
+        <table className="data-table data-table-cards">
           <thead>
             <tr>
               <SortableTh
@@ -213,11 +213,11 @@ export function FundStatusTable({ members, minimumAmount }: FundStatusTableProps
             {sortedMembers.map((member) => (
               <tr key={member.id}>
                 <td>{member.name}</td>
-                <td>{member.phone ?? "—"}</td>
-                <td>{member.address ?? "—"}</td>
-                <td>{formatCurrency(member.paid)}</td>
-                <td>{member.balanceDue > 0 ? formatCurrency(member.balanceDue) : "—"}</td>
-                <td>
+                <td data-label="Phone">{member.phone ?? "—"}</td>
+                <td data-label="Address">{member.address ?? "—"}</td>
+                <td data-label="Paid">{formatCurrency(member.paid)}</td>
+                <td data-label="Balance Due">{member.balanceDue > 0 ? formatCurrency(member.balanceDue) : "—"}</td>
+                <td data-label="Status">
                   <span className={`status-pill ${STATUS_CLASS[member.status]}`}>
                     {STATUS_LABEL[member.status]}
                   </span>

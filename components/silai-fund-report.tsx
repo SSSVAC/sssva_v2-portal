@@ -332,7 +332,7 @@ export function SilaiFundReport({
               {group.groupName} ({group.rows.length})
             </h3>
             <div className="table-panel table-panel-scroll">
-              <table className="data-table">
+              <table className="data-table data-table-cards">
                 <thead>
                   <tr>
                     <th>Donor</th>
@@ -344,17 +344,17 @@ export function SilaiFundReport({
                 <tbody>
                   {group.rows.map((row, index) => (
                     <tr key={`${row.donorName ?? "unknown"}-${index}`}>
-                      <td>{row.donorName ?? "—"}</td>
-                      <td>{row.phone ?? "—"}</td>
-                      <td>{row.address ?? "—"}</td>
-                      <td className={amountClass(row.total)}>{formatCurrency(row.total)}</td>
+                      <td data-label="Donor">{row.donorName ?? "—"}</td>
+                      <td data-label="Phone">{row.phone ?? "—"}</td>
+                      <td data-label="Address">{row.address ?? "—"}</td>
+                      <td data-label="Amount" className={amountClass(row.total)}>{formatCurrency(row.total)}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr>
                     <td colSpan={3}>Subtotal</td>
-                    <td>{formatCurrency(group.subtotal)}</td>
+                    <td data-label="Amount">{formatCurrency(group.subtotal)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -379,7 +379,7 @@ export function SilaiFundReport({
             onExportImage={exportImage}
           />
           <div className="table-panel table-panel-scroll">
-            <table className="data-table">
+            <table className="data-table data-table-cards">
               <thead>
                 <tr>
                   <th>Donor</th>
@@ -390,9 +390,9 @@ export function SilaiFundReport({
               <tbody>
                 {nonCashDonationRows.map((row, index) => (
                   <tr key={`${row.donorName ?? "unknown"}-${index}`}>
-                    <td>{row.donorName ?? "—"}</td>
-                    <td>{row.address ?? "—"}</td>
-                    <td>{row.detail}</td>
+                    <td data-label="Donor">{row.donorName ?? "—"}</td>
+                    <td data-label="Address">{row.address ?? "—"}</td>
+                    <td data-label="Detail">{row.detail}</td>
                   </tr>
                 ))}
               </tbody>
@@ -410,7 +410,7 @@ export function SilaiFundReport({
       />
       {expenseRows.length > 0 ? (
         <div className="table-panel table-panel-scroll">
-          <table className="data-table">
+          <table className="data-table data-table-cards">
             <thead>
               <tr>
                 <th>Item</th>
@@ -421,16 +421,16 @@ export function SilaiFundReport({
             <tbody>
               {expenseRows.map((row) => (
                 <tr key={row.id}>
-                  <td>{row.itemName ?? "—"}</td>
-                  <td>{row.date ? formatDateOnly(row.date) : "—"}</td>
-                  <td>{formatCurrency(row.total)}</td>
+                  <td data-label="Item">{row.itemName ?? "—"}</td>
+                  <td data-label="Date">{row.date ? formatDateOnly(row.date) : "—"}</td>
+                  <td data-label="Amount">{formatCurrency(row.total)}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr>
                 <td colSpan={2}>Total Expenses</td>
-                <td>{formatCurrency(totalExpenses)}</td>
+                <td data-label="Amount">{formatCurrency(totalExpenses)}</td>
               </tr>
             </tfoot>
           </table>
@@ -450,7 +450,7 @@ export function SilaiFundReport({
       />
       {billRows.length > 0 ? (
         <div className="table-panel table-panel-scroll">
-          <table className="data-table">
+          <table className="data-table data-table-cards">
             <thead>
               <tr>
                 <th>Bill #</th>
@@ -464,21 +464,21 @@ export function SilaiFundReport({
             <tbody>
               {billRows.map((row) => (
                 <tr key={row.id}>
-                  <td>{row.number ?? "—"}</td>
-                  <td>{row.vendorName ?? "—"}</td>
-                  <td>{row.date ? formatDateOnly(row.date) : "—"}</td>
-                  <td>{formatCurrency(row.total)}</td>
-                  <td>{formatCurrency(row.total - row.balance)}</td>
-                  <td className={dueClass(row.balance)}>{formatCurrency(row.balance)}</td>
+                  <td data-label="Bill #">{row.number ?? "—"}</td>
+                  <td data-label="Vendor">{row.vendorName ?? "—"}</td>
+                  <td data-label="Date">{row.date ? formatDateOnly(row.date) : "—"}</td>
+                  <td data-label="Total">{formatCurrency(row.total)}</td>
+                  <td data-label="Paid">{formatCurrency(row.total - row.balance)}</td>
+                  <td data-label="Due" className={dueClass(row.balance)}>{formatCurrency(row.balance)}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr>
                 <td colSpan={3}>Total Bills</td>
-                <td>{formatCurrency(totalBills)}</td>
-                <td>{formatCurrency(totalBillsPaid)}</td>
-                <td>{formatCurrency(totalBillsDue)}</td>
+                <td data-label="Total">{formatCurrency(totalBills)}</td>
+                <td data-label="Paid">{formatCurrency(totalBillsPaid)}</td>
+                <td data-label="Due">{formatCurrency(totalBillsDue)}</td>
               </tr>
             </tfoot>
           </table>
@@ -500,7 +500,7 @@ export function SilaiFundReport({
       />
       {vendorRows.length > 0 ? (
         <div className="table-panel table-panel-scroll">
-          <table className="data-table">
+          <table className="data-table data-table-cards">
             <thead>
               <tr>
                 <th>Vendor</th>
@@ -514,21 +514,21 @@ export function SilaiFundReport({
             <tbody>
               {vendorRows.map((row) => (
                 <tr key={row.vendorName}>
-                  <td>{row.vendorName}</td>
-                  <td>{row.billCount}</td>
-                  <td>{row.expenseCount}</td>
-                  <td>{formatCurrency(row.total)}</td>
-                  <td>{formatCurrency(row.paid)}</td>
-                  <td className={dueClass(row.due)}>{formatCurrency(row.due)}</td>
+                  <td data-label="Vendor">{row.vendorName}</td>
+                  <td data-label="Bills">{row.billCount}</td>
+                  <td data-label="Expenses">{row.expenseCount}</td>
+                  <td data-label="Total">{formatCurrency(row.total)}</td>
+                  <td data-label="Paid">{formatCurrency(row.paid)}</td>
+                  <td data-label="Due" className={dueClass(row.due)}>{formatCurrency(row.due)}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr>
                 <td colSpan={3}>Total</td>
-                <td>{formatCurrency(vendorTotals.total)}</td>
-                <td>{formatCurrency(vendorTotals.paid)}</td>
-                <td>{formatCurrency(vendorTotals.due)}</td>
+                <td data-label="Total">{formatCurrency(vendorTotals.total)}</td>
+                <td data-label="Paid">{formatCurrency(vendorTotals.paid)}</td>
+                <td data-label="Due">{formatCurrency(vendorTotals.due)}</td>
               </tr>
             </tfoot>
           </table>

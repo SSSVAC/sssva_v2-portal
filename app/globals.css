@@ -941,7 +941,10 @@ input {
   }
 }
 
-@media (max-width: 960px) {
+/* "screen and" keeps these out of print/export rendering — A4 portrait is
+   narrower than 960px, so without it these would fight the dedicated
+   @media print rules above and break printed/exported reports. */
+@media screen and (max-width: 960px) {
   .auth-page,
   .dashboard-grid {
     grid-template-columns: 1fr;
@@ -960,7 +963,7 @@ input {
   }
 }
 
-@media (max-width: 640px) {
+@media screen and (max-width: 640px) {
   .topbar,
   .main,
   .auth-art,
@@ -1038,8 +1041,182 @@ input {
   }
 }
 
-@media (max-width: 420px) {
+@media screen and (max-width: 420px) {
   .metric-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   Card layout for data tables on mobile/tablet (<=960px).
+
+   Opt in per-table with the `data-table-cards` class alongside
+   `data-table` (see components using it). Every <td> needs a
+   `data-label="Column Name"` attribute — that's what supplies the label
+   shown above each value once the table stops having visible column
+   headers. The header row is kept for screen readers (visually hidden,
+   not display:none) rather than dropped.
+
+   Row 1 of a table becomes the card's title (bold, tinted background,
+   no label) by default. A table where column 1 isn't a meaningful title
+   (editable-data-table's tables lead with an internal id) opts out by
+   marking the real title cell with `data-table-card-title` — see
+   editable-data-table.tsx.
+   --------------------------------------------------------------------- */
+@media screen and (max-width: 960px) {
+  .data-table-cards thead tr:first-child {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .data-table-cards,
+  .data-table-cards tbody,
+  .data-table-cards tfoot,
+  .data-table-cards tr {
+    display: block;
+    width: 100%;
+  }
+
+  .data-table-cards tbody tr,
+  .data-table-cards tfoot tr {
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--panel);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+
+  .data-table-cards tbody tr:last-child {
+    margin-bottom: 0;
+  }
+
+  .data-table-cards tbody tr:nth-child(even) {
+    background: var(--panel);
+  }
+
+  .data-table-cards tfoot tr {
+    margin-top: 4px;
+    margin-bottom: 0;
+    border-color: var(--primary-soft);
+    background: var(--panel-alt);
+    font-weight: 700;
+  }
+
+  .data-table-cards td {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    word-break: break-word;
+  }
+
+  .data-table-cards td:last-child {
+    border-bottom: 0;
+  }
+
+  .data-table-cards td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 750;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  /* Checkbox/boolean cells read better as a single inline row than a
+     stacked label-over-control pair. */
+  .data-table-cards td:has(> input[type="checkbox"]) {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Card title: first cell by default, or the explicitly marked one when
+     a table opts out of that guess (see comment above). */
+  .data-table-cards td:first-child,
+  .data-table-cards td.data-table-card-title {
+    padding: 12px 14px;
+    background: var(--panel-alt);
+    color: var(--foreground);
+    font-size: 15px;
+    font-weight: 750;
+  }
+
+  .data-table-cards td:first-child::before,
+  .data-table-cards td.data-table-card-title::before {
+    display: none;
+  }
+
+  .data-table-cards tr:has(td.data-table-card-title) td:first-child {
+    padding: 10px 14px;
+    background: var(--panel);
+    color: inherit;
+    font-size: 14px;
+    font-weight: 400;
+  }
+
+  .data-table-cards tr:has(td.data-table-card-title) td:first-child::before {
+    display: block;
+  }
+
+  /* The status dot from .cell-success/-warning/-danger (see the table
+     rules above) is redundant with the card's own colored, bold value —
+     drop it here rather than fighting the label pseudo-element for the
+     same ::before. */
+  .data-table-cards .cell-success::before,
+  .data-table-cards .cell-warning::before,
+  .data-table-cards .cell-danger::before {
+    content: attr(data-label);
+    width: auto;
+    height: auto;
+    margin: 0;
+    border-radius: 0;
+    background: none;
+  }
+
+  /* editable-data-table's second header row holds live filter inputs
+     (not just labels), so it stays visible — reflowed into a compact
+     wrapping form instead of a table row. */
+  .data-table-cards thead tr:last-child:has(.filter-cell) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--panel-alt);
+  }
+
+  .data-table-cards thead tr:last-child .filter-cell {
+    flex: 1 1 150px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0;
+    background: none;
+    text-transform: none;
+  }
+
+  .data-table-cards thead tr:last-child .filter-cell:empty {
+    display: none;
+  }
+
+  .data-table-cards thead tr:last-child .filter-cell::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 750;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
   }
 }

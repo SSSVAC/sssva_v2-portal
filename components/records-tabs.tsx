@@ -23,7 +23,7 @@ type RecordsTabsProps = {
 const CUSTOMER_COLUMNS: RecordColumn[] = [
   { key: "id", label: "ID", type: "text", editable: false },
   { key: "zoho_customer_id", label: "Zoho ID", type: "text", editable: false },
-  { key: "display_name", label: "Name", type: "text", editable: true },
+  { key: "display_name", label: "Name", type: "text", editable: true, cardTitle: true },
   { key: "company_name", label: "Company", type: "text", editable: true },
   { key: "email", label: "Email", type: "text", editable: true },
   { key: "phone", label: "Phone", type: "text", editable: true },
@@ -39,7 +39,7 @@ const CUSTOMER_COLUMNS: RecordColumn[] = [
 const INVOICE_COLUMNS: RecordColumn[] = [
   { key: "id", label: "ID", type: "text", editable: false },
   { key: "zoho_invoice_id", label: "Zoho ID", type: "text", editable: false },
-  { key: "invoice_number", label: "Invoice #", type: "text", editable: true },
+  { key: "invoice_number", label: "Invoice #", type: "text", editable: true, cardTitle: true },
   { key: "customer_name", label: "Customer", type: "text", editable: true },
   { key: "status", label: "Status", type: "text", editable: true },
   { key: "date", label: "Date", type: "date", editable: true },
@@ -54,7 +54,7 @@ const INVOICE_COLUMNS: RecordColumn[] = [
 const EXPENSE_COLUMNS: RecordColumn[] = [
   { key: "id", label: "ID", type: "text", editable: false },
   { key: "zoho_expense_id", label: "Zoho ID", type: "text", editable: false },
-  { key: "expense_number", label: "Expense #", type: "text", editable: true },
+  { key: "expense_number", label: "Expense #", type: "text", editable: true, cardTitle: true },
   { key: "vendor_name", label: "Vendor", type: "text", editable: true },
   { key: "account_name", label: "Account", type: "text", editable: true },
   { key: "paid_through_account_name", label: "Paid Through", type: "text", editable: true },
@@ -70,7 +70,7 @@ const EXPENSE_COLUMNS: RecordColumn[] = [
 const BILL_COLUMNS: RecordColumn[] = [
   { key: "id", label: "ID", type: "text", editable: false },
   { key: "zoho_bill_id", label: "Zoho ID", type: "text", editable: false },
-  { key: "bill_number", label: "Bill #", type: "text", editable: true },
+  { key: "bill_number", label: "Bill #", type: "text", editable: true, cardTitle: true },
   { key: "vendor_name", label: "Vendor", type: "text", editable: true },
   { key: "account_name", label: "Account", type: "text", editable: true },
   { key: "item_name", label: "Item", type: "text", editable: true },

@@ -266,7 +266,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
         onExportImage={exportImage}
       />
       <div className="table-panel table-panel-scroll">
-        <table className="data-table">
+        <table className="data-table data-table-cards">
           <thead>
             <tr>
               <th>Category</th>
@@ -276,25 +276,25 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
           <tbody>
             <tr>
               <td>{INCOME_CATEGORY_LABELS.donations}</td>
-              <td>{formatCurrency(totalDonations)}</td>
+              <td data-label="Amount">{formatCurrency(totalDonations)}</td>
             </tr>
             <tr>
               <td>{INCOME_CATEGORY_LABELS.archanai}</td>
-              <td>{formatCurrency(totalArchanai)}</td>
+              <td data-label="Amount">{formatCurrency(totalArchanai)}</td>
             </tr>
             <tr>
               <td>{INCOME_CATEGORY_LABELS.abhishegam}</td>
-              <td>{formatCurrency(totalAbhishegam)}</td>
+              <td data-label="Amount">{formatCurrency(totalAbhishegam)}</td>
             </tr>
             <tr>
               <td>{INCOME_CATEGORY_LABELS.others}</td>
-              <td>{formatCurrency(totalOthers)}</td>
+              <td data-label="Amount">{formatCurrency(totalOthers)}</td>
             </tr>
           </tbody>
           <tfoot>
             <tr>
               <td>Total Received</td>
-              <td>{formatCurrency(totalReceived)}</td>
+              <td data-label="Amount">{formatCurrency(totalReceived)}</td>
             </tr>
           </tfoot>
         </table>
@@ -318,7 +318,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
       />
       {donationDonorRows.length > 0 ? (
         <div className="table-panel table-panel-scroll">
-          <table className="data-table">
+          <table className="data-table data-table-cards">
             <thead>
               <tr>
                 <th>Donor</th>
@@ -329,14 +329,14 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
               {donationDonorRows.map((row) => (
                 <tr key={row.donorName}>
                   <td>{row.donorName}</td>
-                  <td>{formatCurrency(row.total)}</td>
+                  <td data-label="Amount">{formatCurrency(row.total)}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr>
                 <td>Total</td>
-                <td>{formatCurrency(totalDonations)}</td>
+                <td data-label="Amount">{formatCurrency(totalDonations)}</td>
               </tr>
             </tfoot>
           </table>
@@ -363,7 +363,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
       />
       {othersDonorRows.length > 0 ? (
         <div className="table-panel table-panel-scroll">
-          <table className="data-table">
+          <table className="data-table data-table-cards">
             <thead>
               <tr>
                 <th>Donor</th>
@@ -374,14 +374,14 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
               {othersDonorRows.map((row) => (
                 <tr key={row.donorName}>
                   <td>{row.donorName}</td>
-                  <td>{formatCurrency(row.total)}</td>
+                  <td data-label="Amount">{formatCurrency(row.total)}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr>
                 <td>Total</td>
-                <td>{formatCurrency(totalOthers)}</td>
+                <td data-label="Amount">{formatCurrency(totalOthers)}</td>
               </tr>
             </tfoot>
           </table>
@@ -403,7 +403,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
       />
       {monthExpenseRows.length > 0 ? (
         <div className="table-panel table-panel-scroll">
-          <table className="data-table">
+          <table className="data-table data-table-cards">
             <thead>
               <tr>
                 <th>Item</th>
@@ -415,17 +415,17 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
             <tbody>
               {monthExpenseRows.map((row) => (
                 <tr key={row.id}>
-                  <td>{row.itemName ?? "—"}</td>
-                  <td>{row.accountName ?? "—"}</td>
-                  <td>{row.date ? formatDateOnly(row.date) : "—"}</td>
-                  <td>{formatCurrency(row.total)}</td>
+                  <td data-label="Item">{row.itemName ?? "—"}</td>
+                  <td data-label="Account">{row.accountName ?? "—"}</td>
+                  <td data-label="Date">{row.date ? formatDateOnly(row.date) : "—"}</td>
+                  <td data-label="Amount">{formatCurrency(row.total)}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr>
                 <td colSpan={3}>Total Expenses</td>
-                <td>{formatCurrency(totalExpenses)}</td>
+                <td data-label="Amount">{formatCurrency(totalExpenses)}</td>
               </tr>
             </tfoot>
           </table>
@@ -447,7 +447,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
       />
       {monthBillRows.length > 0 ? (
         <div className="table-panel table-panel-scroll">
-          <table className="data-table">
+          <table className="data-table data-table-cards">
             <thead>
               <tr>
                 <th>Bill #</th>
@@ -462,22 +462,22 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
             <tbody>
               {monthBillRows.map((row) => (
                 <tr key={row.id}>
-                  <td>{row.number ?? "—"}</td>
-                  <td>{row.vendorName ?? "—"}</td>
-                  <td>{row.accountName ?? "—"}</td>
-                  <td>{row.date ? formatDateOnly(row.date) : "—"}</td>
-                  <td>{formatCurrency(row.total)}</td>
-                  <td>{formatCurrency(row.total - row.balance)}</td>
-                  <td className={dueClass(row.balance)}>{formatCurrency(row.balance)}</td>
+                  <td data-label="Bill #">{row.number ?? "—"}</td>
+                  <td data-label="Vendor">{row.vendorName ?? "—"}</td>
+                  <td data-label="Account">{row.accountName ?? "—"}</td>
+                  <td data-label="Date">{row.date ? formatDateOnly(row.date) : "—"}</td>
+                  <td data-label="Total">{formatCurrency(row.total)}</td>
+                  <td data-label="Paid">{formatCurrency(row.total - row.balance)}</td>
+                  <td data-label="Due" className={dueClass(row.balance)}>{formatCurrency(row.balance)}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr>
                 <td colSpan={4}>Total Bills</td>
-                <td>{formatCurrency(totalBills)}</td>
-                <td>{formatCurrency(totalBillsPaid)}</td>
-                <td>{formatCurrency(totalBillsDue)}</td>
+                <td data-label="Total">{formatCurrency(totalBills)}</td>
+                <td data-label="Paid">{formatCurrency(totalBillsPaid)}</td>
+                <td data-label="Due">{formatCurrency(totalBillsDue)}</td>
               </tr>
             </tfoot>
           </table>

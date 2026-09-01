@@ -295,7 +295,7 @@ export function EventFundReport({
               {group.groupName} ({group.rows.length})
             </h3>
             <div className="table-panel table-panel-scroll">
-              <table className="data-table">
+              <table className="data-table data-table-cards">
                 <thead>
                   <tr>
                     <th>Donor</th>
@@ -307,17 +307,17 @@ export function EventFundReport({
                 <tbody>
                   {group.rows.map((row, index) => (
                     <tr key={`${row.donorName ?? "unknown"}-${index}`}>
-                      <td>{row.donorName ?? "—"}</td>
-                      <td>{row.phone ?? "—"}</td>
-                      <td>{row.address ?? "—"}</td>
-                      <td className={amountClass(row.total)}>{formatCurrency(row.total)}</td>
+                      <td data-label="Donor">{row.donorName ?? "—"}</td>
+                      <td data-label="Phone">{row.phone ?? "—"}</td>
+                      <td data-label="Address">{row.address ?? "—"}</td>
+                      <td data-label="Amount" className={amountClass(row.total)}>{formatCurrency(row.total)}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr>
                     <td colSpan={3}>Subtotal</td>
-                    <td>{formatCurrency(group.subtotal)}</td>
+                    <td data-label="Amount">{formatCurrency(group.subtotal)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -341,7 +341,7 @@ export function EventFundReport({
       />
       {yearExpenseRows.length > 0 ? (
         <div className="table-panel table-panel-scroll">
-          <table className="data-table">
+          <table className="data-table data-table-cards">
             <thead>
               <tr>
                 <th>Item</th>
@@ -352,16 +352,16 @@ export function EventFundReport({
             <tbody>
               {yearExpenseRows.map((row) => (
                 <tr key={row.id}>
-                  <td>{row.itemName ?? "—"}</td>
-                  <td>{row.date ? formatDateOnly(row.date) : "—"}</td>
-                  <td>{formatCurrency(row.total)}</td>
+                  <td data-label="Item">{row.itemName ?? "—"}</td>
+                  <td data-label="Date">{row.date ? formatDateOnly(row.date) : "—"}</td>
+                  <td data-label="Amount">{formatCurrency(row.total)}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr>
                 <td colSpan={2}>Total Expenses</td>
-                <td>{formatCurrency(totalExpenses)}</td>
+                <td data-label="Amount">{formatCurrency(totalExpenses)}</td>
               </tr>
             </tfoot>
           </table>
@@ -381,7 +381,7 @@ export function EventFundReport({
       />
       {yearBillRows.length > 0 ? (
         <div className="table-panel table-panel-scroll">
-          <table className="data-table">
+          <table className="data-table data-table-cards">
             <thead>
               <tr>
                 <th>Bill #</th>
@@ -395,21 +395,21 @@ export function EventFundReport({
             <tbody>
               {yearBillRows.map((row) => (
                 <tr key={row.id}>
-                  <td>{row.number ?? "—"}</td>
-                  <td>{row.vendorName ?? "—"}</td>
-                  <td>{row.date ? formatDateOnly(row.date) : "—"}</td>
-                  <td>{formatCurrency(row.total)}</td>
-                  <td>{formatCurrency(row.total - row.balance)}</td>
-                  <td className={dueClass(row.balance)}>{formatCurrency(row.balance)}</td>
+                  <td data-label="Bill #">{row.number ?? "—"}</td>
+                  <td data-label="Vendor">{row.vendorName ?? "—"}</td>
+                  <td data-label="Date">{row.date ? formatDateOnly(row.date) : "—"}</td>
+                  <td data-label="Total">{formatCurrency(row.total)}</td>
+                  <td data-label="Paid">{formatCurrency(row.total - row.balance)}</td>
+                  <td data-label="Due" className={dueClass(row.balance)}>{formatCurrency(row.balance)}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr>
                 <td colSpan={3}>Total Bills</td>
-                <td>{formatCurrency(totalBills)}</td>
-                <td>{formatCurrency(totalBillsPaid)}</td>
-                <td>{formatCurrency(totalBillsDue)}</td>
+                <td data-label="Total">{formatCurrency(totalBills)}</td>
+                <td data-label="Paid">{formatCurrency(totalBillsPaid)}</td>
+                <td data-label="Due">{formatCurrency(totalBillsDue)}</td>
               </tr>
             </tfoot>
           </table>

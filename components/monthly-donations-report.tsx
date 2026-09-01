@@ -136,7 +136,7 @@ export function MonthlyDonationsReport({ months, donors }: MonthlyDonationsRepor
 
       {sortedDonors.length > 0 ? (
         <div className="table-panel table-panel-scroll">
-          <table className="data-table">
+          <table className="data-table data-table-cards">
             <thead>
               <tr>
                 <SortableTh
@@ -168,9 +168,13 @@ export function MonthlyDonationsReport({ months, donors }: MonthlyDonationsRepor
                   <td>{donor.donorName}</td>
                   {months.map((month) => {
                     const amount = donor.amounts[month.key] ?? 0;
-                    return <td key={month.key}>{amount > 0 ? formatCurrency(amount) : "—"}</td>;
+                    return (
+                      <td key={month.key} data-label={month.label}>
+                        {amount > 0 ? formatCurrency(amount) : "—"}
+                      </td>
+                    );
                   })}
-                  <td>{formatCurrency(donor.total)}</td>
+                  <td data-label="Total">{formatCurrency(donor.total)}</td>
                 </tr>
               ))}
             </tbody>
@@ -178,9 +182,11 @@ export function MonthlyDonationsReport({ months, donors }: MonthlyDonationsRepor
               <tr>
                 <td>Total</td>
                 {monthTotals.map((amount, index) => (
-                  <td key={months[index].key}>{formatCurrency(amount)}</td>
+                  <td key={months[index].key} data-label={months[index].label}>
+                    {formatCurrency(amount)}
+                  </td>
                 ))}
-                <td>{formatCurrency(grandTotal)}</td>
+                <td data-label="Total">{formatCurrency(grandTotal)}</td>
               </tr>
             </tfoot>
           </table>

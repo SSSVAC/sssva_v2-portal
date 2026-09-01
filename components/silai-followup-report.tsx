@@ -157,7 +157,7 @@ export function SilaiFollowUpReport({ members }: SilaiFollowUpReportProps) {
             </h3>
             {section.rows.length > 0 ? (
               <div className="table-panel table-panel-scroll">
-                <table className="data-table">
+                <table className="data-table data-table-cards">
                   <thead>
                     <tr>
                       <th>Name</th>
@@ -171,17 +171,17 @@ export function SilaiFollowUpReport({ members }: SilaiFollowUpReportProps) {
                     {section.rows.map((row) => (
                       <tr key={row.id}>
                         <td>{row.name}</td>
-                        <td>{row.phone ?? "—"}</td>
-                        <td>{row.address ?? "—"}</td>
-                        <td>{row.paid > 0 ? formatCurrency(row.paid) : "—"}</td>
-                        <td>{formatCurrency(row.balanceDue)}</td>
+                        <td data-label="Phone">{row.phone ?? "—"}</td>
+                        <td data-label="Address">{row.address ?? "—"}</td>
+                        <td data-label="Paid">{row.paid > 0 ? formatCurrency(row.paid) : "—"}</td>
+                        <td data-label="Balance Due">{formatCurrency(row.balanceDue)}</td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
                     <tr>
                       <td colSpan={4}>Subtotal</td>
-                      <td>{formatCurrency(section.balanceDueSubtotal)}</td>
+                      <td data-label="Balance Due">{formatCurrency(section.balanceDueSubtotal)}</td>
                     </tr>
                   </tfoot>
                 </table>

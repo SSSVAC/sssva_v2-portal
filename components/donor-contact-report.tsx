@@ -125,7 +125,7 @@ export function DonorContactReport({ months, donors }: DonorContactReportProps) 
 
       {sortedDonors.length > 0 ? (
         <div className="table-panel table-panel-scroll">
-          <table className="data-table">
+          <table className="data-table data-table-cards">
             <thead>
               <tr>
                 <SortableTh
@@ -161,12 +161,16 @@ export function DonorContactReport({ months, donors }: DonorContactReportProps) 
               {sortedDonors.map((donor) => (
                 <tr key={donor.id}>
                   <td>{donor.donorName}</td>
-                  <td>{donor.address ?? "—"}</td>
+                  <td data-label="Address">{donor.address ?? "—"}</td>
                   {months.map((month) => {
                     const amount = donor.amounts[month.key] ?? 0;
-                    return <td key={month.key}>{amount > 0 ? formatCurrency(amount) : "—"}</td>;
+                    return (
+                      <td key={month.key} data-label={month.label}>
+                        {amount > 0 ? formatCurrency(amount) : "—"}
+                      </td>
+                    );
                   })}
-                  <td>{formatCurrency(donor.total)}</td>
+                  <td data-label="Total">{formatCurrency(donor.total)}</td>
                 </tr>
               ))}
             </tbody>

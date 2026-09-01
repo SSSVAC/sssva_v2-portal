@@ -17,6 +17,11 @@ export type RecordColumn = {
   // For type "select": label shown for a null/empty value, and offered as
   // an explicit option that saves null (e.g. "Others" for an unset group).
   emptyLabel?: string;
+  // Marks the column whose value should read as the mobile/tablet card's
+  // title (see .data-table-card-title in globals.css). Without this, the
+  // card layout guesses column 1 is the title, which is wrong here since
+  // these tables lead with an internal id column.
+  cardTitle?: boolean;
 };
 
 type RowValue = string | number | boolean | null;
@@ -355,7 +360,7 @@ export function EditableDataTable({
       />
 
       <div className="table-panel-scroll records-table-wrap">
-      <table className="data-table">
+      <table className="data-table data-table-cards">
         <thead>
           <tr>
             {isAdmin && (
@@ -388,7 +393,7 @@ export function EditableDataTable({
           <tr>
             {isAdmin && <th className="filter-cell" />}
             {columns.map((column) => (
-              <th key={column.key} className="filter-cell">
+              <th key={column.key} className="filter-cell" data-label={column.label}>
                 {column.type === "boolean" ? (
                   <select
                     className="filter-input"
@@ -443,7 +448,7 @@ export function EditableDataTable({
             return (
               <tr key={rowId}>
                 {isAdmin && (
-                  <td>
+                  <td data-label="Select">
                     <input
                       type="checkbox"
                       aria-label={`Select row ${rowId}`}
@@ -455,14 +460,19 @@ export function EditableDataTable({
                 {columns.map((column) => {
                   const cellKey = `${rowId}:${column.key}`;
                   const value = row[column.key];
+                  const titleClass = column.cardTitle ? "data-table-card-title" : "";
 
                   if (!column.editable) {
-                    return <td key={column.key}>{formatValue(value)}</td>;
+                    return (
+                      <td key={column.key} data-label={column.label} className={titleClass}>
+                        {formatValue(value)}
+                      </td>
+                    );
                   }
 
                   if (column.type === "boolean") {
                     return (
-                      <td key={column.key}>
+                      <td key={column.key} data-label={column.label}>
                         <input
                           type="checkbox"
                           checked={Boolean(value)}
@@ -479,7 +489,7 @@ export function EditableDataTable({
 
                     if (addingOptionCell === cellKey) {
                       return (
-                        <td key={column.key}>
+                        <td key={column.key} data-label={column.label} className={titleClass}>
                           <input
                             autoFocus
                             className="cell-input"
@@ -499,7 +509,7 @@ export function EditableDataTable({
                     }
 
                     return (
-                      <td key={column.key}>
+                      <td key={column.key} data-label={column.label} className={titleClass}>
                         <select
                           className="filter-input"
                           aria-label={`Edit ${column.label}`}
@@ -530,7 +540,7 @@ export function EditableDataTable({
 
                   if (editingCell === cellKey) {
                     return (
-                      <td key={column.key}>
+                      <td key={column.key} data-label={column.label} className={titleClass}>
                         <input
                           autoFocus
                           className="cell-input"
@@ -551,7 +561,8 @@ export function EditableDataTable({
                   return (
                     <td
                       key={column.key}
-                      className={`editable-cell ${errorCell === cellKey ? "editable-cell-error" : ""}`}
+                      data-label={column.label}
+                      className={`editable-cell ${titleClass} ${errorCell === cellKey ? "editable-cell-error" : ""}`}
                       onClick={() => startEdit(rowId, column.key, value)}
                       title={errorCell === cellKey ? "Save failed — click to retry" : "Click to edit"}
                     >
@@ -559,7 +570,7 @@ export function EditableDataTable({
                     </td>
                   );
                 })}
-                {actionColumn && <td>{actionColumn.render(row)}</td>}
+                {actionColumn && <td data-label={actionColumn.label}>{actionColumn.render(row)}</td>}
               </tr>
             );
           })}

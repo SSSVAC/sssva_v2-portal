@@ -134,7 +134,7 @@ export function SilaiGroupedReport({ rows }: SilaiGroupedReportProps) {
               {group.groupName} ({group.rows.length})
             </h3>
             <div className="table-panel table-panel-scroll">
-              <table className="data-table">
+              <table className="data-table data-table-cards">
                 <thead>
                   <tr>
                     <th>Name</th>
@@ -147,16 +147,16 @@ export function SilaiGroupedReport({ rows }: SilaiGroupedReportProps) {
                   {group.rows.map((row) => (
                     <tr key={row.id}>
                       <td>{row.name}</td>
-                      <td>{row.phone ?? "—"}</td>
-                      <td>{row.address ?? "—"}</td>
-                      <td>{row.total > 0 ? formatCurrency(row.total) : "—"}</td>
+                      <td data-label="Phone">{row.phone ?? "—"}</td>
+                      <td data-label="Address">{row.address ?? "—"}</td>
+                      <td data-label="Total">{row.total > 0 ? formatCurrency(row.total) : "—"}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr>
                     <td colSpan={3}>Subtotal</td>
-                    <td>{formatCurrency(group.subtotal)}</td>
+                    <td data-label="Total">{formatCurrency(group.subtotal)}</td>
                   </tr>
                 </tfoot>
               </table>
