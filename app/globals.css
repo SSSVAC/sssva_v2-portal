@@ -1051,16 +1051,27 @@ input {
    Collapsible report sections (see components/collapsible-section.tsx).
 
    Built on native <details>/<summary> so the open/close click needs no
-   JS. .report-section-body's visibility is fully taken over by this
-   CSS rather than left to the browser's own <details> UA styling, so
-   it's easy to make desktop ignore the open/closed state entirely and
-   always show content — only the mobile/tablet rule below hides
-   anything, and it's `screen`-scoped like the other mobile rules so
-   printed reports are unaffected. Exporting a screenshot from a phone
-   (lib/export.ts's exportSectionToImage, which rasterizes the live DOM
-   rather than going through @media print) separately force-opens
-   sections before capturing — see that function.
+   JS. The content lives OUTSIDE <details> as a plain sibling div,
+   revealed with a `.report-section[open] + .report-section-body`
+   selector — NOT nested inside <details>. Chromium renders a closed
+   <details>'s children through an internal ::details-content box with
+   its own content-visibility that a rule on a nested child can't
+   override, which is what let this ship completely broken: every
+   section rendered as a title with no table under it, on every screen
+   size, since every section starts closed. Keeping the body out of
+   <details> entirely sidesteps that.
+
+   Desktop ignores open/closed and always shows every section; only the
+   mobile/tablet rule hides anything, and it's `screen`-scoped like the
+   other mobile rules so printed reports are unaffected. Exporting a
+   screenshot from a phone (lib/export.ts's exportSectionToImage, which
+   rasterizes the live DOM rather than going through @media print)
+   separately force-opens sections before capturing — see that function.
    --------------------------------------------------------------------- */
+.report-section {
+  margin-top: 28px;
+}
+
 .report-section-summary {
   display: flex;
   align-items: center;
@@ -1075,7 +1086,7 @@ input {
 }
 
 .report-section-summary h3 {
-  margin: 0;
+  margin: 0 0 8px;
 }
 
 .report-section-summary::after {
@@ -1109,16 +1120,23 @@ input {
     display: none;
   }
 
-  .report-section[open] > .report-section-body {
+  .report-section[open] + .report-section-body {
     display: block;
   }
 
+  .report-section {
+    margin-top: 12px;
+  }
+
   .report-section-summary {
-    margin: 4px 0;
     padding: 10px 12px;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     background: var(--panel);
+  }
+
+  .report-section-summary h3 {
+    margin: 0;
   }
 
   .report-section-summary:hover {
