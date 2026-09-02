@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { formatCurrency } from "@/lib/format";
 import { ExportToolbar } from "@/components/export-toolbar";
+import { CollapsibleSection } from "@/components/collapsible-section";
 import {
   exportSectionsToCsv,
   exportSectionsToHtml,
@@ -129,10 +130,7 @@ export function SilaiGroupedReport({ rows }: SilaiGroupedReportProps) {
 
       {groups.length > 0 ? (
         groups.map((group) => (
-          <div key={group.groupName}>
-            <h3>
-              {group.groupName} ({group.rows.length})
-            </h3>
+          <CollapsibleSection key={group.groupName} title={`${group.groupName} (${group.rows.length})`}>
             <div className="table-panel table-panel-scroll">
               <table className="data-table data-table-cards">
                 <thead>
@@ -161,7 +159,7 @@ export function SilaiGroupedReport({ rows }: SilaiGroupedReportProps) {
                 </tfoot>
               </table>
             </div>
-          </div>
+          </CollapsibleSection>
         ))
       ) : (
         <div className="empty-state">

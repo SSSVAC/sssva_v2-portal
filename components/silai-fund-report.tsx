@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { formatCurrency, formatDateOnly } from "@/lib/format";
 import { ExportToolbar } from "@/components/export-toolbar";
+import { CollapsibleSection } from "@/components/collapsible-section";
 import {
   exportToCsv,
   exportToHtml,
@@ -327,10 +328,7 @@ export function SilaiFundReport({
       />
       {contributionGroups.length > 0 ? (
         contributionGroups.map((group) => (
-          <div key={group.groupName}>
-            <h3>
-              {group.groupName} ({group.rows.length})
-            </h3>
+          <CollapsibleSection key={group.groupName} title={`${group.groupName} (${group.rows.length})`}>
             <div className="table-panel table-panel-scroll">
               <table className="data-table data-table-cards">
                 <thead>
@@ -359,7 +357,7 @@ export function SilaiFundReport({
                 </tfoot>
               </table>
             </div>
-          </div>
+          </CollapsibleSection>
         ))
       ) : (
         <div className="empty-state">
@@ -369,7 +367,6 @@ export function SilaiFundReport({
 
       {nonCashDonationRows.length > 0 && (
         <>
-          <h3>Non-Cash Donations</h3>
           <ExportToolbar
             onExportCsv={() => exportToCsv(`${fileSlug}-non-cash-donations.csv`, nonCashExportHeaders, nonCashExportRows())}
             onExportHtml={() =>
@@ -378,36 +375,38 @@ export function SilaiFundReport({
             onExportPdf={exportPdf}
             onExportImage={exportImage}
           />
-          <div className="table-panel table-panel-scroll">
-            <table className="data-table data-table-cards">
-              <thead>
-                <tr>
-                  <th>Donor</th>
-                  <th>Address</th>
-                  <th>Detail</th>
-                </tr>
-              </thead>
-              <tbody>
-                {nonCashDonationRows.map((row, index) => (
-                  <tr key={`${row.donorName ?? "unknown"}-${index}`}>
-                    <td data-label="Donor">{row.donorName ?? "—"}</td>
-                    <td data-label="Address">{row.address ?? "—"}</td>
-                    <td data-label="Detail">{row.detail}</td>
+          <CollapsibleSection title="Non-Cash Donations">
+            <div className="table-panel table-panel-scroll">
+              <table className="data-table data-table-cards">
+                <thead>
+                  <tr>
+                    <th>Donor</th>
+                    <th>Address</th>
+                    <th>Detail</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {nonCashDonationRows.map((row, index) => (
+                    <tr key={`${row.donorName ?? "unknown"}-${index}`}>
+                      <td data-label="Donor">{row.donorName ?? "—"}</td>
+                      <td data-label="Address">{row.address ?? "—"}</td>
+                      <td data-label="Detail">{row.detail}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CollapsibleSection>
         </>
       )}
 
-      <h3>Expenses</h3>
       <ExportToolbar
         onExportCsv={() => exportToCsv(`${fileSlug}-expenses.csv`, expenseExportHeaders, expenseExportRows())}
         onExportHtml={() => exportToHtml(`${fileSlug}-expenses.html`, `${title} — Expenses`, expenseExportHeaders, expenseExportRows())}
         onExportPdf={exportPdf}
         onExportImage={exportImage}
       />
+      <CollapsibleSection title="Expenses">
       {expenseRows.length > 0 ? (
         <div className="table-panel table-panel-scroll">
           <table className="data-table data-table-cards">
@@ -440,14 +439,15 @@ export function SilaiFundReport({
           <p>No expenses recorded.</p>
         </div>
       )}
+      </CollapsibleSection>
 
-      <h3>Bills</h3>
       <ExportToolbar
         onExportCsv={() => exportToCsv(`${fileSlug}-bills.csv`, billExportHeaders, billExportRows())}
         onExportHtml={() => exportToHtml(`${fileSlug}-bills.html`, `${title} — Bills`, billExportHeaders, billExportRows())}
         onExportPdf={exportPdf}
         onExportImage={exportImage}
       />
+      <CollapsibleSection title="Bills">
       {billRows.length > 0 ? (
         <div className="table-panel table-panel-scroll">
           <table className="data-table data-table-cards">
@@ -488,8 +488,8 @@ export function SilaiFundReport({
           <p>No bills recorded.</p>
         </div>
       )}
+      </CollapsibleSection>
 
-      <h3>Vendor Payments</h3>
       <ExportToolbar
         onExportCsv={() => exportToCsv(`${fileSlug}-vendor-payments.csv`, vendorExportHeaders, vendorExportRows())}
         onExportHtml={() =>
@@ -498,6 +498,7 @@ export function SilaiFundReport({
         onExportPdf={exportPdf}
         onExportImage={exportImage}
       />
+      <CollapsibleSection title="Vendor Payments">
       {vendorRows.length > 0 ? (
         <div className="table-panel table-panel-scroll">
           <table className="data-table data-table-cards">
@@ -538,6 +539,7 @@ export function SilaiFundReport({
           <p>No vendor payments recorded.</p>
         </div>
       )}
+      </CollapsibleSection>
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { formatCurrency } from "@/lib/format";
 import { ExportToolbar } from "@/components/export-toolbar";
+import { CollapsibleSection } from "@/components/collapsible-section";
 import {
   exportSectionsToCsv,
   exportSectionsToHtml,
@@ -150,11 +151,15 @@ export function SilaiFollowUpReport({ members }: SilaiFollowUpReportProps) {
 
       {followUpRows.length > 0 ? (
         sections.map((section) => (
-          <div key={section.status}>
-            <h3>
-              <span className={`status-pill ${STATUS_CLASS[section.status]}`}>{section.sectionName}</span>{" "}
-              ({section.rows.length})
-            </h3>
+          <CollapsibleSection
+            key={section.status}
+            title={
+              <>
+                <span className={`status-pill ${STATUS_CLASS[section.status]}`}>{section.sectionName}</span>{" "}
+                ({section.rows.length})
+              </>
+            }
+          >
             {section.rows.length > 0 ? (
               <div className="table-panel table-panel-scroll">
                 <table className="data-table data-table-cards">
@@ -191,7 +196,7 @@ export function SilaiFollowUpReport({ members }: SilaiFollowUpReportProps) {
                 <p>No members in this section.</p>
               </div>
             )}
-          </div>
+          </CollapsibleSection>
         ))
       ) : (
         <div className="empty-state">

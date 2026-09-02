@@ -1048,6 +1048,85 @@ input {
 }
 
 /* ---------------------------------------------------------------------
+   Collapsible report sections (see components/collapsible-section.tsx).
+
+   Built on native <details>/<summary> so the open/close click needs no
+   JS. .report-section-body's visibility is fully taken over by this
+   CSS rather than left to the browser's own <details> UA styling, so
+   it's easy to make desktop ignore the open/closed state entirely and
+   always show content — only the mobile/tablet rule below hides
+   anything, and it's `screen`-scoped like the other mobile rules so
+   printed reports are unaffected. Exporting a screenshot from a phone
+   (lib/export.ts's exportSectionToImage, which rasterizes the live DOM
+   rather than going through @media print) separately force-opens
+   sections before capturing — see that function.
+   --------------------------------------------------------------------- */
+.report-section-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.report-section-summary::-webkit-details-marker {
+  display: none;
+}
+
+.report-section-summary h3 {
+  margin: 0;
+}
+
+.report-section-summary::after {
+  content: "\25BE";
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 13px;
+  transition: transform 0.15s ease;
+}
+
+.report-section[open] > .report-section-summary::after {
+  transform: rotate(180deg);
+}
+
+.report-section-body {
+  display: block;
+}
+
+@media screen and (min-width: 961px) {
+  .report-section-summary {
+    cursor: default;
+  }
+
+  .report-section-summary::after {
+    display: none;
+  }
+}
+
+@media screen and (max-width: 960px) {
+  .report-section-body {
+    display: none;
+  }
+
+  .report-section[open] > .report-section-body {
+    display: block;
+  }
+
+  .report-section-summary {
+    margin: 4px 0;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--panel);
+  }
+
+  .report-section-summary:hover {
+    background: var(--row-hover);
+  }
+}
+
+/* ---------------------------------------------------------------------
    Card layout for data tables on mobile/tablet (<=960px).
 
    Opt in per-table with the `data-table-cards` class alongside

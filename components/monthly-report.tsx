@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { formatCurrency, formatDateOnly } from "@/lib/format";
 import { ExportToolbar } from "@/components/export-toolbar";
+import { CollapsibleSection } from "@/components/collapsible-section";
 import {
   exportToCsv,
   exportToHtml,
@@ -256,7 +257,6 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
         </article>
       </div>
 
-      <h3>Income</h3>
       <ExportToolbar
         onExportCsv={() => exportToCsv(`monthly-report-income-${selectedMonth}.csv`, incomeExportHeaders, incomeExportRows())}
         onExportHtml={() =>
@@ -265,6 +265,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
         onExportPdf={exportPdf}
         onExportImage={exportImage}
       />
+      <CollapsibleSection title="Income">
       <div className="table-panel table-panel-scroll">
         <table className="data-table data-table-cards">
           <thead>
@@ -299,8 +300,8 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
           </tfoot>
         </table>
       </div>
+      </CollapsibleSection>
 
-      <h3>Monthly Donations — Donor Detail</h3>
       <ExportToolbar
         onExportCsv={() =>
           exportToCsv(`monthly-report-donations-${selectedMonth}.csv`, donationDonorExportHeaders, donationDonorExportRows())
@@ -316,6 +317,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
         onExportPdf={exportPdf}
         onExportImage={exportImage}
       />
+      <CollapsibleSection title="Monthly Donations — Donor Detail">
       {donationDonorRows.length > 0 ? (
         <div className="table-panel table-panel-scroll">
           <table className="data-table data-table-cards">
@@ -346,8 +348,8 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
           <p>No monthly donations recorded for this month.</p>
         </div>
       )}
+      </CollapsibleSection>
 
-      <h3>Others — Detail</h3>
       <ExportToolbar
         onExportCsv={() => exportToCsv(`monthly-report-others-${selectedMonth}.csv`, othersDonorExportHeaders, othersDonorExportRows())}
         onExportHtml={() =>
@@ -361,6 +363,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
         onExportPdf={exportPdf}
         onExportImage={exportImage}
       />
+      <CollapsibleSection title="Others — Detail">
       {othersDonorRows.length > 0 ? (
         <div className="table-panel table-panel-scroll">
           <table className="data-table data-table-cards">
@@ -391,8 +394,8 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
           <p>No other income recorded for this month.</p>
         </div>
       )}
+      </CollapsibleSection>
 
-      <h3>Expenses</h3>
       <ExportToolbar
         onExportCsv={() => exportToCsv(`monthly-report-expenses-${selectedMonth}.csv`, expenseExportHeaders, expenseExportRows())}
         onExportHtml={() =>
@@ -401,6 +404,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
         onExportPdf={exportPdf}
         onExportImage={exportImage}
       />
+      <CollapsibleSection title="Expenses">
       {monthExpenseRows.length > 0 ? (
         <div className="table-panel table-panel-scroll">
           <table className="data-table data-table-cards">
@@ -435,8 +439,8 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
           <p>No expenses recorded for this month.</p>
         </div>
       )}
+      </CollapsibleSection>
 
-      <h3>Bills</h3>
       <ExportToolbar
         onExportCsv={() => exportToCsv(`monthly-report-bills-${selectedMonth}.csv`, billExportHeaders, billExportRows())}
         onExportHtml={() =>
@@ -445,6 +449,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
         onExportPdf={exportPdf}
         onExportImage={exportImage}
       />
+      <CollapsibleSection title="Bills">
       {monthBillRows.length > 0 ? (
         <div className="table-panel table-panel-scroll">
           <table className="data-table data-table-cards">
@@ -487,6 +492,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
           <p>No bills recorded for this month.</p>
         </div>
       )}
+      </CollapsibleSection>
     </div>
   );
 }

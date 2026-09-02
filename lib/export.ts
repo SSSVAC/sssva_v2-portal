@@ -245,20 +245,32 @@ export async function exportSectionToImage(target: string, filename: string) {
   const element = document.querySelector<HTMLElement>(`[data-print-id="${target}"]`);
   if (!element) return;
 
-  const { toPng } = await import("html-to-image");
-  const dataUrl = await toPng(element, {
-    pixelRatio: 1.5,
-    backgroundColor: "#ffffff",
-    cacheBust: true,
-    filter: (node) => !(node instanceof HTMLElement && node.classList.contains("no-print"))
-  });
+  // html-to-image rasterizes the live DOM as currently rendered on
+  // screen, so a collapsed mobile <details> section (see
+  // components/collapsible-section.tsx) would otherwise be silently
+  // missing from the exported image — force every section open for the
+  // capture, then restore whatever the user had open/closed.
+  const collapsedSections = Array.from(element.querySelectorAll<HTMLDetailsElement>("details.report-section:not([open])"));
+  collapsedSections.forEach((details) => details.setAttribute("open", ""));
 
-  const link = document.createElement("a");
-  link.href = dataUrl;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  try {
+    const { toPng } = await import("html-to-image");
+    const dataUrl = await toPng(element, {
+      pixelRatio: 1.5,
+      backgroundColor: "#ffffff",
+      cacheBust: true,
+      filter: (node) => !(node instanceof HTMLElement && node.classList.contains("no-print"))
+    });
+
+    const link = document.createElement("a");
+    link.href = dataUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } finally {
+    collapsedSections.forEach((details) => details.removeAttribute("open"));
+  }
 }
 
 export type ExcelGroupSection = {

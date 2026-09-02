@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { formatCurrency, formatDateOnly } from "@/lib/format";
 import { ExportToolbar } from "@/components/export-toolbar";
+import { CollapsibleSection } from "@/components/collapsible-section";
 import {
   exportToCsv,
   exportToHtml,
@@ -290,10 +291,7 @@ export function EventFundReport({
       />
       {contributionGroups.length > 0 ? (
         contributionGroups.map((group) => (
-          <div key={group.groupName}>
-            <h3>
-              {group.groupName} ({group.rows.length})
-            </h3>
+          <CollapsibleSection key={group.groupName} title={`${group.groupName} (${group.rows.length})`}>
             <div className="table-panel table-panel-scroll">
               <table className="data-table data-table-cards">
                 <thead>
@@ -322,7 +320,7 @@ export function EventFundReport({
                 </tfoot>
               </table>
             </div>
-          </div>
+          </CollapsibleSection>
         ))
       ) : (
         <div className="empty-state">
@@ -330,7 +328,6 @@ export function EventFundReport({
         </div>
       )}
 
-      <h3>Expenses</h3>
       <ExportToolbar
         onExportCsv={() => exportToCsv(`${fileSlug}-expenses-${selectedYear}.csv`, expenseExportHeaders, expenseExportRows())}
         onExportHtml={() =>
@@ -339,6 +336,7 @@ export function EventFundReport({
         onExportPdf={exportPdf}
         onExportImage={exportImage}
       />
+      <CollapsibleSection title="Expenses">
       {yearExpenseRows.length > 0 ? (
         <div className="table-panel table-panel-scroll">
           <table className="data-table data-table-cards">
@@ -371,14 +369,15 @@ export function EventFundReport({
           <p>No expenses recorded.</p>
         </div>
       )}
+      </CollapsibleSection>
 
-      <h3>Bills</h3>
       <ExportToolbar
         onExportCsv={() => exportToCsv(`${fileSlug}-bills-${selectedYear}.csv`, billExportHeaders, billExportRows())}
         onExportHtml={() => exportToHtml(`${fileSlug}-bills-${selectedYear}.html`, `${title} — Bills`, billExportHeaders, billExportRows())}
         onExportPdf={exportPdf}
         onExportImage={exportImage}
       />
+      <CollapsibleSection title="Bills">
       {yearBillRows.length > 0 ? (
         <div className="table-panel table-panel-scroll">
           <table className="data-table data-table-cards">
@@ -419,6 +418,7 @@ export function EventFundReport({
           <p>No bills recorded.</p>
         </div>
       )}
+      </CollapsibleSection>
     </div>
   );
 }
