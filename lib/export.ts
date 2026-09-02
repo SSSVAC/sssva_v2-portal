@@ -246,10 +246,10 @@ export async function exportSectionToImage(target: string, filename: string) {
   if (!element) return;
 
   // html-to-image rasterizes the live DOM as currently rendered on
-  // screen, so a collapsed mobile <details> section (see
-  // components/collapsible-section.tsx) would otherwise be silently
-  // missing from the exported image — force every section open for the
-  // capture, then restore whatever the user had open/closed.
+  // screen, so a section collapsed on mobile (see components/ui/section.tsx)
+  // would otherwise be silently missing from the exported image — force
+  // every section open for the capture, then restore whatever the user had
+  // open/closed.
   const collapsedSections = Array.from(element.querySelectorAll<HTMLDetailsElement>("details.report-section:not([open])"));
   collapsedSections.forEach((details) => details.setAttribute("open", ""));
 

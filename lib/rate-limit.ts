@@ -1,5 +1,3 @@
-import type { NextRequest } from "next/server";
-
 type Bucket = { count: number; resetAt: number };
 
 // Best-effort, per-instance rate limiting. Serverless functions can scale to
@@ -44,7 +42,11 @@ export function checkRateLimit(key: string, options: { max: number; windowMs: nu
   return { allowed: true, remaining: max - existing.count, resetAt: existing.resetAt };
 }
 
-export function getClientIp(request: NextRequest): string {
+// Takes anything with readable headers — a NextRequest in a route handler,
+// or { headers: await headers() } inside a server action.
+type HeaderSource = { headers: { get(name: string): string | null } };
+
+export function getClientIp(request: HeaderSource): string {
   const forwarded = request.headers.get("x-forwarded-for");
   if (forwarded) {
     return forwarded.split(",")[0]!.trim();

@@ -2,8 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { formatCurrency, formatDateOnly } from "@/lib/format";
-import { ExportToolbar } from "@/components/export-toolbar";
-import { CollapsibleSection } from "@/components/collapsible-section";
+import { ExportMenu } from "@/components/ui/export-menu";
+import { Section } from "@/components/ui/section";
+import { SectionGroup } from "@/components/ui/section-group";
+import { ReportToolbar } from "@/components/ui/report-toolbar";
 import {
   exportToCsv,
   exportToHtml,
@@ -118,9 +120,9 @@ export function SilaiFundReport({
   const totalPaid = totalExpenses + totalBillsPaid;
   const balance = totalContributions - totalPaid;
 
-  // visibleContributionRows already arrive sorted in street walking order
-  // (see buildSilaiContributionRows in app/reports/page.tsx), so bucketing
-  // here by group preserves the correct order within each section too.
+  // visibleContributionRows already arrive sorted in street walking order,
+  // so bucketing here by group preserves the correct order within each
+  // section too.
   const contributionGroups = useMemo(() => {
     const byGroup = new Map<string, SilaiContributionRow[]>();
 
@@ -153,7 +155,10 @@ export function SilaiFundReport({
   ];
 
   const contributionExportHeaders = ["Donor", "Phone", "Address", "Amount"];
-  const contributionGroupExportRows = (rows: SilaiContributionRow[], subtotal: number): ExportCell[][] => [
+  const contributionGroupExportRows = (
+    rows: SilaiContributionRow[],
+    subtotal: number
+  ): ExportCell[][] => [
     ...rows.map((row) => [row.donorName ?? "", row.phone ?? "", row.address ?? "", amountCell(row.total)]),
     ["Subtotal", "", "", amountCell(subtotal)]
   ];
@@ -165,11 +170,16 @@ export function SilaiFundReport({
     }));
 
   const nonCashExportHeaders = ["Donor", "Address", "Detail"];
-  const nonCashExportRows = () => nonCashDonationRows.map((row) => [row.donorName ?? "", row.address ?? "", row.detail]);
+  const nonCashExportRows = () =>
+    nonCashDonationRows.map((row) => [row.donorName ?? "", row.address ?? "", row.detail]);
 
   const expenseExportHeaders = ["Item", "Date", "Amount"];
   const expenseExportRows = () => [
-    ...expenseRows.map((row) => [row.itemName ?? "", row.date ? formatDateOnly(row.date) : "", formatCurrency(row.total)]),
+    ...expenseRows.map((row) => [
+      row.itemName ?? "",
+      row.date ? formatDateOnly(row.date) : "",
+      formatCurrency(row.total)
+    ]),
     ["Total", "", formatCurrency(totalExpenses)]
   ];
 
@@ -197,16 +207,34 @@ export function SilaiFundReport({
   ];
 
   return (
-    <div>
-      <ExportToolbar
-        onExportCsv={() => exportSectionsToCsv(`${fileSlug}-report.csv`, fullReportSections())}
-        onExportHtml={() => exportSectionsToHtml(`${fileSlug}-report.html`, title, fullReportSections())}
-        onExportPdf={exportPdf}
-        onExportImage={exportImage}
-      />
+    <div className="stack">
+      <ReportToolbar
+        actions={
+          <ExportMenu
+            label="Export report"
+            onExportCsv={() => exportSectionsToCsv(`${fileSlug}-report.csv`, fullReportSections())}
+            onExportHtml={() => exportSectionsToHtml(`${fileSlug}-report.html`, title, fullReportSections())}
+            onExportPdf={exportPdf}
+            onExportImage={exportImage}
+          />
+        }
+      >
+        <label className="checkbox-row">
+          <input
+            type="checkbox"
+            checked={showAllMembers}
+            onChange={(event) => handleShowAllMembersChange(event.target.checked)}
+          />
+          Show all members (including not yet paid)
+        </label>
+      </ReportToolbar>
 
+      {/* Contributions is the figure the report exists to report, so it
+          carries the lead emphasis. Bills Due is the only tile whose value
+          can be in a bad state, so it is the only one that ever takes a
+          semantic colour — the rest stay neutral. */}
       <div className="metric-grid" aria-label={`${title} summary`}>
-        <article className="metric-card">
+        <article className="metric-card" data-emphasis="lead">
           <div className="metric-head">
             <span>Total Contributions</span>
           </div>
@@ -234,199 +262,255 @@ export function SilaiFundReport({
           <div className="metric-value">{formatCurrency(balance)}</div>
           <div className="metric-sub">Contributions minus paid</div>
         </article>
-        <article className="metric-card">
+        <article className="metric-card" data-state={totalBillsDue > 0 ? "critical" : "positive"}>
           <div className="metric-head">
             <span>Bills Due</span>
           </div>
-          <div className={`metric-value ${totalBillsDue > 0 ? "cell-danger" : "cell-success"}`}>
-            {formatCurrency(totalBillsDue)}
+          <div className="metric-value">{formatCurrency(totalBillsDue)}</div>
+          <div className="metric-sub">
+            {formatCurrency(totalBillsPaid)} paid of {formatCurrency(totalBills)}
           </div>
-          <div className="metric-sub">{formatCurrency(totalBillsPaid)} paid of {formatCurrency(totalBills)}</div>
         </article>
       </div>
 
-      <div className="filter-banner no-print" style={{ justifyContent: "flex-start", gap: 10 }}>
-        <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <input
-            type="checkbox"
-            checked={showAllMembers}
-            onChange={(event) => handleShowAllMembersChange(event.target.checked)}
-          />
-          Show all members (including not yet paid)
-        </label>
-      </div>
-
-      <ExportToolbar
-        onExportCsv={() => exportSectionsToCsv(`${fileSlug}-contributions.csv`, contributionExportSections())}
-        onExportHtml={() =>
-          exportSectionsToHtml(`${fileSlug}-contributions.html`, `${title} — Contributions`, contributionExportSections())
-        }
-        onExportPdf={exportPdf}
-        onExportImage={exportImage}
-      />
-      {contributionGroups.length > 0 ? (
-        contributionGroups.map((group) => (
-          <CollapsibleSection key={group.groupName} title={`${group.groupName} (${group.rows.length})`}>
-            <div className="table-panel table-panel-scroll">
-              <table className="data-table data-table-cards">
-                <thead>
-                  <tr>
-                    <th>Donor</th>
-                    <th>Phone</th>
-                    <th>Address</th>
-                    <th>Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {group.rows.map((row, index) => (
-                    <tr key={`${row.donorName ?? "unknown"}-${index}`}>
-                      <td data-label="Donor">{row.donorName ?? "—"}</td>
-                      <td data-label="Phone">{row.phone ?? "—"}</td>
-                      <td data-label="Address">{row.address ?? "—"}</td>
-                      <td data-label="Amount" className={amountClass(row.total)}>{formatCurrency(row.total)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td colSpan={3}>Subtotal</td>
-                    <td data-label="Amount">{formatCurrency(group.subtotal)}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </CollapsibleSection>
-        ))
-      ) : (
-        <div className="empty-state">
-          <p>{showAllMembers ? "No members found." : "No contributions recorded."}</p>
-        </div>
-      )}
-
-      {nonCashDonationRows.length > 0 && (
-        <>
-          <ExportToolbar
-            onExportCsv={() => exportToCsv(`${fileSlug}-non-cash-donations.csv`, nonCashExportHeaders, nonCashExportRows())}
+      <SectionGroup
+        title="Contributions"
+        description={`${visibleContributionRows.length} contributor${
+          visibleContributionRows.length === 1 ? "" : "s"
+        } across ${contributionGroups.length} street${contributionGroups.length === 1 ? "" : "s"}`}
+        actions={
+          <ExportMenu
+            label="Export contributions"
+            onExportCsv={() =>
+              exportSectionsToCsv(`${fileSlug}-contributions.csv`, contributionExportSections())
+            }
             onExportHtml={() =>
-              exportToHtml(`${fileSlug}-non-cash-donations.html`, `${title} — Non-Cash Donations`, nonCashExportHeaders, nonCashExportRows())
+              exportSectionsToHtml(
+                `${fileSlug}-contributions.html`,
+                `${title} — Contributions`,
+                contributionExportSections()
+              )
             }
             onExportPdf={exportPdf}
             onExportImage={exportImage}
           />
-          <CollapsibleSection title="Non-Cash Donations">
-            <div className="table-panel table-panel-scroll">
-              <table className="data-table data-table-cards">
-                <thead>
-                  <tr>
-                    <th>Donor</th>
-                    <th>Address</th>
-                    <th>Detail</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {nonCashDonationRows.map((row, index) => (
-                    <tr key={`${row.donorName ?? "unknown"}-${index}`}>
-                      <td data-label="Donor">{row.donorName ?? "—"}</td>
-                      <td data-label="Address">{row.address ?? "—"}</td>
-                      <td data-label="Detail">{row.detail}</td>
+        }
+      >
+        {contributionGroups.length > 0 ? (
+          contributionGroups.map((group) => (
+            <Section key={group.groupName} title={group.groupName} count={group.rows.length}>
+              <div className="table-panel-scroll">
+                <table className="data-table data-table-cards">
+                  <thead>
+                    <tr>
+                      <th>Donor</th>
+                      <th>Phone</th>
+                      <th>Address</th>
+                      <th className="num">Amount</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CollapsibleSection>
-        </>
+                  </thead>
+                  <tbody>
+                    {group.rows.map((row, index) => (
+                      <tr key={`${row.donorName ?? "unknown"}-${index}`}>
+                        <td data-label="Donor">{row.donorName ?? "—"}</td>
+                        <td data-label="Phone">{row.phone ?? "—"}</td>
+                        <td data-label="Address">{row.address ?? "—"}</td>
+                        <td data-label="Amount" className={`num ${amountClass(row.total)}`}>
+                          {formatCurrency(row.total)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colSpan={3}>Subtotal</td>
+                      <td data-label="Amount" className="num">
+                        {formatCurrency(group.subtotal)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </Section>
+          ))
+        ) : (
+          <div className="empty-state">
+            <p>{showAllMembers ? "No members found." : "No contributions recorded."}</p>
+          </div>
+        )}
+      </SectionGroup>
+
+      {nonCashDonationRows.length > 0 && (
+        <Section
+          title="Non-Cash Donations"
+          count={nonCashDonationRows.length}
+          actions={
+            <ExportMenu
+              onExportCsv={() =>
+                exportToCsv(`${fileSlug}-non-cash-donations.csv`, nonCashExportHeaders, nonCashExportRows())
+              }
+              onExportHtml={() =>
+                exportToHtml(
+                  `${fileSlug}-non-cash-donations.html`,
+                  `${title} — Non-Cash Donations`,
+                  nonCashExportHeaders,
+                  nonCashExportRows()
+                )
+              }
+              onExportPdf={exportPdf}
+              onExportImage={exportImage}
+            />
+          }
+        >
+          <div className="table-panel-scroll">
+            <table className="data-table data-table-cards">
+              <thead>
+                <tr>
+                  <th>Donor</th>
+                  <th>Address</th>
+                  <th>Detail</th>
+                </tr>
+              </thead>
+              <tbody>
+                {nonCashDonationRows.map((row, index) => (
+                  <tr key={`${row.donorName ?? "unknown"}-${index}`}>
+                    <td data-label="Donor">{row.donorName ?? "—"}</td>
+                    <td data-label="Address">{row.address ?? "—"}</td>
+                    <td data-label="Detail">{row.detail}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Section>
       )}
 
-      <ExportToolbar
-        onExportCsv={() => exportToCsv(`${fileSlug}-expenses.csv`, expenseExportHeaders, expenseExportRows())}
-        onExportHtml={() => exportToHtml(`${fileSlug}-expenses.html`, `${title} — Expenses`, expenseExportHeaders, expenseExportRows())}
-        onExportPdf={exportPdf}
-        onExportImage={exportImage}
-      />
-      <CollapsibleSection title="Expenses">
-      {expenseRows.length > 0 ? (
-        <div className="table-panel table-panel-scroll">
-          <table className="data-table data-table-cards">
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th>Date</th>
-                <th>Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {expenseRows.map((row) => (
-                <tr key={row.id}>
-                  <td data-label="Item">{row.itemName ?? "—"}</td>
-                  <td data-label="Date">{row.date ? formatDateOnly(row.date) : "—"}</td>
-                  <td data-label="Amount">{formatCurrency(row.total)}</td>
+      <Section
+        title="Expenses"
+        count={expenseRows.length}
+        actions={
+          <ExportMenu
+            onExportCsv={() =>
+              exportToCsv(`${fileSlug}-expenses.csv`, expenseExportHeaders, expenseExportRows())
+            }
+            onExportHtml={() =>
+              exportToHtml(
+                `${fileSlug}-expenses.html`,
+                `${title} — Expenses`,
+                expenseExportHeaders,
+                expenseExportRows()
+              )
+            }
+            onExportPdf={exportPdf}
+            onExportImage={exportImage}
+          />
+        }
+      >
+        {expenseRows.length > 0 ? (
+          <div className="table-panel-scroll">
+            <table className="data-table data-table-cards">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Date</th>
+                  <th className="num">Amount</th>
                 </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colSpan={2}>Total Expenses</td>
-                <td data-label="Amount">{formatCurrency(totalExpenses)}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      ) : (
-        <div className="empty-state">
-          <p>No expenses recorded.</p>
-        </div>
-      )}
-      </CollapsibleSection>
+              </thead>
+              <tbody>
+                {expenseRows.map((row) => (
+                  <tr key={row.id}>
+                    <td data-label="Item">{row.itemName ?? "—"}</td>
+                    <td data-label="Date">{row.date ? formatDateOnly(row.date) : "—"}</td>
+                    <td data-label="Amount" className="num">
+                      {formatCurrency(row.total)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colSpan={2}>Total Expenses</td>
+                  <td data-label="Amount" className="num">
+                    {formatCurrency(totalExpenses)}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        ) : (
+          <div className="empty-state">
+            <p>No expenses recorded.</p>
+          </div>
+        )}
+      </Section>
 
-      <ExportToolbar
-        onExportCsv={() => exportToCsv(`${fileSlug}-bills.csv`, billExportHeaders, billExportRows())}
-        onExportHtml={() => exportToHtml(`${fileSlug}-bills.html`, `${title} — Bills`, billExportHeaders, billExportRows())}
-        onExportPdf={exportPdf}
-        onExportImage={exportImage}
-      />
-      <CollapsibleSection title="Bills">
-      {billRows.length > 0 ? (
-        <div className="table-panel table-panel-scroll">
-          <table className="data-table data-table-cards">
-            <thead>
-              <tr>
-                <th>Bill #</th>
-                <th>Vendor</th>
-                <th>Date</th>
-                <th>Total</th>
-                <th>Paid</th>
-                <th>Due</th>
-              </tr>
-            </thead>
-            <tbody>
-              {billRows.map((row) => (
-                <tr key={row.id}>
-                  <td data-label="Bill #">{row.number ?? "—"}</td>
-                  <td data-label="Vendor">{row.vendorName ?? "—"}</td>
-                  <td data-label="Date">{row.date ? formatDateOnly(row.date) : "—"}</td>
-                  <td data-label="Total">{formatCurrency(row.total)}</td>
-                  <td data-label="Paid">{formatCurrency(row.total - row.balance)}</td>
-                  <td data-label="Due" className={dueClass(row.balance)}>{formatCurrency(row.balance)}</td>
+      <Section
+        title="Bills"
+        count={billRows.length}
+        actions={
+          <ExportMenu
+            onExportCsv={() => exportToCsv(`${fileSlug}-bills.csv`, billExportHeaders, billExportRows())}
+            onExportHtml={() =>
+              exportToHtml(`${fileSlug}-bills.html`, `${title} — Bills`, billExportHeaders, billExportRows())
+            }
+            onExportPdf={exportPdf}
+            onExportImage={exportImage}
+          />
+        }
+      >
+        {billRows.length > 0 ? (
+          <div className="table-panel-scroll">
+            <table className="data-table data-table-cards">
+              <thead>
+                <tr>
+                  <th>Bill #</th>
+                  <th>Vendor</th>
+                  <th>Date</th>
+                  <th className="num">Total</th>
+                  <th className="num">Paid</th>
+                  <th className="num">Due</th>
                 </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colSpan={3}>Total Bills</td>
-                <td data-label="Total">{formatCurrency(totalBills)}</td>
-                <td data-label="Paid">{formatCurrency(totalBillsPaid)}</td>
-                <td data-label="Due">{formatCurrency(totalBillsDue)}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      ) : (
-        <div className="empty-state">
-          <p>No bills recorded.</p>
-        </div>
-      )}
-      </CollapsibleSection>
+              </thead>
+              <tbody>
+                {billRows.map((row) => (
+                  <tr key={row.id}>
+                    <td data-label="Bill #">{row.number ?? "—"}</td>
+                    <td data-label="Vendor">{row.vendorName ?? "—"}</td>
+                    <td data-label="Date">{row.date ? formatDateOnly(row.date) : "—"}</td>
+                    <td data-label="Total" className="num">
+                      {formatCurrency(row.total)}
+                    </td>
+                    <td data-label="Paid" className="num">
+                      {formatCurrency(row.total - row.balance)}
+                    </td>
+                    <td data-label="Due" className={`num ${dueClass(row.balance)}`}>
+                      {formatCurrency(row.balance)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colSpan={3}>Total Bills</td>
+                  <td data-label="Total" className="num">
+                    {formatCurrency(totalBills)}
+                  </td>
+                  <td data-label="Paid" className="num">
+                    {formatCurrency(totalBillsPaid)}
+                  </td>
+                  <td data-label="Due" className="num">
+                    {formatCurrency(totalBillsDue)}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        ) : (
+          <div className="empty-state">
+            <p>No bills recorded.</p>
+          </div>
+        )}
+      </Section>
     </div>
   );
 }

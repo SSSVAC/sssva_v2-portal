@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { formatCurrency } from "@/lib/format";
-import { ExportToolbar } from "@/components/export-toolbar";
+import { Search } from "lucide-react";
+import { ExportMenu } from "@/components/ui/export-menu";
+import { Section } from "@/components/ui/section";
 import { SortableTh, type SortDirection } from "@/components/sortable-th";
 import {
   exportSectionsToCsv,
@@ -135,39 +137,64 @@ export function FundStatusTable({ members, minimumAmount }: FundStatusTableProps
   ];
 
   return (
-    <div className="table-panel" style={{ minWidth: 0 }}>
-      <ExportToolbar
-        onExportCsv={() => exportSectionsToCsv("members-silai-contributions.csv", exportSections())}
-        onExportHtml={() => exportSectionsToHtml("members-silai-contributions.html", "Members Silai Contributions", exportSections())}
-        onExportPdf={() => printReportSection("silai-contributions")}
-        onExportImage={() => exportSectionToImage("silai-contributions", "members-silai-contributions.png")}
-      />
+    <Section
+      title="Members"
+      count={`${sortedMembers.length} of ${members.length}`}
+      actions={
+        <ExportMenu
+          onExportCsv={() => exportSectionsToCsv("members-silai-contributions.csv", exportSections())}
+          onExportHtml={() =>
+            exportSectionsToHtml(
+              "members-silai-contributions.html",
+              "Members Silai Contributions",
+              exportSections()
+            )
+          }
+          onExportPdf={() => printReportSection("silai-contributions")}
+          onExportImage={() => exportSectionToImage("silai-contributions", "members-silai-contributions.png")}
+        />
+      }
+    >
+      {/* Status filter and search sit in one toolbar row inside the section
+          rather than stacked as an underlined tab strip (which read like
+          the app's navigation tabs) plus a loose input below it. */}
+      <div className="records-toolbar no-print" style={{ padding: "12px 16px 0", marginBottom: 12 }}>
+        <div className="segmented" role="tablist" aria-label="Member fund status">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              role="tab"
+              type="button"
+              aria-selected={activeTab === tab.id}
+              className={`segment${activeTab === tab.id ? " segment-active" : ""}`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              {tab.label}
+              <span className="segment-count">{counts[tab.id]}</span>
+            </button>
+          ))}
+        </div>
 
-      <div className="report-tablist no-print" role="tablist" aria-label="Member fund status">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            role="tab"
-            type="button"
-            aria-selected={activeTab === tab.id}
-            className={`report-tab ${activeTab === tab.id ? "report-tab-active" : ""}`}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            {tab.label} ({counts[tab.id]})
-          </button>
-        ))}
+        <div className="searchbox">
+          <Search size={14} />
+          <input
+            type="search"
+            placeholder="Search by name…"
+            aria-label="Search members by name"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            className="input"
+            style={{ paddingTop: 6, paddingBottom: 6 }}
+          />
+        </div>
+
+        <span className="muted" style={{ marginLeft: "auto" }}>
+          Minimum {formatCurrency(minimumAmount)} per member
+        </span>
       </div>
 
-      <input
-        type="text"
-        placeholder="Search by name…"
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        className="filter-input no-print"
-        style={{ maxWidth: 280, marginBottom: 16 }}
-      />
-
       {sortedMembers.length > 0 ? (
+        <div className="table-panel-scroll">
         <table className="data-table data-table-cards">
           <thead>
             <tr>
@@ -215,8 +242,12 @@ export function FundStatusTable({ members, minimumAmount }: FundStatusTableProps
                 <td>{member.name}</td>
                 <td data-label="Phone">{member.phone ?? "—"}</td>
                 <td data-label="Address">{member.address ?? "—"}</td>
-                <td data-label="Paid">{formatCurrency(member.paid)}</td>
-                <td data-label="Balance Due">{member.balanceDue > 0 ? formatCurrency(member.balanceDue) : "—"}</td>
+                <td data-label="Paid" className="num">
+                  {formatCurrency(member.paid)}
+                </td>
+                <td data-label="Balance Due" className="num">
+                  {member.balanceDue > 0 ? formatCurrency(member.balanceDue) : "—"}
+                </td>
                 <td data-label="Status">
                   <span className={`status-pill ${STATUS_CLASS[member.status]}`}>
                     {STATUS_LABEL[member.status]}
@@ -226,15 +257,12 @@ export function FundStatusTable({ members, minimumAmount }: FundStatusTableProps
             ))}
           </tbody>
         </table>
+        </div>
       ) : (
         <div className="empty-state">
           <p>No members match this filter.</p>
         </div>
       )}
-
-      <p className="muted" style={{ marginTop: 12, fontSize: 13 }}>
-        Minimum expected contribution: {formatCurrency(minimumAmount)} per member.
-      </p>
-    </div>
+    </Section>
   );
 }

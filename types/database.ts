@@ -223,6 +223,140 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["audit_log"]["Insert"]>;
         Relationships: [];
       };
+      event_functions: {
+        Row: {
+          id: string;
+          slug: string;
+          title: string;
+          subtitle: string | null;
+          description: string | null;
+          starts_on: string | null;
+          ends_on: string | null;
+          status: string;
+          order_no: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          slug: string;
+          title: string;
+          subtitle?: string | null;
+          description?: string | null;
+          starts_on?: string | null;
+          ends_on?: string | null;
+          status?: string;
+          order_no?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["event_functions"]["Insert"]>;
+        Relationships: [];
+      };
+      function_sections: {
+        Row: {
+          id: string;
+          function_id: string;
+          order_no: number;
+          code: string | null;
+          title: string;
+          subtitle: string | null;
+          kind: string;
+          sponsor: string | null;
+          vendor: string | null;
+          estimate_amount: number | null;
+          advance_paid: number | null;
+          balance_paid: number | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          function_id: string;
+          order_no?: number;
+          code?: string | null;
+          title: string;
+          subtitle?: string | null;
+          kind?: string;
+          sponsor?: string | null;
+          vendor?: string | null;
+          estimate_amount?: number | null;
+          advance_paid?: number | null;
+          balance_paid?: number | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["function_sections"]["Insert"]>;
+        Relationships: [];
+      };
+      function_items: {
+        Row: {
+          id: string;
+          section_id: string;
+          order_no: number;
+          name: string;
+          qty: string | null;
+          unit: string | null;
+          time_label: string | null;
+          expected_amount: number | null;
+          actual_amount: number | null;
+          sponsor: string | null;
+          status: string;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          section_id: string;
+          order_no?: number;
+          name: string;
+          qty?: string | null;
+          unit?: string | null;
+          time_label?: string | null;
+          expected_amount?: number | null;
+          actual_amount?: number | null;
+          sponsor?: string | null;
+          status?: string;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["function_items"]["Insert"]>;
+        Relationships: [];
+      };
+      guest_passes: {
+        Row: {
+          id: string;
+          label: string;
+          code_hash: string;
+          code_hint: string;
+          expires_at: string;
+          revoked_at: string | null;
+          created_by: string | null;
+          last_used_at: string | null;
+          use_count: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          label: string;
+          code_hash: string;
+          code_hint: string;
+          expires_at: string;
+          revoked_at?: string | null;
+          created_by?: string | null;
+          last_used_at?: string | null;
+          use_count?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["guest_passes"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: {
       dashboard_monthly_revenue: {

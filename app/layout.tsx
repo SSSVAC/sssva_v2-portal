@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { ToastProvider } from "@/components/toast";
+import { THEME_INIT_SCRIPT } from "@/components/shell/theme-toggle";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -21,7 +22,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Applies the stored theme before first paint. Without it a
+            dark-mode user sees a white flash on every navigation, because
+            the server has no way to know their preference. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body>
         <ToastProvider>{children}</ToastProvider>
       </body>

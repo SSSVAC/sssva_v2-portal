@@ -253,3 +253,160 @@ create index if not exists zoho_bills_date_idx on public.zoho_bills (date desc);
 create index if not exists zoho_bills_status_idx on public.zoho_bills (status);
 create index if not exists sync_runs_provider_started_idx on public.sync_runs (provider, started_at desc);
 create index if not exists audit_log_created_at_idx on public.audit_log (created_at desc);
+
+-- =====================================================================
+-- Function arrangements
+--
+-- One shape covers every kind of temple event planning sheet: a function
+-- holds ordered sections, each section holds ordered line items. A
+-- section's `kind` decides which columns the UI renders, so a Kumbabhishekam
+-- requirement list, an Annathanam menu with its own vendor/estimate block,
+-- and a printed agenda are all the same three tables.
+-- =====================================================================
+
+create table if not exists public.event_functions (
+  id uuid primary key default gen_random_uuid(),
+  slug text not null unique,
+  title text not null,
+  subtitle text,
+  description text,
+  starts_on date,
+  ends_on date,
+  -- planning | active | completed | archived
+  status text not null default 'planning',
+  order_no integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.function_sections (
+  id uuid primary key default gen_random_uuid(),
+  function_id uuid not null references public.event_functions (id) on delete cascade,
+  order_no integer not null default 0,
+  -- The numbering used in the source document ("4.1", "10.2"), kept so a
+  -- printed sheet and the tracker can be read side by side.
+  code text,
+  title text not null,
+  subtitle text,
+  -- items | menu | schedule
+  kind text not null default 'items',
+  -- Whole-section ubhayam ("இந்தப் பிரிவு முழுவதும் உபயம்").
+  sponsor text,
+  -- Annathanam sessions settle costs per session, not per menu line, so
+  -- these four live on the section rather than on its items.
+  vendor text,
+  estimate_amount numeric(14, 2),
+  advance_paid numeric(14, 2),
+  balance_paid numeric(14, 2),
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.function_items (
+  id uuid primary key default gen_random_uuid(),
+  section_id uuid not null references public.function_sections (id) on delete cascade,
+  order_no integer not null default 0,
+  name text not null,
+  -- Free text, not numeric: the source lists read "2 ஜோடி", "அரை கிலோ",
+  -- "சின்ன மூட்டை", "கலசத்திற்கு 250 கிராம் வீதம்".
+  qty text,
+  unit text,
+  -- Only used by kind = 'schedule' rows.
+  time_label text,
+  expected_amount numeric(14, 2),
+  actual_amount numeric(14, 2),
+  sponsor text,
+  -- pending | committed | purchased | done
+  status text not null default 'pending',
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- =====================================================================
+-- Guest passes
+--
+-- Read-only access for people outside the committee. A pass is a shared
+-- code with a label and a hard expiry; it is NOT a Supabase account, so a
+-- guest request has no JWT and its reads run through the service-role
+-- client on the server, gated by the allowlist in lib/auth/guest-scope.ts.
+--
+-- The code itself is never stored. `code_hash` is a plain SHA-256 of the
+-- code, which is appropriate here because codes are generated with ~60
+-- bits of entropy rather than chosen by a person — there is nothing to
+-- brute-force offline. `code_hint` keeps the last four characters so a
+-- pass stays identifiable in the admin list after the code is shown once.
+-- =====================================================================
+
+create table if not exists public.guest_passes (
+  id uuid primary key default gen_random_uuid(),
+  label text not null,
+  code_hash text not null unique,
+  code_hint text not null,
+  expires_at timestamptz not null,
+  revoked_at timestamptz,
+  created_by text,
+  last_used_at timestamptz,
+  use_count integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+drop trigger if exists set_event_functions_updated_at on public.event_functions;
+create trigger set_event_functions_updated_at
+before update on public.event_functions
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_function_sections_updated_at on public.function_sections;
+create trigger set_function_sections_updated_at
+before update on public.function_sections
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_function_items_updated_at on public.function_items;
+create trigger set_function_items_updated_at
+before update on public.function_items
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_guest_passes_updated_at on public.guest_passes;
+create trigger set_guest_passes_updated_at
+before update on public.guest_passes
+for each row execute function public.set_updated_at();
+
+alter table public.event_functions enable row level security;
+alter table public.function_sections enable row level security;
+alter table public.function_items enable row level security;
+alter table public.guest_passes enable row level security;
+
+drop policy if exists "Authenticated users can read functions" on public.event_functions;
+create policy "Authenticated users can read functions"
+on public.event_functions for select
+to authenticated
+using (true);
+
+drop policy if exists "Authenticated users can read function sections" on public.function_sections;
+create policy "Authenticated users can read function sections"
+on public.function_sections for select
+to authenticated
+using (true);
+
+drop policy if exists "Authenticated users can read function items" on public.function_items;
+create policy "Authenticated users can read function items"
+on public.function_items for select
+to authenticated
+using (true);
+
+-- Staff can see which passes exist and when they expire, but the codes are
+-- not stored, so reading this table never leaks access.
+drop policy if exists "Authenticated users can read guest passes" on public.guest_passes;
+create policy "Authenticated users can read guest passes"
+on public.guest_passes for select
+to authenticated
+using (true);
+
+create index if not exists function_sections_function_idx
+  on public.function_sections (function_id, order_no);
+create index if not exists function_items_section_idx
+  on public.function_items (section_id, order_no);
+create index if not exists guest_passes_code_hash_idx
+  on public.guest_passes (code_hash);

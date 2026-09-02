@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { RefreshCw, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
 import { useToast } from "@/components/toast";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 
@@ -38,20 +39,26 @@ type ActionColumn = {
 
 type EditableDataTableProps = {
   table: string;
+  /** Shown in the panel header, so the table names itself. */
+  title: string;
   columns: RecordColumn[];
   rows: Row[];
   actionColumn?: ActionColumn;
   presetFilter?: (row: Row) => boolean;
   isAdmin?: boolean;
+  /** Contextual notice rendered above the table (e.g. an active filter). */
+  banner?: ReactNode;
 };
 
 export function EditableDataTable({
   table,
+  title,
   columns,
   rows: initialRows,
   actionColumn,
   presetFilter,
-  isAdmin = false
+  isAdmin = false,
+  banner
 }: EditableDataTableProps) {
   const [rows, setRows] = useState(initialRows);
   const { showToast } = useToast();
@@ -62,7 +69,12 @@ export function EditableDataTable({
     setRows(initialRows);
   }, [initialRows]);
 
+  const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<Record<string, string>>({});
+  // Per-column filters are opt-in now. They live in a second header row of
+  // inputs that was previously always on screen, which made every table
+  // open with two dense rows of chrome before a single record.
+  const [showColumnFilters, setShowColumnFilters] = useState(false);
   const [sort, setSort] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
   const [page, setPage] = useState(1);
   const [editingCell, setEditingCell] = useState<string | null>(null);
@@ -102,8 +114,24 @@ export function EditableDataTable({
   }
 
   const filteredRows = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
     return rows.filter((row) => {
       if (presetFilter && !presetFilter(row)) return false;
+
+      // One search box across every visible column — the common case was
+      // "find this customer", which previously meant knowing which column
+      // to type into.
+      if (
+        query &&
+        !columns.some((column) =>
+          String(row[column.key] ?? "")
+            .toLowerCase()
+            .includes(query)
+        )
+      ) {
+        return false;
+      }
 
       return columns.every((column) => {
         const filterValue = filters[column.key];
@@ -123,7 +151,7 @@ export function EditableDataTable({
           .includes(filterValue.toLowerCase());
       });
     });
-  }, [rows, filters, columns, presetFilter]);
+  }, [rows, filters, columns, presetFilter, search]);
 
   const sortedRows = useMemo(() => {
     if (!sort) return filteredRows;
@@ -155,7 +183,7 @@ export function EditableDataTable({
 
   useEffect(() => {
     setPage(1);
-  }, [filters, sort]);
+  }, [filters, sort, search]);
 
   const totalPages = Math.max(1, Math.ceil(sortedRows.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -326,40 +354,61 @@ export function EditableDataTable({
   const visibleIds = pagedRows.map((row) => String(row.id));
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
 
+  const activeColumnFilters = Object.values(filters).filter(Boolean).length;
+
   return (
     <div>
-      {isAdmin && (
-        <div className="filter-banner no-print" style={{ justifyContent: "flex-start", gap: 12 }}>
-          <span>{selectedIds.size} selected</span>
-          <button
-            type="button"
-            className="button secondary"
-            disabled={selectedIds.size === 0 || resyncing}
-            onClick={() => void resyncSelected()}
-          >
-            {resyncing ? "Resyncing…" : "Resync Selected"}
-          </button>
-          <button
-            type="button"
-            className="button secondary"
-            disabled={selectedIds.size === 0 || deleting}
-            onClick={requestDeleteSelected}
-          >
-            {deleting ? "Deleting…" : "Delete Selected"}
-          </button>
-        </div>
-      )}
-
       <ConfirmDialog
         open={confirmDeleteOpen}
         title="Delete records"
         message={`Delete ${selectedIds.size} record${selectedIds.size === 1 ? "" : "s"}? This cannot be undone.`}
         confirmLabel="Delete"
+        tone="danger"
         onConfirm={() => void deleteSelected()}
         onCancel={() => setConfirmDeleteOpen(false)}
       />
 
-      <div className="table-panel-scroll">
+      <section className="section">
+        <div className="section-head">
+          <h3 className="section-title">{title}</h3>
+          <span className="section-count">
+            {sortedRows.length === rows.length
+              ? sortedRows.length
+              : `${sortedRows.length} of ${rows.length}`}
+          </span>
+
+          <div className="section-actions">
+            <div className="searchbox">
+              <Search size={14} />
+              <input
+                className="input"
+                type="search"
+                value={search}
+                placeholder={`Search ${title.toLowerCase()}…`}
+                aria-label={`Search ${title}`}
+                onChange={(event) => setSearch(event.target.value)}
+                style={{ paddingTop: 6, paddingBottom: 6 }}
+              />
+            </div>
+            <button
+              type="button"
+              className={`btn btn-sm ${showColumnFilters ? "btn-secondary" : "btn-ghost"}`}
+              aria-pressed={showColumnFilters}
+              onClick={() => setShowColumnFilters((value) => !value)}
+            >
+              <SlidersHorizontal size={14} />
+              Filters
+              {activeColumnFilters > 0 && (
+                <span className="segment-count">{activeColumnFilters}</span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {banner && <div className="filter-banner no-print" style={{ margin: 12, marginBottom: 0 }}>{banner}</div>}
+
+        <div className="section-body">
+          <div className="table-panel-scroll">
       <table className="data-table data-table-cards">
         <thead>
           <tr>
@@ -390,6 +439,7 @@ export function EditableDataTable({
             ))}
             {actionColumn && <th>{actionColumn.label}</th>}
           </tr>
+          {showColumnFilters && (
           <tr>
             {isAdmin && <th className="filter-cell" />}
             {columns.map((column) => (
@@ -440,6 +490,7 @@ export function EditableDataTable({
             ))}
             {actionColumn && <th className="filter-cell" />}
           </tr>
+          )}
         </thead>
         <tbody>
           {pagedRows.map((row) => {
@@ -580,41 +631,99 @@ export function EditableDataTable({
           })}
         </tbody>
       </table>
-      </div>
-
-      {sortedRows.length === 0 && (
-        <div className="empty-state">
-          <p>No matching rows.</p>
-        </div>
-      )}
-
-      {sortedRows.length > 0 && (
-        <div className="filter-banner no-print" style={{ justifyContent: "space-between" }}>
-          <span className="muted">
-            Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, sortedRows.length)} of{" "}
-            {sortedRows.length}
-          </span>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <button
-              type="button"
-              className="button secondary"
-              disabled={currentPage <= 1}
-              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-            >
-              Previous
-            </button>
-            <span className="muted">
-              Page {currentPage} of {totalPages}
-            </span>
-            <button
-              type="button"
-              className="button secondary"
-              disabled={currentPage >= totalPages}
-              onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-            >
-              Next
-            </button>
           </div>
+
+          {sortedRows.length === 0 && (
+            <div className="empty-state">
+              <Search size={22} />
+              <p>
+                {search || activeColumnFilters > 0
+                  ? "No rows match the current search or filters."
+                  : "No records in this table yet."}
+              </p>
+              {(search || activeColumnFilters > 0) && (
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => {
+                    setSearch("");
+                    setFilters({});
+                  }}
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {sortedRows.length > 0 && (
+          <div className="pagination no-print">
+            <span>
+              {(currentPage - 1) * PAGE_SIZE + 1}–
+              {Math.min(currentPage * PAGE_SIZE, sortedRows.length)} of {sortedRows.length}
+            </span>
+            <div className="pagination-controls">
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                disabled={currentPage <= 1}
+                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              >
+                Previous
+              </button>
+              <span>
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                disabled={currentPage >= totalPages}
+                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Bulk actions surface only once something is selected. The bar used
+          to sit above every table permanently reading "0 selected" with two
+          disabled buttons — chrome that was never useful until it was, and
+          always in the way until then. Selection persists across pages, so
+          the count can exceed what's visible. */}
+      {isAdmin && selectedIds.size > 0 && (
+        <div className="selection-bar no-print" role="status">
+          <span>
+            <strong>{selectedIds.size}</strong> selected
+          </span>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            disabled={resyncing}
+            onClick={() => void resyncSelected()}
+          >
+            <RefreshCw size={13} />
+            {resyncing ? "Resyncing…" : "Resync"}
+          </button>
+          <button
+            type="button"
+            className="btn btn-danger btn-sm"
+            disabled={deleting}
+            onClick={requestDeleteSelected}
+          >
+            <Trash2 size={13} />
+            {deleting ? "Deleting…" : "Delete"}
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost btn-icon btn-sm"
+            aria-label="Clear selection"
+            onClick={() => setSelectedIds(new Set())}
+          >
+            <X size={14} />
+          </button>
         </div>
       )}
     </div>
