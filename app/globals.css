@@ -423,10 +423,13 @@ input {
   background-attachment: local, local, scroll, scroll;
 }
 
-.records-table-wrap {
-  max-height: 70vh;
-  overflow-y: auto;
-}
+/* Records used to wrap its table in a 70vh scrollbox with its own
+   sticky header — a scroll-inside-a-scroll that got worse once mobile
+   rows became taller cards: the actual data could sit far enough down
+   inside that fixed-height box to look like the page had none. Records
+   now scrolls with the rest of the page, like every other table in the
+   app — see components/editable-data-table.tsx and records-tabs.tsx,
+   which no longer render the (now unused) .records-table-wrap class. */
 
 .panel-head {
   display: flex;
@@ -481,12 +484,6 @@ input {
   background: var(--row-hover);
 }
 
-.records-table-wrap thead tr:first-child th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-}
-
 .status-pill {
   display: inline-flex;
   border-radius: 999px;
@@ -509,6 +506,13 @@ input {
 .status-overdue {
   color: #991b1b;
   background: #fee2e2;
+}
+
+/* Neutral fallback for statuses that aren't paid/sent/overdue — draft,
+   void, nonbillable, etc. */
+.status-draft {
+  color: #475569;
+  background: #e2e8f0;
 }
 
 /* Amount-cell coloring for on-screen tables (matches .cell-success/

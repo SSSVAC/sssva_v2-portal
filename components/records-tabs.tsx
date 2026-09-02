@@ -20,25 +20,33 @@ type RecordsTabsProps = {
   isAdmin: boolean;
 };
 
+// Column order is what staff actually scan for day to day: the
+// human-readable identifier leads (and doubles as the mobile card
+// title), then the fields people look up or edit most, with the
+// internal Zoho id trailing at the end for the rare cross-reference —
+// not hidden, just out of the way. The raw Supabase `id` (a UUID) isn't
+// listed at all: EditableDataTable already keys/edits/deletes rows off
+// row.id directly regardless of whether it's a visible column, so
+// showing it bought nothing but wasted the first column on every table.
+// currency_code is dropped outright rather than reordered — every row
+// across all 437 invoices is "INR", so it's not a column, it's a
+// constant.
 const CUSTOMER_COLUMNS: RecordColumn[] = [
-  { key: "id", label: "ID", type: "text", editable: false },
-  { key: "zoho_customer_id", label: "Zoho ID", type: "text", editable: false },
   { key: "display_name", label: "Name", type: "text", editable: true, cardTitle: true },
   { key: "company_name", label: "Company", type: "text", editable: true },
-  { key: "email", label: "Email", type: "text", editable: true },
   { key: "phone", label: "Phone", type: "text", editable: true },
+  { key: "email", label: "Email", type: "text", editable: true },
   { key: "billing_address", label: "Billing Address", type: "text", editable: true },
   { key: "is_active", label: "Active", type: "boolean", editable: true },
   { key: "is_member", label: "Member", type: "boolean", editable: true },
   { key: "collected_by", label: "Collected By", type: "text", editable: true },
   { key: "ownership", label: "Ownership", type: "select", editable: true, options: ["Tenant", "Owner", "Company"] },
   { key: "customer_group", label: "Group", type: "select", editable: true, emptyLabel: "Others" },
-  { key: "order_number", label: "Order #", type: "number", editable: true }
+  { key: "order_number", label: "Order #", type: "number", editable: true },
+  { key: "zoho_customer_id", label: "Zoho ID", type: "text", editable: false }
 ];
 
 const INVOICE_COLUMNS: RecordColumn[] = [
-  { key: "id", label: "ID", type: "text", editable: false },
-  { key: "zoho_invoice_id", label: "Zoho ID", type: "text", editable: false },
   { key: "invoice_number", label: "Invoice #", type: "text", editable: true, cardTitle: true },
   { key: "customer_name", label: "Customer", type: "text", editable: true },
   { key: "status", label: "Status", type: "text", editable: true },
@@ -46,40 +54,36 @@ const INVOICE_COLUMNS: RecordColumn[] = [
   { key: "due_date", label: "Due Date", type: "date", editable: true },
   { key: "total", label: "Total", type: "number", editable: true },
   { key: "balance", label: "Balance", type: "number", editable: true },
-  { key: "currency_code", label: "Currency", type: "text", editable: true },
   { key: "item_name", label: "Item", type: "text", editable: true },
-  { key: "subject", label: "Subject", type: "text", editable: true }
+  { key: "subject", label: "Subject", type: "text", editable: true },
+  { key: "zoho_invoice_id", label: "Zoho ID", type: "text", editable: false }
 ];
 
 const EXPENSE_COLUMNS: RecordColumn[] = [
-  { key: "id", label: "ID", type: "text", editable: false },
-  { key: "zoho_expense_id", label: "Zoho ID", type: "text", editable: false },
   { key: "expense_number", label: "Expense #", type: "text", editable: true, cardTitle: true },
   { key: "vendor_name", label: "Vendor", type: "text", editable: true },
-  { key: "account_name", label: "Account", type: "text", editable: true },
-  { key: "paid_through_account_name", label: "Paid Through", type: "text", editable: true },
   { key: "description", label: "Description", type: "text", editable: true },
   { key: "status", label: "Status", type: "text", editable: true },
   { key: "date", label: "Date", type: "date", editable: true },
   { key: "due_date", label: "Due Date", type: "date", editable: true },
   { key: "total", label: "Total", type: "number", editable: true },
   { key: "balance", label: "Balance", type: "number", editable: true },
-  { key: "currency_code", label: "Currency", type: "text", editable: true }
+  { key: "account_name", label: "Account", type: "text", editable: true },
+  { key: "paid_through_account_name", label: "Paid Through", type: "text", editable: true },
+  { key: "zoho_expense_id", label: "Zoho ID", type: "text", editable: false }
 ];
 
 const BILL_COLUMNS: RecordColumn[] = [
-  { key: "id", label: "ID", type: "text", editable: false },
-  { key: "zoho_bill_id", label: "Zoho ID", type: "text", editable: false },
   { key: "bill_number", label: "Bill #", type: "text", editable: true, cardTitle: true },
   { key: "vendor_name", label: "Vendor", type: "text", editable: true },
-  { key: "account_name", label: "Account", type: "text", editable: true },
-  { key: "item_name", label: "Item", type: "text", editable: true },
   { key: "status", label: "Status", type: "text", editable: true },
   { key: "date", label: "Date", type: "date", editable: true },
   { key: "due_date", label: "Due Date", type: "date", editable: true },
   { key: "total", label: "Total", type: "number", editable: true },
   { key: "balance", label: "Balance", type: "number", editable: true },
-  { key: "currency_code", label: "Currency", type: "text", editable: true }
+  { key: "item_name", label: "Item", type: "text", editable: true },
+  { key: "account_name", label: "Account", type: "text", editable: true },
+  { key: "zoho_bill_id", label: "Zoho ID", type: "text", editable: false }
 ];
 
 const TABS = [

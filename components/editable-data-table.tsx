@@ -359,7 +359,7 @@ export function EditableDataTable({
         onCancel={() => setConfirmDeleteOpen(false)}
       />
 
-      <div className="table-panel-scroll records-table-wrap">
+      <div className="table-panel-scroll">
       <table className="data-table data-table-cards">
         <thead>
           <tr>
@@ -566,7 +566,11 @@ export function EditableDataTable({
                       onClick={() => startEdit(rowId, column.key, value)}
                       title={errorCell === cellKey ? "Save failed — click to retry" : "Click to edit"}
                     >
-                      {savingCell === cellKey ? "Saving…" : formatValue(value)}
+                      {savingCell === cellKey
+                        ? "Saving…"
+                        : column.key === "status"
+                          ? renderStatusValue(value)
+                          : formatValue(value)}
                     </td>
                   );
                 })}
@@ -621,4 +625,23 @@ function formatValue(value: unknown) {
   if (value === null || value === undefined || value === "") return "—";
   if (typeof value === "boolean") return value ? "Yes" : "No";
   return String(value);
+}
+
+// Zoho's raw status strings (paid, draft, partially_paid, overdue, sent,
+// nonbillable, void, …) span invoices/expenses/bills with different
+// vocabularies, so this maps by keyword rather than an exact table —
+// same pill styling the Dashboard's invoice list already uses, applied
+// here too rather than the plain text this table showed before.
+function statusPillClass(status: string) {
+  const normalized = status.toLowerCase();
+  if (normalized.includes("overdue") || normalized === "void") return "status-overdue";
+  if (normalized.includes("paid") && !normalized.includes("partially")) return "status-paid";
+  if (normalized.includes("partially") || normalized === "sent") return "status-sent";
+  return "status-draft";
+}
+
+function renderStatusValue(value: unknown) {
+  if (typeof value !== "string" || value === "") return "—";
+  const label = value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  return <span className={`status-pill ${statusPillClass(value)}`}>{label}</span>;
 }
