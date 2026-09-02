@@ -25,6 +25,10 @@ export function mapZohoCustomer(raw: Record<string, unknown>): CustomerInsert {
     phone: optionalString(raw, "phone") ?? optionalString(raw, "contact_phone"),
     billing_address: billingAddressResult.value,
     is_active: isActive,
+    // Reappeared in a fresh Zoho fetch (or was explicitly resynced), so
+    // it's back — clears any earlier archive from lib/zoho/sync.ts's
+    // reconciliation, which only sets archived_at, never this mapper.
+    archived_at: null,
     raw: raw as Json,
     synced_at: new Date().toISOString()
   };
@@ -58,6 +62,7 @@ export function mapZohoInvoice(raw: Record<string, unknown>): InvoiceInsert {
     // before this mapper runs, but resyncZohoRecords calls this mapper
     // directly on Zoho's raw detail response, so both keys are checked.
     subject: optionalString(raw, "subject") ?? optionalString(raw, "subject_content"),
+    archived_at: null,
     raw: raw as Json,
     synced_at: new Date().toISOString()
   };
@@ -79,6 +84,7 @@ export function mapZohoExpense(raw: Record<string, unknown>): ExpenseInsert {
     account_name: optionalString(raw, "account_name"),
     paid_through_account_name: optionalString(raw, "paid_through_account_name"),
     description: optionalString(raw, "description"),
+    archived_at: null,
     raw: raw as Json,
     synced_at: new Date().toISOString()
   };
@@ -99,6 +105,7 @@ export function mapZohoBill(raw: Record<string, unknown>): BillInsert {
     currency_code: optionalString(raw, "currency_code"),
     account_name: optionalString(raw, "account_name"),
     item_name: getItemName(raw),
+    archived_at: null,
     raw: raw as Json,
     synced_at: new Date().toISOString()
   };

@@ -82,6 +82,10 @@ describe("customer sync mapping", () => {
     expect(mapped.billing_address).toBe("10 Market St, Seattle, WA, 98101");
   });
 
+  it("always clears archived_at on map, so a record reappearing in Zoho un-archives", () => {
+    expect(mapZohoCustomer({ contact_id: "1" }).archived_at).toBeNull();
+  });
+
   it("reads billing address data from Zoho contact detail payloads", () => {
     const mapped = mapZohoCustomer({
       contact_id: "7638915000000099228",

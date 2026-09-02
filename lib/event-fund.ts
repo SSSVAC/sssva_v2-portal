@@ -170,23 +170,27 @@ export async function fetchEventFundReportData(
     supabase
       .from("zoho_invoices")
       .select("customer_id, customer_name, date, total")
+      .is("archived_at", null)
       .or(config.incomeItemNames.map((name) => `item_name.ilike.%${name}%`).join(","))
       .returns<EventFundInvoice[]>(),
     supabase
       .from("zoho_expenses")
       .select("id, description, date, total")
+      .is("archived_at", null)
       .in("account_name", config.expenseAccountNames)
       .order("date", { ascending: false })
       .returns<EventFundExpense[]>(),
     supabase
       .from("zoho_bills")
       .select("id, bill_number, vendor_name, date, total, balance")
+      .is("archived_at", null)
       .in("account_name", config.expenseAccountNames)
       .order("date", { ascending: false })
       .returns<EventFundBill[]>(),
     supabase
       .from("zoho_customers")
       .select("zoho_customer_id, display_name, phone, billing_address, customer_group, order_number, is_member")
+      .is("archived_at", null)
       .returns<EventFundCustomer[]>()
   ]);
 

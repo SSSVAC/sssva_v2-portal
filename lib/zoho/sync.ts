@@ -204,6 +204,49 @@ export async function runZohoBooksSync(options: ZohoSyncOptions = DEFAULT_SYNC_O
       if (error) throw error;
     }
 
+    // A full sync fetches each resource's *complete* current Zoho list
+    // (lib/zoho/client.ts's fetchZohoList pages until Zoho reports no
+    // more), so anything previously synced but absent from this run's
+    // mapped set no longer exists in Zoho — archive it. Gated on
+    // resolvedOptions rather than "mapped list is non-empty", since a
+    // resource that was excluded from this sync (e.g. "Invoices Only")
+    // must be left untouched entirely, and a resource that's genuinely
+    // gone to zero in Zoho (mapped list empty, but selected) must still
+    // archive everything that used to be there.
+    let recordsArchived = 0;
+    if (resolvedOptions.customers) {
+      recordsArchived += await archiveMissingRecords(
+        supabase,
+        "zoho_customers",
+        "zoho_customer_id",
+        new Set(mappedCustomers.map((row) => row.zoho_customer_id))
+      );
+    }
+    if (resolvedOptions.invoices) {
+      recordsArchived += await archiveMissingRecords(
+        supabase,
+        "zoho_invoices",
+        "zoho_invoice_id",
+        new Set(mappedInvoices.map((row) => row.zoho_invoice_id))
+      );
+    }
+    if (resolvedOptions.expenses) {
+      recordsArchived += await archiveMissingRecords(
+        supabase,
+        "zoho_expenses",
+        "zoho_expense_id",
+        new Set(mappedExpenses.map((row) => row.zoho_expense_id))
+      );
+    }
+    if (resolvedOptions.bills) {
+      recordsArchived += await archiveMissingRecords(
+        supabase,
+        "zoho_bills",
+        "zoho_bill_id",
+        new Set(mappedBills.map((row) => row.zoho_bill_id))
+      );
+    }
+
     const recordsUpserted = mappedCustomers.length + mappedInvoices.length + mappedExpenses.length + mappedBills.length;
 
     await supabase
@@ -211,7 +254,8 @@ export async function runZohoBooksSync(options: ZohoSyncOptions = DEFAULT_SYNC_O
       .update({
         status: "succeeded",
         finished_at: new Date().toISOString(),
-        records_upserted: recordsUpserted
+        records_upserted: recordsUpserted,
+        records_archived: recordsArchived
       })
       .eq("id", run.id);
 
@@ -219,6 +263,7 @@ export async function runZohoBooksSync(options: ZohoSyncOptions = DEFAULT_SYNC_O
       ok: true,
       resources: selectedResources,
       recordsUpserted,
+      recordsArchived,
       customers: mappedCustomers.length,
       invoices: mappedInvoices.length,
       expenses: mappedExpenses.length,
@@ -333,6 +378,52 @@ async function upsertResyncedRecords<T extends { [key: string]: unknown }>(
   }
 
   return { resynced: mapped.length, failed };
+}
+
+// Marks every currently-unarchived row whose Zoho id isn't in
+// freshZohoIds as archived — called once per resource per full sync,
+// after that resource's fresh fetch has been upserted. Never called for
+// a resource excluded from the current sync (see the resolvedOptions
+// gate at each call site), since an empty freshZohoIds set from a
+// resource that simply wasn't fetched would otherwise archive
+// everything.
+async function archiveMissingRecords(
+  supabase: ReturnType<typeof createAdminClient>,
+  table: ResyncTableName,
+  zohoIdColumn: string,
+  freshZohoIds: Set<string>
+) {
+  const { data: existing, error } = await supabase
+    .from(table)
+    .select(`id, ${zohoIdColumn}`)
+    .is("archived_at", null)
+    .returns<Record<string, unknown>[]>();
+
+  if (error) {
+    throw error;
+  }
+
+  const staleIds = (existing ?? [])
+    .filter((row) => {
+      const zohoId = row[zohoIdColumn];
+      return typeof zohoId === "string" && !freshZohoIds.has(zohoId);
+    })
+    .map((row) => row.id as string);
+
+  if (staleIds.length === 0) {
+    return 0;
+  }
+
+  const { error: archiveError } = await supabase
+    .from(table)
+    .update({ archived_at: new Date().toISOString() })
+    .in("id", staleIds);
+
+  if (archiveError) {
+    throw archiveError;
+  }
+
+  return staleIds.length;
 }
 
 async function loadExistingCustomerFields(supabase: ReturnType<typeof createAdminClient>) {

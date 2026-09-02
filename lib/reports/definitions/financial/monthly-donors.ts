@@ -26,6 +26,7 @@ async function loadMonthlyDonors({ supabase }: ReportLoaderContext): Promise<Pro
     supabase
       .from("zoho_invoices")
       .select("customer_id, customer_name, total, date")
+      .is("archived_at", null)
       .ilike("item_name", `%${DONATION_ITEM_NAME}%`)
       .gte("date", rangeStart)
       .returns<DonationInvoice[]>()

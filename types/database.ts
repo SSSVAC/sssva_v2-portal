@@ -18,6 +18,7 @@ export type Database = {
           ownership: string | null;
           customer_group: string | null;
           order_number: number | null;
+          archived_at: string | null;
           raw: Json;
           synced_at: string;
           created_at: string;
@@ -37,6 +38,7 @@ export type Database = {
           ownership?: string | null;
           customer_group?: string | null;
           order_number?: number | null;
+          archived_at?: string | null;
           raw?: Json;
           synced_at?: string;
           created_at?: string;
@@ -60,6 +62,7 @@ export type Database = {
           currency_code: string | null;
           item_name: string | null;
           subject: string | null;
+          archived_at: string | null;
           raw: Json;
           synced_at: string;
           created_at: string;
@@ -79,6 +82,7 @@ export type Database = {
           currency_code?: string | null;
           item_name?: string | null;
           subject?: string | null;
+          archived_at?: string | null;
           raw?: Json;
           synced_at?: string;
           created_at?: string;
@@ -102,6 +106,7 @@ export type Database = {
           account_name: string | null;
           paid_through_account_name: string | null;
           description: string | null;
+          archived_at: string | null;
           raw: Json;
           synced_at: string;
           created_at: string;
@@ -121,6 +126,7 @@ export type Database = {
           account_name?: string | null;
           paid_through_account_name?: string | null;
           description?: string | null;
+          archived_at?: string | null;
           raw?: Json;
           synced_at?: string;
           created_at?: string;
@@ -143,6 +149,7 @@ export type Database = {
           currency_code: string | null;
           account_name: string | null;
           item_name: string | null;
+          archived_at: string | null;
           raw: Json;
           synced_at: string;
           created_at: string;
@@ -161,6 +168,7 @@ export type Database = {
           currency_code?: string | null;
           account_name?: string | null;
           item_name?: string | null;
+          archived_at?: string | null;
           raw?: Json;
           synced_at?: string;
           created_at?: string;
@@ -177,6 +185,7 @@ export type Database = {
           started_at: string;
           finished_at: string | null;
           records_upserted: number;
+          records_archived: number;
           error: string | null;
         };
         Insert: {
@@ -186,6 +195,7 @@ export type Database = {
           started_at?: string;
           finished_at?: string | null;
           records_upserted?: number;
+          records_archived?: number;
           error?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["sync_runs"]["Insert"]>;

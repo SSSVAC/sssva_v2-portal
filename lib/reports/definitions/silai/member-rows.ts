@@ -13,6 +13,7 @@ export async function fetchContributions(supabase: ReportLoaderContext["supabase
   const { data } = await supabase
     .from("zoho_invoices")
     .select("customer_id, customer_name, total")
+    .is("archived_at", null)
     .or(FUND_ITEM_NAMES.map((name) => `item_name.ilike.%${name}%`).join(","))
     .returns<Contribution[]>();
 

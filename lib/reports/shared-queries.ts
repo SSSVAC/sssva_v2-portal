@@ -17,6 +17,7 @@ export const getAllCustomers = cache(async (supabase: ReportLoaderContext["supab
   const { data } = await supabase
     .from("zoho_customers")
     .select("zoho_customer_id, display_name, company_name, phone, billing_address, customer_group, order_number, is_member")
+    .is("archived_at", null)
     .order("display_name", { ascending: true })
     .returns<ReportCustomer[]>();
 

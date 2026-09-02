@@ -58,18 +58,21 @@ async function loadMonthlyReport({ supabase, searchParams }: ReportLoaderContext
     supabase
       .from("zoho_invoices")
       .select("date, total, item_name, customer_name")
+      .is("archived_at", null)
       .gte("date", rangeStart)
       .or(incomeItemNamePatterns.map((name) => `item_name.ilike.%${name}%`).join(","))
       .returns<MonthlyIncomeInvoice[]>(),
     supabase
       .from("zoho_expenses")
       .select("id, description, account_name, date, total")
+      .is("archived_at", null)
       .gte("date", rangeStart)
       .order("date", { ascending: false })
       .returns<MonthlyExpenseSource[]>(),
     supabase
       .from("zoho_bills")
       .select("id, bill_number, vendor_name, account_name, date, total, balance")
+      .is("archived_at", null)
       .gte("date", rangeStart)
       .order("date", { ascending: false })
       .returns<MonthlyBillSource[]>()

@@ -35,10 +35,10 @@ export default async function RecordsPage({ searchParams }: RecordsPageProps) {
 
   const [{ data: customers }, { data: invoices }, { data: expenses }, { data: bills }] =
     await Promise.all([
-      supabase.from("zoho_customers").select("*").order("display_name", { ascending: true }),
-      supabase.from("zoho_invoices").select("*").order("date", { ascending: false }),
-      supabase.from("zoho_expenses").select("*").order("date", { ascending: false }),
-      supabase.from("zoho_bills").select("*").order("date", { ascending: false })
+      supabase.from("zoho_customers").select("*").is("archived_at", null).order("display_name", { ascending: true }),
+      supabase.from("zoho_invoices").select("*").is("archived_at", null).order("date", { ascending: false }),
+      supabase.from("zoho_expenses").select("*").is("archived_at", null).order("date", { ascending: false }),
+      supabase.from("zoho_bills").select("*").is("archived_at", null).order("date", { ascending: false })
     ]);
 
   return (

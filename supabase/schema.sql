@@ -112,6 +112,30 @@ add column if not exists account_name text;
 alter table public.zoho_bills
 add column if not exists item_name text;
 
+-- Soft-delete marker: set by the sync job when a record that used to
+-- exist in a full Zoho fetch no longer appears in it (deleted in Zoho),
+-- and cleared again if it later reappears. The app filters every
+-- archived_at is null everywhere — an archived row is fully hidden
+-- rather than kept in historical totals, but the row itself (and its
+-- history) is preserved rather than hard-deleted, so it isn't lost to a
+-- mistaken deletion in Zoho.
+alter table public.zoho_customers
+add column if not exists archived_at timestamptz;
+
+alter table public.zoho_invoices
+add column if not exists archived_at timestamptz;
+
+alter table public.zoho_expenses
+add column if not exists archived_at timestamptz;
+
+alter table public.zoho_bills
+add column if not exists archived_at timestamptz;
+
+create index if not exists idx_zoho_customers_archived_at on public.zoho_customers (archived_at);
+create index if not exists idx_zoho_invoices_archived_at on public.zoho_invoices (archived_at);
+create index if not exists idx_zoho_expenses_archived_at on public.zoho_expenses (archived_at);
+create index if not exists idx_zoho_bills_archived_at on public.zoho_bills (archived_at);
+
 create table if not exists public.sync_runs (
   id uuid primary key default gen_random_uuid(),
   provider text not null,
@@ -121,6 +145,9 @@ create table if not exists public.sync_runs (
   records_upserted integer not null default 0,
   error text
 );
+
+alter table public.sync_runs
+add column if not exists records_archived integer not null default 0;
 
 -- Persisted trail of who performed destructive/write actions (record edits,
 -- bulk deletes, Zoho resyncs) through the app's API routes, since these
@@ -171,6 +198,7 @@ select
   sum(total)::numeric(14, 2) as revenue
 from public.zoho_invoices
 where date is not null
+  and archived_at is null
 group by date_trunc('month', date)
 order by date_trunc('month', date);
 

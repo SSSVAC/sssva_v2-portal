@@ -38,6 +38,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       supabase
         .from("zoho_invoices")
         .select("*")
+        .is("archived_at", null)
         .order("date", { ascending: false })
         .limit(10)
         .returns<InvoiceRow[]>(),
@@ -45,7 +46,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       // chart off every invoice instead of just the 10 shown below, which
       // previously made Revenue/Outstanding/Invoices read like recent-only
       // numbers without saying so.
-      supabase.from("zoho_invoices").select("total, balance, status").returns<InvoiceStats[]>(),
+      supabase.from("zoho_invoices").select("total, balance, status").is("archived_at", null).returns<InvoiceStats[]>(),
       supabase
         .from("dashboard_monthly_revenue")
         .select("*")

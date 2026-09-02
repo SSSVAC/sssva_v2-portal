@@ -209,18 +209,21 @@ export async function fetchAllTimeFundReportData(
     supabase
       .from("zoho_invoices")
       .select("customer_id, customer_name, date, total, subject")
+      .is("archived_at", null)
       .or(config.incomeItemNames.map((name) => `item_name.ilike.%${name}%`).join(","))
       .order("date", { ascending: false })
       .returns<AllTimeFundInvoice[]>(),
     supabase
       .from("zoho_expenses")
       .select("id, vendor_name, description, date, total")
+      .is("archived_at", null)
       .in("account_name", config.expenseAccountNames)
       .order("date", { ascending: false })
       .returns<AllTimeFundExpense[]>(),
     supabase
       .from("zoho_bills")
       .select("id, bill_number, vendor_name, date, total, balance")
+      .is("archived_at", null)
       .in("account_name", config.expenseAccountNames)
       .order("date", { ascending: false })
       .returns<AllTimeFundBill[]>()
