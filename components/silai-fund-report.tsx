@@ -116,7 +116,7 @@ export function SilaiFundReport({
   const totalBillsPaid = totalBills - totalBillsDue;
   const totalSpent = totalExpenses + totalBills;
   const totalPaid = totalExpenses + totalBillsPaid;
-  const balance = totalContributions - totalSpent;
+  const balance = totalContributions - totalPaid;
 
   // visibleContributionRows already arrive sorted in street walking order
   // (see buildSilaiContributionRows in app/reports/page.tsx), so bucketing
@@ -232,7 +232,7 @@ export function SilaiFundReport({
             <span>Balance</span>
           </div>
           <div className="metric-value">{formatCurrency(balance)}</div>
-          <div className="metric-sub">Contributions minus spent</div>
+          <div className="metric-sub">Contributions minus paid</div>
         </article>
         <article className="metric-card">
           <div className="metric-head">
