@@ -1,45 +1,245 @@
+/* =====================================================================
+   SSSVA Portal - design system
+   ---------------------------------------------------------------------
+   One source of truth for colour, type, spacing and the shared UI
+   primitives. Organised as:
+
+     1. Tokens (light + dark)
+     2. Base / reset / typography
+     3. App shell - sidebar, appbar, page header
+     4. Primitives - buttons, inputs, menus, pills
+     5. Blocks - stats, sections, panels, tables, filters
+     6. Feature surfaces - auth, records, reports, charts
+     7. Feedback - toasts, modals, empty, loading
+     8. Responsive
+     9. Print
+
+   Colour rule: the brand hue means "interactive / you are here" and
+   never carries status. Semantic hues (success/warning/danger) mean a
+   value's state and are never used decoratively. Category hues identify
+   a report family and are fixed per family, never rotated by position.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   1. Tokens
+   --------------------------------------------------------------------- */
+
 :root {
-  --background: #f7f8fa;
-  --foreground: #18202f;
-  --muted: #6b7280;
-  --border: #d9dee7;
-  --panel: #ffffff;
-  --panel-alt: #f6f8fa;
-  --row-hover: rgba(15, 118, 110, 0.06);
-  --primary: #0f766e;
-  --primary-dark: #115e59;
-  --primary-soft: rgba(15, 118, 110, 0.12);
-  --accent: #c2410c;
-  --accent-soft: rgba(194, 65, 12, 0.12);
-  --accent-blue: #2563eb;
-  --accent-blue-soft: rgba(37, 99, 235, 0.12);
-  --accent-purple: #7c3aed;
-  --accent-purple-soft: rgba(124, 58, 237, 0.12);
-  --accent-amber: #d97706;
-  --accent-amber-soft: rgba(217, 119, 6, 0.12);
+  /* Warm neutral ramp. The app is mostly greys, so they carry a slight
+     warm cast to sit under the saffron brand instead of reading cold. */
+  --n-0: #ffffff;
+  --n-25: #fbfaf8;
+  --n-50: #f6f4f1;
+  --n-100: #efece7;
+  --n-200: #e3ded7;
+  --n-300: #cfc8bf;
+  --n-400: #a49b92;
+  --n-500: #7b736b;
+  --n-600: #5c554e;
+  --n-700: #443e38;
+  --n-800: #2c2823;
+  --n-900: #1b1815;
+
+  /* Brand - saffron. Identity, primary action, "you are here". */
+  --brand-50: #fef6ec;
+  --brand-100: #fde8d2;
+  --brand-200: #fbcfa4;
+  --brand-300: #f6ac68;
+  --brand-500: #e2670a;
+  --brand-600: #c2410c;
+  --brand-700: #9a340b;
+  --brand-800: #7c2d0e;
+
+  /* Category identity - fixed per report family, never positional. */
+  --cat-financial: #4338ca;
+  --cat-financial-soft: rgba(67, 56, 202, 0.12);
+  --cat-silai: #c2410c;
+  --cat-silai-soft: rgba(194, 65, 12, 0.12);
+  --cat-events: #0f766e;
+  --cat-events-soft: rgba(15, 118, 110, 0.12);
+
+  /* Semantic - state of a value, nothing else. */
   --success: #15803d;
   --success-soft: #dcfce7;
-  --warning: #b45309;
+  --success-border: #bbf7d0;
+  --warning: #a16207;
   --warning-soft: #fef3c7;
+  --warning-border: #fde68a;
   --danger: #b91c1c;
   --danger-soft: #fee2e2;
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
-  --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.08);
-  --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.18);
+  --danger-border: #fecaca;
+  --info: #4338ca;
+  --info-soft: #e0e7ff;
+  --info-border: #c7d2fe;
+
+  /* Roles - every component reads these, never a ramp step directly, so
+     the dark theme only has to redefine this block. */
+  --bg: var(--n-25);
+  --surface: var(--n-0);
+  --surface-2: var(--n-50);
+  --surface-3: var(--n-100);
+  --border: var(--n-200);
+  --border-strong: var(--n-300);
+  --text: var(--n-800);
+  --text-strong: var(--n-900);
+  --text-secondary: var(--n-600);
+  --text-muted: var(--n-500);
+  --brand: var(--brand-600);
+  --brand-hover: var(--brand-700);
+  --brand-soft: var(--brand-50);
+  --brand-tint: rgba(194, 65, 12, 0.09);
+  --on-brand: #ffffff;
+  --focus-ring: rgba(194, 65, 12, 0.26);
+  --row-hover: rgba(194, 65, 12, 0.05);
+  --overlay: rgba(27, 24, 21, 0.5);
+
+  --shadow-xs: 0 1px 2px rgba(27, 24, 21, 0.06);
+  --shadow-sm: 0 1px 3px rgba(27, 24, 21, 0.08), 0 1px 2px rgba(27, 24, 21, 0.04);
+  --shadow-md: 0 4px 12px rgba(27, 24, 21, 0.08), 0 2px 4px rgba(27, 24, 21, 0.04);
+  --shadow-lg: 0 16px 40px rgba(27, 24, 21, 0.18);
+
+  /* Type scale - five steps, one job each. Nothing in the app should
+     invent a size outside this list. */
+  --fs-display: 28px;
+  --fs-title: 20px;
+  --fs-section: 16px;
+  --fs-body: 14px;
+  --fs-small: 13px;
+  --fs-label: 11px;
+  --fs-stat: 26px;
+
+  --radius-sm: 6px;
   --radius: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  --sidebar-w: 248px;
+  --appbar-h: 56px;
+  --content-max: 1440px;
+
+  color-scheme: light;
 }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --bg: #141210;
+    --surface: #1d1a16;
+    --surface-2: #24201b;
+    --surface-3: #2c2721;
+    --border: #362f28;
+    --border-strong: #4a423a;
+    --text: #ece7df;
+    --text-strong: #fbf9f6;
+    --text-secondary: #b3aa9f;
+    --text-muted: #8d857b;
+    --brand: #f6ac68;
+    --brand-hover: #fbcfa4;
+    --brand-soft: rgba(246, 172, 104, 0.14);
+    --brand-tint: rgba(246, 172, 104, 0.1);
+    --on-brand: #2c1608;
+    --focus-ring: rgba(246, 172, 104, 0.32);
+    --row-hover: rgba(246, 172, 104, 0.07);
+    --overlay: rgba(0, 0, 0, 0.62);
+
+    --success: #4ade80;
+    --success-soft: rgba(74, 222, 128, 0.14);
+    --success-border: rgba(74, 222, 128, 0.3);
+    --warning: #fbbf24;
+    --warning-soft: rgba(251, 191, 36, 0.14);
+    --warning-border: rgba(251, 191, 36, 0.3);
+    --danger: #f87171;
+    --danger-soft: rgba(248, 113, 113, 0.14);
+    --danger-border: rgba(248, 113, 113, 0.3);
+    --info: #a5b4fc;
+    --info-soft: rgba(165, 180, 252, 0.14);
+    --info-border: rgba(165, 180, 252, 0.3);
+
+    --cat-financial: #a5b4fc;
+    --cat-financial-soft: rgba(165, 180, 252, 0.14);
+    --cat-silai: #f6ac68;
+    --cat-silai-soft: rgba(246, 172, 104, 0.14);
+    --cat-events: #5eead4;
+    --cat-events-soft: rgba(94, 234, 212, 0.14);
+
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #141210;
+  --surface: #1d1a16;
+  --surface-2: #24201b;
+  --surface-3: #2c2721;
+  --border: #362f28;
+  --border-strong: #4a423a;
+  --text: #ece7df;
+  --text-strong: #fbf9f6;
+  --text-secondary: #b3aa9f;
+  --text-muted: #8d857b;
+  --brand: #f6ac68;
+  --brand-hover: #fbcfa4;
+  --brand-soft: rgba(246, 172, 104, 0.14);
+  --brand-tint: rgba(246, 172, 104, 0.1);
+  --on-brand: #2c1608;
+  --focus-ring: rgba(246, 172, 104, 0.32);
+  --row-hover: rgba(246, 172, 104, 0.07);
+  --overlay: rgba(0, 0, 0, 0.62);
+
+  --success: #4ade80;
+  --success-soft: rgba(74, 222, 128, 0.14);
+  --success-border: rgba(74, 222, 128, 0.3);
+  --warning: #fbbf24;
+  --warning-soft: rgba(251, 191, 36, 0.14);
+  --warning-border: rgba(251, 191, 36, 0.3);
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.14);
+  --danger-border: rgba(248, 113, 113, 0.3);
+  --info: #a5b4fc;
+  --info-soft: rgba(165, 180, 252, 0.14);
+  --info-border: rgba(165, 180, 252, 0.3);
+
+  --cat-financial: #a5b4fc;
+  --cat-financial-soft: rgba(165, 180, 252, 0.14);
+  --cat-silai: #f6ac68;
+  --cat-silai-soft: rgba(246, 172, 104, 0.14);
+  --cat-events: #5eead4;
+  --cat-events-soft: rgba(94, 234, 212, 0.14);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
+}
+
+/* ---------------------------------------------------------------------
+   2. Base
+   --------------------------------------------------------------------- */
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
-  color: var(--foreground);
-  background: var(--background);
+  color: var(--text);
+  background: var(--bg);
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+    "Noto Sans Tamil", sans-serif;
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
 a {
@@ -48,489 +248,1081 @@ a {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
+  color: inherit;
 }
 
-.page {
-  min-height: 100vh;
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
-.auth-page {
-  display: grid;
-  min-height: 100vh;
-  grid-template-columns: minmax(0, 1fr) minmax(360px, 480px);
-}
-
-.auth-art {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  gap: 24px;
-  padding: 48px;
-  color: white;
-  background:
-    linear-gradient(rgba(15, 118, 110, 0.72), rgba(24, 32, 47, 0.76)),
-    url("https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=1800&q=80")
-      center/cover;
-}
-
-.auth-art h1 {
-  max-width: 680px;
+h1,
+h2,
+h3,
+h4 {
   margin: 0;
-  font-size: clamp(42px, 7vw, 80px);
-  line-height: 0.95;
-  letter-spacing: 0;
+  color: var(--text-strong);
+  font-weight: 700;
+  letter-spacing: -0.011em;
+  line-height: 1.25;
 }
 
-.auth-art p {
-  max-width: 560px;
+h1 {
+  font-size: var(--fs-display);
+}
+
+h2 {
+  font-size: var(--fs-title);
+}
+
+h3 {
+  font-size: var(--fs-section);
+  font-weight: 650;
+}
+
+p {
   margin: 0;
-  font-size: 18px;
-  line-height: 1.6;
 }
 
-.auth-panel {
-  display: flex;
-  align-items: center;
-  padding: 32px;
-  background: var(--panel);
-}
-
-.auth-card {
-  width: 100%;
-}
-
-.auth-card h2,
-.section-title {
-  margin: 0 0 8px;
-  font-size: 28px;
+/* The only uppercase-micro treatment in the app, reserved for table
+   column headers and stat labels. If it starts appearing elsewhere the
+   hierarchy stops working, because nothing reads as "quiet label" any
+   more - that was the old design's core problem. */
+.eyebrow,
+.metric-head,
+.data-table th,
+.stat-label {
+  color: var(--text-muted);
+  font-size: var(--fs-label);
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .muted {
-  color: var(--muted);
+  color: var(--text-secondary);
+}
+
+/* Money and counts must line up column-wise; without this, currency
+   columns read ragged because proportional digits vary in width. */
+.num,
+.metric-value,
+.data-table td {
+  font-variant-numeric: tabular-nums;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------------------------------------------------------------------
+   3. App shell
+   --------------------------------------------------------------------- */
+
+.app {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+/* --- Sidebar --- */
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  height: var(--appbar-h);
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.brand-mark {
+  display: grid;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--on-brand);
+  background: linear-gradient(140deg, var(--brand-500), var(--brand-700));
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+:root[data-theme="dark"] .brand-mark,
+:root:not([data-theme="light"]) .brand-mark {
+  color: #2c1608;
+}
+
+.brand-name {
+  display: grid;
+  line-height: 1.15;
+}
+
+.brand-name strong {
+  color: var(--text-strong);
+  font-size: var(--fs-body);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.brand-name span {
+  color: var(--text-muted);
+  font-size: var(--fs-label);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sidebar-nav {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 12px 10px 20px;
+  scrollbar-width: thin;
+}
+
+.nav-group + .nav-group {
+  margin-top: 18px;
+}
+
+.nav-group-label {
+  padding: 0 8px 6px;
+  color: var(--text-muted);
+  font-size: var(--fs-label);
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+  font-weight: 500;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.nav-item:hover {
+  color: var(--text-strong);
+  background: var(--surface-2);
+}
+
+.nav-item svg {
+  flex: 0 0 auto;
+  opacity: 0.75;
+}
+
+/* "You are here" is the brand hue's only job in navigation - the left
+   bar plus the tint, so the active item is unmistakable without the old
+   trick of removing the current page's link entirely. */
+.nav-item-active {
+  color: var(--brand);
+  background: var(--brand-tint);
+  font-weight: 650;
+}
+
+.nav-item-active::before {
+  content: "";
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  left: -10px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--brand);
+}
+
+.nav-item-active svg {
+  opacity: 1;
+}
+
+.nav-sub {
+  display: grid;
+  gap: 1px;
+  margin: 2px 0 0 19px;
+  padding-left: 11px;
+  border-left: 1px solid var(--border);
+}
+
+.nav-item-sub {
+  padding: 6px 10px;
+  font-size: var(--fs-small);
+}
+
+.nav-item-sub.nav-item-active::before {
+  left: -12px;
+}
+
+/* Category dot - the report family's fixed identity colour. */
+.nav-dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--dot, var(--text-muted));
+}
+
+.nav-count {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: var(--fs-label);
+  font-variant-numeric: tabular-nums;
+}
+
+.sidebar-foot {
+  flex: 0 0 auto;
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding: 12px;
+}
+
+.sidebar-user {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.sidebar-user strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-user span {
+  color: var(--text-muted);
+  font-size: var(--fs-label);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sidebar-backdrop {
+  display: none;
+}
+
+/* --- Appbar (inside the content column) --- */
+
+.appbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: var(--appbar-h);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.appbar-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: var(--fs-small);
+}
+
+.appbar-crumbs a:hover {
+  color: var(--text);
+}
+
+.appbar-crumbs .crumb-current {
+  overflow: hidden;
+  color: var(--text);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.appbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* --- Content + page header --- */
+
+.content {
+  width: 100%;
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 24px 24px 64px;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.page-header-text {
+  min-width: 0;
+  max-width: 72ch;
+}
+
+.page-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.page-desc {
+  margin-top: 6px;
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+  line-height: 1.55;
+}
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Kept for the loading skeletons and any legacy call sites. */
+.page,
+.shell {
+  min-height: 100vh;
+}
+
+.stack {
+  display: grid;
+  gap: 20px;
+}
+
+/* ---------------------------------------------------------------------
+   4. Primitives
+   --------------------------------------------------------------------- */
+
+.button,
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 7px 13px;
+  color: var(--on-brand);
+  background: var(--brand);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.13s ease, border-color 0.13s ease, color 0.13s ease;
+}
+
+.button:hover,
+.btn:hover {
+  background: var(--brand-hover);
+}
+
+.button:disabled,
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.button.secondary,
+.btn-secondary {
+  border-color: var(--border-strong);
+  color: var(--text);
+  background: var(--surface);
+}
+
+.button.secondary:hover,
+.btn-secondary:hover {
+  border-color: var(--text-muted);
+  background: var(--surface-2);
+}
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--text-secondary);
+  background: transparent;
+}
+
+.btn-ghost:hover {
+  color: var(--text-strong);
+  background: var(--surface-2);
+}
+
+.btn-danger {
+  border-color: var(--danger-border);
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.btn-danger:hover {
+  color: var(--on-brand);
+  background: var(--danger);
+}
+
+.btn-sm {
+  min-height: 30px;
+  padding: 4px 10px;
+  font-size: var(--fs-label);
+  letter-spacing: 0.01em;
+}
+
+.btn-icon {
+  width: 34px;
+  min-height: 34px;
+  padding: 0;
+}
+
+.input,
+.select,
+.filter-input,
+.cell-input,
+.sync-target-select {
+  width: 100%;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  color: var(--text);
+  background: var(--surface);
+  font-size: var(--fs-body);
+  transition: border-color 0.13s ease, box-shadow 0.13s ease;
+}
+
+.input {
+  padding: 10px 12px;
+}
+
+.input:focus,
+.select:focus,
+.filter-input:focus,
+.cell-input:focus,
+.sync-target-select:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.select,
+.sync-target-select {
+  width: auto;
+  padding-right: 28px;
+  cursor: pointer;
 }
 
 .form {
   display: grid;
   gap: 16px;
-  margin-top: 28px;
+  margin-top: 24px;
 }
 
 .field {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .field span {
-  color: #374151;
-  font-size: 14px;
-  font-weight: 650;
+  color: var(--text-secondary);
+  font-size: var(--fs-small);
+  font-weight: 600;
 }
 
-.input {
-  width: 100%;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 12px 14px;
-  background: #fff;
-  color: var(--foreground);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.input:focus,
-.filter-input:focus,
-.cell-input:focus,
-.sync-target-select:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-soft);
-}
-
-.button {
+.checkbox-row {
   display: inline-flex;
-  min-height: 42px;
   align-items: center;
-  justify-content: center;
   gap: 8px;
-  border: 0;
-  border-radius: 6px;
-  padding: 10px 14px;
-  color: white;
-  background: var(--primary);
-  font-weight: 700;
+  color: var(--text);
+  font-size: var(--fs-small);
   cursor: pointer;
-  box-shadow: var(--shadow-sm);
-  transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
 }
 
-.button:hover {
-  background: var(--primary-dark);
-}
-
-.button:active {
-  transform: translateY(1px);
-}
-
-.button:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-  box-shadow: none;
-  transform: none;
-}
-
-.button.secondary {
-  border: 1px solid var(--border);
-  color: var(--foreground);
-  background: #fff;
-  box-shadow: none;
-}
-
-.button.secondary:hover {
-  background: #f3f4f6;
+input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--brand);
+  cursor: pointer;
 }
 
 .error-box {
-  border: 1px solid #fecaca;
-  border-left: 3px solid var(--danger);
-  border-radius: 6px;
-  padding: 12px;
-  color: var(--danger);
-  background: #fef2f2;
-}
-
-.shell {
-  min-height: 100vh;
-}
-
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  border-bottom: 1px solid var(--border);
-  padding: 14px 28px;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(12px);
-  box-shadow: var(--shadow-sm);
-}
-
-.brand {
-  display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
-  font-weight: 800;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+  padding: 11px 13px;
+  color: var(--danger);
+  background: var(--danger-soft);
+  font-size: var(--fs-small);
 }
 
-.brand-mark {
+/* --- Dropdown menu --- */
+
+.menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.menu-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 50;
   display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border-radius: 6px;
-  color: white;
-  background: var(--primary);
+  min-width: 208px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 5px;
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  animation: menu-in 0.12s ease;
 }
 
-.nav {
+.menu-list-left {
+  right: auto;
+  left: 0;
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.menu-item {
   display: flex;
   align-items: center;
-  gap: 16px;
-}
-
-.nav-toggle {
-  display: none;
-  flex-direction: column;
-  justify-content: center;
-  gap: 4px;
+  gap: 9px;
+  width: 100%;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
+  padding: 7px 9px;
+  color: var(--text);
   background: none;
-  padding: 8px;
+  font-size: var(--fs-small);
+  text-align: left;
   cursor: pointer;
 }
 
-.nav-toggle span {
-  display: block;
-  width: 22px;
-  height: 2px;
-  background: var(--foreground);
+.menu-item:hover:not(:disabled) {
+  background: var(--surface-2);
 }
 
-.main {
-  display: grid;
-  gap: 24px;
-  padding: 28px;
+.menu-item:disabled {
+  cursor: default;
+  opacity: 0.55;
 }
 
-.hero-band {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 24px;
+.menu-item svg {
+  flex: 0 0 auto;
+  color: var(--text-muted);
 }
 
-.hero-band h1 {
-  margin: 0;
-  font-size: 34px;
-  letter-spacing: 0;
+.menu-label {
+  padding: 7px 9px 4px;
+  color: var(--text-muted);
+  font-size: var(--fs-label);
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
-.hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+.menu-sep {
+  height: 1px;
+  margin: 4px 5px;
+  background: var(--border);
 }
 
-.sync-form-row {
-  display: flex;
+/* --- Pills --- */
+
+.status-pill,
+.pill {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-  font-size: 14px;
+  gap: 5px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  padding: 2px 9px;
+  font-size: var(--fs-label);
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
-.sync-target-select {
+.status-paid,
+.pill-success {
+  border-color: var(--success-border);
+  color: var(--success);
+  background: var(--success-soft);
+}
+
+.status-sent,
+.pill-warning {
+  border-color: var(--warning-border);
+  color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.status-overdue,
+.pill-danger {
+  border-color: var(--danger-border);
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.status-draft,
+.pill-neutral {
+  border-color: var(--border);
+  color: var(--text-secondary);
+  background: var(--surface-2);
+}
+
+.pill-info {
+  border-color: var(--info-border);
+  color: var(--info);
+  background: var(--info-soft);
+}
+
+/* --- Segmented control (record tabs) --- */
+
+.segmented {
+  display: inline-flex;
+  gap: 2px;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  background: var(--surface-2);
 }
 
-.metric-grid {
+.segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 4px;
+  padding: 6px 12px;
+  color: var(--text-secondary);
+  background: none;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.13s ease, color 0.13s ease;
+}
+
+.segment:hover {
+  color: var(--text-strong);
+}
+
+.segment-active {
+  color: var(--text-strong);
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
+}
+
+.segment-count {
+  border-radius: var(--radius-pill);
+  padding: 1px 6px;
+  color: var(--text-muted);
+  background: var(--surface-3);
+  font-size: 10px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.segment-active .segment-count {
+  color: var(--brand);
+  background: var(--brand-tint);
+}
+
+/* ---------------------------------------------------------------------
+   5. Blocks
+   --------------------------------------------------------------------- */
+
+/* --- Stats -----------------------------------------------------------
+   Neutral by default. A tile only takes a semantic colour when its value
+   genuinely has a state (bills outstanding, a failed sync) - the old
+   design rotated four accent colours by nth-child position, which made
+   colour meaningless and collided with the real status colours used in
+   the same row.
+   --------------------------------------------------------------------- */
+
+.metric-grid,
+.stat-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(180px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
 }
 
 .metric-card,
-.chart-panel,
-.table-panel,
-.report-card {
+.stat {
+  display: grid;
+  align-content: start;
+  gap: 5px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--panel);
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow 0.15s ease;
-}
-
-.chart-panel:hover,
-.table-panel:hover,
-.report-card:hover {
-  box-shadow: var(--shadow-md);
-}
-
-.report-card {
-  display: grid;
-  gap: 16px;
-  padding: 18px;
-}
-
-.report-card[hidden] {
-  display: none;
-}
-
-.report-card-head h2 {
-  margin: 0 0 4px;
-  font-size: 20px;
-}
-
-.metric-card {
-  display: grid;
-  gap: 12px;
-  min-height: 132px;
-  padding: 18px;
-  border-top: 3px solid var(--metric-accent, var(--primary));
-  transition: box-shadow 0.15s ease, transform 0.15s ease;
-}
-
-/* Cycle a small accent palette across metric tiles in source order so a
-   row of stat cards reads with distinct color hierarchy at a glance,
-   without every report having to pick colors per tile itself. */
-.metric-grid .metric-card:nth-child(4n + 2) {
-  --metric-accent: var(--accent-blue);
-}
-
-.metric-grid .metric-card:nth-child(4n + 3) {
-  --metric-accent: var(--accent-purple);
-}
-
-.metric-grid .metric-card:nth-child(4n + 4) {
-  --metric-accent: var(--accent-amber);
-}
-
-.metric-card:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
+  padding: 14px 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
 }
 
 .metric-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 750;
-  text-transform: uppercase;
+  gap: 8px;
+}
+
+.metric-head svg {
+  color: var(--text-muted);
+  opacity: 0.7;
 }
 
 .metric-value {
-  font-size: 30px;
-  font-weight: 850;
+  color: var(--text-strong);
+  font-size: var(--fs-stat);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
 }
 
 .metric-sub {
-  color: var(--muted);
-  font-size: 14px;
+  color: var(--text-muted);
+  font-size: var(--fs-small);
+  line-height: 1.4;
 }
 
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.8fr);
-  gap: 16px;
+.metric-card[data-state="positive"] .metric-value {
+  color: var(--success);
 }
 
-.chart-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
+.metric-card[data-state="warning"] .metric-value {
+  color: var(--warning);
 }
 
+.metric-card[data-state="critical"] {
+  border-color: var(--danger-border);
+  background: var(--danger-soft);
+}
+
+.metric-card[data-state="critical"] .metric-value {
+  color: var(--danger);
+}
+
+/* The single lead figure of a report - one per KPI row, so the eye has
+   somewhere to land first instead of four equal-weight tiles. */
+.metric-card[data-emphasis="lead"] {
+  border-color: var(--brand-200);
+  background: linear-gradient(180deg, var(--brand-soft), var(--surface) 70%);
+}
+
+/* --- Panel / section -------------------------------------------------
+   One container primitive. A section is a card whose header carries the
+   title, a count, and its own export menu - so a section's controls are
+   unmistakably attached to that section's content. The old layout put a
+   row of six export buttons ABOVE a bare heading, repeated up to six
+   times a page, and nothing said which toolbar exported what.
+
+   The <details>/<summary> mechanics and the .report-section /
+   .report-section-body class names are load-bearing: lib/export.ts
+   force-opens `details.report-section` before rasterising a report to
+   PNG, and the body must stay a SIBLING of <details> rather than a
+   child, because Chromium renders a closed <details>'s children through
+   an internal ::details-content box whose content-visibility an author
+   rule on a descendant cannot override.
+   --------------------------------------------------------------------- */
+
+.panel,
+.table-panel,
 .chart-panel,
-.table-panel {
-  min-width: 0;
-  padding: 18px;
+.section {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
 }
 
-.table-panel-scroll {
-  min-width: 0;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  /* Fades the table edges under the scroll container so a table wider than
-     its panel visibly hints "more content this way" on touch screens,
-     where there's no hover/scrollbar affordance to notice otherwise. */
-  background:
-    linear-gradient(to right, var(--panel) 0%, rgba(255, 255, 255, 0) 12px),
-    linear-gradient(to left, var(--panel) 0%, rgba(255, 255, 255, 0) 12px) 100% 0,
-    linear-gradient(to right, rgba(15, 23, 42, 0.1), rgba(15, 23, 42, 0)) 0 0,
-    linear-gradient(to left, rgba(15, 23, 42, 0.1), rgba(15, 23, 42, 0)) 100% 0;
-  background-repeat: no-repeat;
-  background-size: 24px 100%, 24px 100%, 10px 100%, 10px 100%;
-  background-attachment: local, local, scroll, scroll;
+.section {
+  overflow: hidden;
 }
 
-/* Records used to wrap its table in a 70vh scrollbox with its own
-   sticky header — a scroll-inside-a-scroll that got worse once mobile
-   rows became taller cards: the actual data could sit far enough down
-   inside that fixed-height box to look like the page had none. Records
-   now scrolls with the rest of the page, like every other table in the
-   app — see components/editable-data-table.tsx and records-tabs.tsx,
-   which no longer render the (now unused) .records-table-wrap class. */
+/* Groups of sections (a report's "Contributions", made of one section per
+   street) get their own h2 band, so the hierarchy reads
+   h1 report > h2 group > h3 section rather than a flat run of headings. */
+.section-group-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.section-group-head h2 {
+  font-size: var(--fs-title);
+}
+
+.section-group-actions {
+  margin-left: auto;
+  align-self: center;
+}
+
+.section-group-body {
+  display: grid;
+  gap: 12px;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.report-section {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.report-section-summary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.report-section-summary::-webkit-details-marker {
+  display: none;
+}
+
+.section-title {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: var(--fs-section);
+  font-weight: 650;
+  letter-spacing: -0.008em;
+}
+
+.section-count {
+  border-radius: var(--radius-pill);
+  padding: 1px 8px;
+  color: var(--text-secondary);
+  background: var(--surface-3);
+  font-size: var(--fs-label);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.section-chevron {
+  display: none;
+  margin-left: auto;
+  color: var(--text-muted);
+  transition: transform 0.15s ease;
+}
+
+.report-section[open] .section-chevron {
+  transform: rotate(180deg);
+}
+
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.section-body {
+  padding: 0;
+}
+
+.section-body-pad {
+  padding: 16px;
+}
 
 .panel-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: 14px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
 }
 
-.panel-head h2 {
+.panel-head h2,
+.panel-head h3 {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--fs-section);
+  font-weight: 650;
 }
 
-.chart-box {
-  width: 100%;
-  height: 330px;
+.panel-body {
+  padding: 16px;
+}
+
+/* --- Filter bar ------------------------------------------------------
+   Every report filter (month, year, "show all members") now lives in one
+   strip directly under the page header instead of ad-hoc .filter-banner
+   divs scattered between sections.
+   --------------------------------------------------------------------- */
+
+.filter-bar,
+.filter-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  background: var(--surface);
+  font-size: var(--fs-small);
+  box-shadow: var(--shadow-xs);
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-group > span,
+.filter-label {
+  color: var(--text-muted);
+  font-size: var(--fs-label);
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.filter-spacer {
+  margin-left: auto;
+}
+
+/* --- Tables --- */
+
+.table-panel-scroll,
+.table-wrap {
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .data-table {
   width: 100%;
-  /* separate (not collapse) so sticky header cells keep their own borders
-     and background cleanly instead of the collapsed border trick that
-     breaks position: sticky rendering in some browsers. */
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 14px;
+  font-size: var(--fs-small);
 }
 
 .data-table th,
 .data-table td {
-  border-bottom: 1px solid var(--border);
-  padding: 9px 10px;
+  padding: 9px 14px;
   text-align: left;
+  border-bottom: 1px solid var(--border);
 }
 
+/* Not sticky: the horizontal scroll container (.table-panel-scroll) has
+   overflow-x:auto, so its computed overflow-y is auto too — it becomes the
+   containing scroll box for any sticky descendant, and since it never
+   scrolls vertically a sticky header would stick to the position it already
+   sits in. Long tables are handled by pagination (Records) and per-section
+   grouping (reports) instead. */
 .data-table th {
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 750;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  background: var(--panel-alt);
-  border-bottom: 2px solid var(--primary-soft);
+  border-bottom: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  white-space: nowrap;
 }
 
-.data-table tbody tr:nth-child(even) {
-  background: var(--panel-alt);
+.data-table tbody tr:last-child td {
+  border-bottom: 0;
 }
 
-.data-table tbody tr:hover {
+/* Zebra striping is gone: a 1px rule per row plus generous cell padding
+   separates rows without laying a second background pattern over the
+   status colours the cells themselves carry. */
+.data-table tbody tr:hover td {
   background: var(--row-hover);
 }
 
-.status-pill {
-  display: inline-flex;
-  border-radius: 999px;
-  padding: 4px 9px;
-  font-size: 12px;
-  font-weight: 750;
-  letter-spacing: 0.01em;
+.data-table tfoot td {
+  border-top: 1px solid var(--border-strong);
+  border-bottom: 0;
+  background: var(--surface-2);
+  color: var(--text-strong);
+  font-weight: 650;
 }
 
-.status-paid {
-  color: #166534;
-  background: #dcfce7;
+.data-table td.num,
+.data-table th.num {
+  text-align: right;
 }
 
-.status-sent {
-  color: #854d0e;
-  background: #fef3c7;
-}
-
-.status-overdue {
-  color: #991b1b;
-  background: #fee2e2;
-}
-
-/* Neutral fallback for statuses that aren't paid/sent/overdue — draft,
-   void, nonbillable, etc. */
-.status-draft {
-  color: #475569;
-  background: #e2e8f0;
-}
-
-/* Amount-cell coloring for on-screen tables (matches .cell-success/
-   .cell-warning/.cell-danger used by HTML exports in lib/export.ts) —
-   e.g. flagging a contribution total against the Silai fund minimum.
-   Applied directly to <td> elements, so styling stays text-only (a
-   leading dot via ::before) rather than changing display/layout, which
-   would break table row flow. */
+/* Amount-cell colouring, matching .cell-* used by the HTML exports in
+   lib/export.ts. Text-only (colour + a leading dot) so it never changes
+   layout, which would break table row flow. */
 .data-table .cell-success,
 .data-table .cell-warning,
 .data-table .cell-danger {
-  font-weight: 700;
+  font-weight: 650;
 }
 
-/* The leading dot is a table-row affordance only — .cell-success/-warning/
-   -danger are also reused on .metric-value (e.g. Bills Due), where a dot
-   in front of a 30px figure reads as a stray mark rather than a status
-   indicator, so scope it to table cells. */
 .data-table .cell-success::before,
 .data-table .cell-warning::before,
 .data-table .cell-danger::before {
@@ -538,13 +1330,13 @@ input {
   display: inline-block;
   width: 6px;
   height: 6px;
-  margin-right: 6px;
+  margin-right: 7px;
   border-radius: 50%;
   vertical-align: middle;
 }
 
 .cell-success {
-  color: #166534;
+  color: var(--success);
 }
 
 .cell-success::before {
@@ -552,7 +1344,7 @@ input {
 }
 
 .cell-warning {
-  color: #854d0e;
+  color: var(--warning);
 }
 
 .cell-warning::before {
@@ -560,148 +1352,35 @@ input {
 }
 
 .cell-danger {
-  color: #991b1b;
+  color: var(--danger);
 }
 
 .cell-danger::before {
   background: var(--danger);
 }
 
-.breadcrumb {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 13px;
-}
-
-.breadcrumb a:hover {
-  color: var(--foreground);
-  text-decoration: underline;
-}
-
-.report-gallery-card {
-  cursor: pointer;
-  text-decoration: none;
-}
-
-.report-tablist {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-bottom: 16px;
-  border-bottom: 1px solid var(--border);
-}
-
-.report-tab {
-  border: 0;
-  border-bottom: 2px solid transparent;
-  border-radius: 6px 6px 0 0;
-  background: none;
-  padding: 10px 14px;
-  color: var(--muted);
-  font-weight: 650;
-  font-size: 14px;
-  cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease;
-}
-
-.report-tab:hover {
-  color: var(--foreground);
-  background: var(--primary-soft);
-}
-
-.report-tab-active {
-  border-bottom-color: var(--primary);
-  color: var(--foreground);
+/* The dot is a table affordance only. On a 26px stat figure it reads as
+   a stray mark, so it is scoped to cells above and suppressed here. */
+.metric-value.cell-success,
+.metric-value.cell-warning,
+.metric-value.cell-danger {
+  font-weight: 700;
 }
 
 .sortable-header {
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
-  transition: color 0.15s ease;
 }
 
 .sortable-header:hover {
-  color: var(--foreground);
+  color: var(--text);
 }
 
 .sort-indicator {
   display: inline-block;
-  min-width: 12px;
-  color: var(--primary);
-}
-
-.filter-cell {
-  padding: 6px 8px;
-}
-
-.filter-input {
-  width: 100%;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 5px 7px;
-  color: var(--foreground);
-  font-size: 13px;
-  font-weight: 400;
-  text-transform: none;
-  background: #fff;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.editable-cell {
-  cursor: text;
-  transition: background-color 0.1s ease;
-}
-
-.editable-cell:hover {
-  background: var(--primary-soft);
-}
-
-.editable-cell-error {
-  outline: 1px solid var(--danger);
-  outline-offset: -1px;
-}
-
-.cell-input {
-  width: 100%;
-  border: 1px solid var(--primary);
-  border-radius: 4px;
-  padding: 5px 7px;
-  font-size: 14px;
-}
-
-.filter-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 10px 14px;
-  background: #f0fdfa;
-  font-size: 14px;
-}
-
-.empty-state {
-  display: grid;
-  min-height: 180px;
-  place-items: center;
-  color: var(--muted);
-  text-align: center;
-}
-
-.export-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.export-toolbar .button {
-  min-height: 34px;
-  padding: 6px 12px;
-  font-size: 13px;
+  min-width: 10px;
+  color: var(--brand);
 }
 
 .sortable-th {
@@ -713,21 +1392,532 @@ input {
   padding: 0;
   color: inherit;
   font: inherit;
+  letter-spacing: inherit;
   text-transform: inherit;
   cursor: pointer;
 }
 
 .sortable-th:hover {
-  color: var(--foreground);
+  color: var(--text);
 }
 
 .sortable-th svg {
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 .sortable-th[aria-sort="ascending"] svg,
 .sortable-th[aria-sort="descending"] svg {
+  color: var(--brand);
   opacity: 1;
+}
+
+.filter-cell {
+  padding: 6px 10px;
+  background: var(--surface-2);
+}
+
+.filter-input {
+  padding: 4px 8px;
+  font-size: var(--fs-small);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.editable-cell {
+  cursor: text;
+  transition: box-shadow 0.1s ease;
+}
+
+.editable-cell:hover {
+  box-shadow: inset 0 0 0 1px var(--brand-200);
+}
+
+.editable-cell-error {
+  box-shadow: inset 0 0 0 1px var(--danger);
+}
+
+.cell-input {
+  padding: 4px 8px;
+  border-color: var(--brand);
+  font-size: var(--fs-small);
+}
+
+/* Inline select inside a table cell — sits flush so a row of dropdowns
+   doesn't read as a row of boxes. */
+.cell-select {
+  max-width: 100%;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 3px 6px;
+  color: inherit;
+  background: transparent;
+  font-size: var(--fs-small);
+  cursor: pointer;
+}
+
+.cell-select:hover {
+  border-color: var(--border-strong);
+  background: var(--surface);
+}
+
+/* --- Function tracker ------------------------------------------------
+   A section's own fields (ubhayam, vendor, estimate) are a small form
+   above its table, not a row inside it. In the source documents these
+   sat in a separate two-column block below the item list, which is why
+   an unassigned section was easy to miss.
+   --------------------------------------------------------------------- */
+
+.section-form {
+  display: flex;
+  align-items: center;
+  gap: 8px 24px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.field-inline {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  font-size: var(--fs-small);
+}
+
+.section-form-note {
+  flex: 1 0 100%;
+  color: var(--text-muted);
+  font-size: var(--fs-small);
+}
+
+/* The numbering carried over from the printed sheet, so the tracker and a
+   paper copy can be read side by side. */
+.section-code {
+  display: inline-block;
+  margin-right: 8px;
+  color: var(--text-muted);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+
+.progress-track {
+  width: 100%;
+  height: 5px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--success);
+  transition: width 0.25s ease;
+}
+
+/* Read-only viewers get a banner rather than a disabled-looking UI, so it's
+   clear nothing is broken — the edit affordances are simply absent. */
+.viewer-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  border: 1px solid var(--info-border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  color: var(--info);
+  background: var(--info-soft);
+  font-size: var(--fs-small);
+}
+
+.code-display {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  border: 1px dashed var(--brand);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  background: var(--brand-soft);
+}
+
+.code-display code {
+  color: var(--text-strong);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+}
+
+/* ---------------------------------------------------------------------
+   6. Feature surfaces
+   --------------------------------------------------------------------- */
+
+/* --- Auth ------------------------------------------------------------
+   The art panel is built from brand tokens rather than the remote stock
+   photo the old login pulled from Unsplash - no third-party request on
+   the one page that must always render, and it is on-brand.
+   --------------------------------------------------------------------- */
+
+.auth-page {
+  display: grid;
+  min-height: 100vh;
+  grid-template-columns: minmax(0, 1fr) minmax(380px, 460px);
+}
+
+.auth-art {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 32px;
+  overflow: hidden;
+  padding: 44px;
+  color: #fff;
+  background:
+    radial-gradient(120% 90% at 8% 100%, rgba(226, 103, 10, 0.55), transparent 60%),
+    radial-gradient(90% 80% at 95% 5%, rgba(67, 56, 202, 0.45), transparent 62%),
+    linear-gradient(150deg, #3b1d08, #1b1815 55%, #10221f);
+}
+
+/* Faint concentric rings - a quiet architectural motif rather than a
+   photograph, and it costs one gradient. */
+.auth-art::after {
+  content: "";
+  position: absolute;
+  right: -14%;
+  bottom: -34%;
+  width: 720px;
+  height: 720px;
+  border-radius: 50%;
+  background: repeating-radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.055) 0 1px,
+    transparent 1px 34px
+  );
+  pointer-events: none;
+}
+
+.auth-art-body {
+  position: relative;
+  z-index: 1;
+  max-width: 560px;
+}
+
+.auth-art h1 {
+  color: #fff;
+  font-size: clamp(34px, 4.4vw, 54px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.04;
+}
+
+.auth-art p {
+  margin-top: 16px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.auth-art-brand {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 650;
+}
+
+.auth-art-foot {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 22px;
+  flex-wrap: wrap;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: var(--fs-small);
+}
+
+.auth-panel {
+  display: flex;
+  align-items: center;
+  padding: 40px;
+  background: var(--surface);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+.auth-card h2 {
+  margin-bottom: 6px;
+  font-size: 24px;
+}
+
+/* --- Report gallery cards --- */
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.gallery-card {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--cat, var(--border-strong));
+  border-radius: var(--radius);
+  padding: 15px 17px;
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
+  transition: border-color 0.13s ease, box-shadow 0.13s ease, transform 0.13s ease;
+}
+
+.gallery-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.gallery-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gallery-card-title {
+  color: var(--text-strong);
+  font-size: var(--fs-body);
+  font-weight: 650;
+  letter-spacing: -0.008em;
+}
+
+.gallery-card-summary {
+  color: var(--text-secondary);
+  font-size: var(--fs-small);
+  line-height: 1.45;
+}
+
+.gallery-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: var(--fs-label);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.gallery-card-arrow {
+  margin-left: auto;
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity 0.13s ease, transform 0.13s ease;
+}
+
+.gallery-card:hover .gallery-card-arrow {
+  color: var(--cat, var(--brand));
+  opacity: 1;
+  transform: translateX(2px);
+}
+
+/* Category chip - the family's fixed hue, used on gallery cards and the
+   report page header so a report's family is always legible. */
+.cat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radius-pill);
+  padding: 2px 9px;
+  color: var(--cat, var(--text-secondary));
+  background: var(--cat-soft, var(--surface-2));
+  font-size: var(--fs-label);
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* --- Dashboard layout --- */
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.75fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.dashboard-side {
+  display: grid;
+  gap: 14px;
+}
+
+.chart-box {
+  width: 100%;
+  height: 300px;
+  padding: 14px 10px 4px 0;
+}
+
+.chart-box-sm {
+  height: 216px;
+}
+
+/* --- Sync status strip --- */
+
+.status-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 11px 15px;
+  background: var(--surface);
+  font-size: var(--fs-small);
+  box-shadow: var(--shadow-xs);
+}
+
+.status-strip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.status-strip[data-state="ok"] .status-strip-dot {
+  background: var(--success);
+}
+
+.status-strip[data-state="failed"] {
+  border-color: var(--danger-border);
+  background: var(--danger-soft);
+}
+
+.status-strip[data-state="failed"] .status-strip-dot {
+  background: var(--danger);
+}
+
+.status-strip[data-state="running"] .status-strip-dot {
+  background: var(--warning);
+}
+
+/* --- Records toolbar / selection bar --- */
+
+.records-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.searchbox {
+  position: relative;
+  flex: 0 1 300px;
+  min-width: 180px;
+}
+
+.searchbox svg {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  color: var(--text-muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.searchbox input {
+  padding-left: 32px;
+}
+
+/* Appears only when rows are selected, instead of a permanently visible
+   "0 selected" row that was always in the way and never actionable. */
+.selection-bar {
+  position: sticky;
+  bottom: 16px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: fit-content;
+  max-width: 100%;
+  margin: 14px auto 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  padding: 8px 10px 8px 18px;
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--fs-small);
+  animation: menu-in 0.15s ease;
+}
+
+.selection-bar strong {
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 11px 16px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: var(--fs-small);
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* --- Breadcrumb (in-page, above a title) --- */
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  color: var(--text-muted);
+  font-size: var(--fs-small);
+}
+
+.breadcrumb a:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+/* ---------------------------------------------------------------------
+   7. Feedback
+   --------------------------------------------------------------------- */
+
+.empty-state,
+.empty {
+  display: grid;
+  min-height: 150px;
+  place-items: center;
+  gap: 6px;
+  padding: 28px;
+  color: var(--text-muted);
+  text-align: center;
+  font-size: var(--fs-small);
+}
+
+.empty-state svg,
+.empty svg {
+  color: var(--border-strong);
 }
 
 .toast-stack {
@@ -742,12 +1932,13 @@ input {
 }
 
 .toast {
-  border-radius: 8px;
-  padding: 12px 16px;
-  color: white;
-  background: var(--foreground);
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25);
-  font-size: 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 11px 15px;
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--fs-small);
   animation: toast-in 0.2s ease;
 }
 
@@ -756,18 +1947,18 @@ input {
     opacity: 0;
     transform: translateY(8px);
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 .toast-success {
-  background: var(--success);
+  border-color: var(--success-border);
+  color: var(--success);
+  background: var(--success-soft);
 }
 
 .toast-error {
-  background: var(--danger);
+  border-color: var(--danger-border);
+  color: var(--danger);
+  background: var(--danger-soft);
 }
 
 .modal-backdrop {
@@ -777,15 +1968,17 @@ input {
   display: grid;
   place-items: center;
   padding: 20px;
-  background: rgba(15, 23, 42, 0.45);
+  background: var(--overlay);
+  backdrop-filter: blur(2px);
 }
 
 .modal-panel {
   width: 100%;
   max-width: 420px;
-  border-radius: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   padding: 22px;
-  background: var(--panel);
+  background: var(--surface);
   box-shadow: var(--shadow-lg);
   animation: modal-in 0.15s ease;
 }
@@ -795,15 +1988,11 @@ input {
     opacity: 0;
     transform: scale(0.97);
   }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
 }
 
 .modal-panel h3 {
   margin: 0 0 8px;
-  font-size: 18px;
+  font-size: var(--fs-title);
 }
 
 .modal-actions {
@@ -814,10 +2003,10 @@ input {
 }
 
 .spinner {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border: 3px solid var(--border);
-  border-top-color: var(--primary);
+  border-top-color: var(--brand);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -834,336 +2023,189 @@ input {
   }
 }
 
-@media print {
-  @page {
-    size: A4;
-    margin: 14mm;
-  }
+/* Skeleton shimmer for route-level loading states. */
+.skeleton {
+  border-radius: var(--radius);
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 25%,
+    var(--surface-3) 37%,
+    var(--surface-2) 63%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
 
-  html,
-  body {
-    /* Floor for all print text; nothing in a report should render smaller
-       than this on the printed A4 page. */
-    font-size: 12px;
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
   }
-
-  body {
-    background: #fff;
-  }
-
-  .topbar,
-  .hero-band,
-  .no-print {
-    display: none !important;
-  }
-
-  /* Each report now lives on its own page (app/reports/[category]/[slug]),
-     so exactly one .report-card is ever in the DOM at a time — no need to
-     hide/allowlist by data-print-target/data-print-id anymore. */
-  .report-card {
-    border: none;
-    padding: 0;
-  }
-
-  .report-card-head h2 {
-    font-size: 16px;
-  }
-
-  .report-card h3 {
-    font-size: 13px;
-    margin: 16px 0 8px;
-  }
-
-  /* Screen layout reserves a 180px minimum per card, which doesn't reliably
-     fit four across an A4 page's printable width; drop the minimum so cards
-     always divide the page width evenly instead of wrapping unpredictably. */
-  .metric-grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-  }
-
-  .metric-card {
-    min-height: 0;
-    gap: 4px;
-    padding: 8px 10px;
-    border-top: 1px solid var(--border);
-    break-inside: avoid;
-  }
-
-  .metric-head {
-    font-size: 12px;
-  }
-
-  .metric-value {
-    font-size: 16px;
-  }
-
-  .metric-sub {
-    font-size: 12px;
-  }
-
-  .table-panel {
-    overflow: visible !important;
-    border: none;
-    padding: 0;
-  }
-
-  .data-table {
-    font-size: 12px;
-    width: 100%;
-  }
-
-  .data-table th,
-  .data-table td {
-    padding: 6px 8px;
-    font-size: 12px;
-  }
-
-  /* The screen UI's zebra striping/tinted header are a screen-only
-     affordance; printed reports stay plain to save toner and print
-     consistently regardless of the browser's background-graphics setting. */
-  .data-table th,
-  .data-table tbody tr:nth-child(even),
-  .data-table tbody tr:hover {
-    background: none;
-  }
-
-  .data-table thead {
-    display: table-header-group;
-  }
-
-  /* Browsers default <tfoot> to table-footer-group, which repeats it at the
-     bottom of every printed page (like thead repeating at the top). Reports
-     with a subtotal row per table (e.g. Silai by Group) only want it once,
-     right after that table's own rows, so print it as a normal row group. */
-  .data-table tfoot {
-    display: table-row-group;
-  }
-
-  .data-table tr {
-    break-inside: avoid;
+  to {
+    background-position: 0 0;
   }
 }
 
-/* "screen and" keeps these out of print/export rendering — A4 portrait is
-   narrower than 960px, so without it these would fight the dedicated
-   @media print rules above and break printed/exported reports. */
-@media screen and (max-width: 960px) {
-  .auth-page,
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   8. Responsive
+
+   All rules are `screen`-scoped: A4 portrait is narrower than 960px, so
+   without that the mobile rules would fight the @media print block below
+   and break printed and exported reports.
+   --------------------------------------------------------------------- */
+
+@media screen and (max-width: 1100px) {
   .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media screen and (max-width: 960px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(288px, 84vw);
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .sidebar-open .sidebar {
+    transform: translateX(0);
+  }
+
+  .sidebar-open .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    display: block;
+    border: 0;
+    padding: 0;
+    background: var(--overlay);
+  }
+
+  .nav-toggle {
+    display: inline-flex;
+  }
+
+  .appbar {
+    padding: 0 16px;
+  }
+
+  .content {
+    padding: 18px 16px 56px;
+  }
+
+  .auth-page {
     grid-template-columns: 1fr;
   }
 
   .auth-art {
-    min-height: 320px;
+    min-height: 240px;
+    padding: 28px;
   }
 
-  .metric-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .filter-banner {
-    flex-wrap: wrap;
-  }
-}
-
-@media screen and (max-width: 640px) {
-  .topbar,
-  .main,
-  .auth-art,
   .auth-panel {
-    padding: 20px;
+    padding: 28px;
   }
 
-  .hero-band {
+  .page-header {
     align-items: flex-start;
     flex-direction: column;
+    gap: 14px;
   }
 
-  .metric-grid {
+  .metric-grid,
+  .stat-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
-  }
-
-  .metric-card {
-    min-height: 0;
-    gap: 6px;
-    padding: 14px;
   }
 
   .metric-value {
-    font-size: 24px;
+    font-size: 21px;
   }
 
-  .data-table {
-    font-size: 12px;
-  }
-
-  .data-table th,
-  .data-table td {
-    padding: 7px 8px;
-  }
-
-  .panel-head {
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-
-  .nav-toggle {
-    display: flex;
-  }
-
-  .nav {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    display: none;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-    border-bottom: 1px solid var(--border);
-    padding: 16px 20px;
-    background: var(--panel);
-    box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
-  }
-
-  .nav-open {
-    display: flex;
-  }
-
-  .nav form {
-    width: 100%;
-  }
-
-  .nav .button {
-    width: 100%;
-  }
-
-  .table-panel-scroll {
-    overflow-x: auto;
-  }
-}
-
-@media screen and (max-width: 420px) {
-  .metric-grid {
+  .card-grid {
     grid-template-columns: 1fr;
   }
-}
 
-/* ---------------------------------------------------------------------
-   Collapsible report sections (see components/collapsible-section.tsx).
-
-   Built on native <details>/<summary> so the open/close click needs no
-   JS. The content lives OUTSIDE <details> as a plain sibling div,
-   revealed with a `.report-section[open] + .report-section-body`
-   selector — NOT nested inside <details>. Chromium renders a closed
-   <details>'s children through an internal ::details-content box with
-   its own content-visibility that a rule on a nested child can't
-   override, which is what let this ship completely broken: every
-   section rendered as a title with no table under it, on every screen
-   size, since every section starts closed. Keeping the body out of
-   <details> entirely sidesteps that.
-
-   Desktop ignores open/closed and always shows every section; only the
-   mobile/tablet rule hides anything, and it's `screen`-scoped like the
-   other mobile rules so printed reports are unaffected. Exporting a
-   screenshot from a phone (lib/export.ts's exportSectionToImage, which
-   rasterizes the live DOM rather than going through @media print)
-   separately force-opens sections before capturing — see that function.
-   --------------------------------------------------------------------- */
-.report-section {
-  margin-top: 28px;
-}
-
-.report-section-summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  cursor: pointer;
-  list-style: none;
-}
-
-.report-section-summary::-webkit-details-marker {
-  display: none;
-}
-
-.report-section-summary h3 {
-  margin: 0 0 8px;
-}
-
-.report-section-summary::after {
-  content: "\25BE";
-  flex: 0 0 auto;
-  color: var(--muted);
-  font-size: 13px;
-  transition: transform 0.15s ease;
-}
-
-.report-section[open] > .report-section-summary::after {
-  transform: rotate(180deg);
-}
-
-.report-section-body {
-  display: block;
-}
-
-@media screen and (min-width: 961px) {
-  .report-section-summary {
-    cursor: default;
+  .chart-box {
+    height: 250px;
   }
 
-  .report-section-summary::after {
-    display: none;
+  /* Sections collapse on small screens so a report made of one section
+     per street doesn't force endless scrolling to reach the one you
+     want. Desktop always shows every body regardless of the <details>
+     state, so no JS is needed for the interaction itself. */
+  .section-chevron {
+    display: inline-flex;
   }
-}
 
-@media screen and (max-width: 960px) {
-  .report-section-body {
+  .section-body {
     display: none;
   }
 
-  .report-section[open] + .report-section-body {
+  .section:has(.report-section[open]) .section-body {
     display: block;
   }
 
-  .report-section {
-    margin-top: 12px;
+  .section-head {
+    padding: 11px 13px;
   }
 
-  .report-section-summary {
-    padding: 10px 12px;
-    border: 1px solid var(--border);
+}
+
+@media screen and (max-width: 560px) {
+  :root {
+    --fs-display: 23px;
+    --fs-stat: 20px;
+  }
+
+  .metric-grid,
+  .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .segmented {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .selection-bar {
+    width: calc(100% - 8px);
+    justify-content: center;
     border-radius: var(--radius);
-    background: var(--panel);
-  }
-
-  .report-section-summary h3 {
-    margin: 0;
-  }
-
-  .report-section-summary:hover {
-    background: var(--row-hover);
   }
 }
 
 /* ---------------------------------------------------------------------
-   Card layout for data tables on mobile/tablet (<=960px).
+   Card layout for data tables on small screens.
 
-   Opt in per-table with the `data-table-cards` class alongside
-   `data-table` (see components using it). Every <td> needs a
-   `data-label="Column Name"` attribute — that's what supplies the label
-   shown above each value once the table stops having visible column
-   headers. The header row is kept for screen readers (visually hidden,
-   not display:none) rather than dropped.
+   Opt in per-table with `data-table-cards` alongside `data-table`. Every
+   <td> needs `data-label="Column Name"` - that supplies the label shown
+   above each value once column headers are gone. The header row is kept
+   for screen readers (visually hidden, not display:none).
 
-   Row 1 of a table becomes the card's title (bold, tinted background,
-   no label) by default. A table where column 1 isn't a meaningful title
-   (editable-data-table's tables lead with an internal id) opts out by
-   marking the real title cell with `data-table-card-title` — see
-   editable-data-table.tsx.
+   Row 1 becomes the card title by default; a table whose first column
+   isn't a meaningful title marks the real one with
+   `data-table-card-title` (see editable-data-table.tsx).
    --------------------------------------------------------------------- */
+
 @media screen and (max-width: 960px) {
   .data-table-cards thead tr:first-child {
     position: absolute;
@@ -1187,11 +2229,10 @@ input {
 
   .data-table-cards tbody tr,
   .data-table-cards tfoot tr {
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    background: var(--panel);
-    box-shadow: var(--shadow-sm);
+    background: var(--surface);
     overflow: hidden;
   }
 
@@ -1199,25 +2240,39 @@ input {
     margin-bottom: 0;
   }
 
-  .data-table-cards tbody tr:nth-child(even) {
-    background: var(--panel);
+  .data-table-cards tbody tr:hover td {
+    background: none;
   }
 
   .data-table-cards tfoot tr {
     margin-top: 4px;
     margin-bottom: 0;
-    border-color: var(--primary-soft);
-    background: var(--panel-alt);
-    font-weight: 700;
+    border-color: var(--border-strong);
+    background: var(--surface-2);
+    font-weight: 650;
   }
 
   .data-table-cards td {
     display: flex;
     flex-direction: column;
     gap: 3px;
-    padding: 10px 14px;
+    padding: 9px 13px;
     border-bottom: 1px solid var(--border);
     word-break: break-word;
+  }
+
+  /* .num right-aligns a cell for column scanning, which only exists on a
+     real table. In card layout the cell is a stacked label/value pair, so
+     right-alignment just pushes both to the wrong edge. */
+  .data-table-cards td.num,
+  .data-table-cards th.num {
+    text-align: left;
+  }
+
+  /* Row cards carry their own border, so they need breathing room inside
+     the section card rather than sitting flush against its edge. */
+  .section .section-body > .table-panel-scroll {
+    padding: 10px;
   }
 
   .data-table-cards td:last-child {
@@ -1226,30 +2281,28 @@ input {
 
   .data-table-cards td::before {
     content: attr(data-label);
-    color: var(--muted);
-    font-size: 11px;
-    font-weight: 750;
-    letter-spacing: 0.03em;
+    color: var(--text-muted);
+    font-size: var(--fs-label);
+    font-weight: 650;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
   }
 
-  /* Checkbox/boolean cells read better as a single inline row than a
-     stacked label-over-control pair. */
+  /* Checkbox cells read better as one inline row than a stacked
+     label-over-control pair. */
   .data-table-cards td:has(> input[type="checkbox"]) {
     flex-direction: row;
     align-items: center;
     gap: 8px;
   }
 
-  /* Card title: first cell by default, or the explicitly marked one when
-     a table opts out of that guess (see comment above). */
   .data-table-cards td:first-child,
   .data-table-cards td.data-table-card-title {
-    padding: 12px 14px;
-    background: var(--panel-alt);
-    color: var(--foreground);
-    font-size: 15px;
-    font-weight: 750;
+    padding: 11px 13px;
+    background: var(--surface-2);
+    color: var(--text-strong);
+    font-size: var(--fs-body);
+    font-weight: 650;
   }
 
   .data-table-cards td:first-child::before,
@@ -1258,10 +2311,10 @@ input {
   }
 
   .data-table-cards tr:has(td.data-table-card-title) td:first-child {
-    padding: 10px 14px;
-    background: var(--panel);
+    padding: 9px 13px;
+    background: var(--surface);
     color: inherit;
-    font-size: 14px;
+    font-size: var(--fs-small);
     font-weight: 400;
   }
 
@@ -1269,10 +2322,8 @@ input {
     display: block;
   }
 
-  /* The status dot from .cell-success/-warning/-danger (see the table
-     rules above) is redundant with the card's own colored, bold value —
-     drop it here rather than fighting the label pseudo-element for the
-     same ::before. */
+  /* The status dot is redundant next to a card's own coloured, bold
+     value - reuse the ::before for the label instead of fighting it. */
   .data-table-cards .cell-success::before,
   .data-table-cards .cell-warning::before,
   .data-table-cards .cell-danger::before {
@@ -1285,35 +2336,31 @@ input {
   }
 
   /* editable-data-table's second header row holds live filter inputs
-     (not just labels), so it stays visible — reflowed into a compact
-     2-column form instead of a table row. A fixed 2-column grid rather
-     than flex-wrap with a px basis: on a ~390px phone the available
-     width after padding/gap is under 300px, so two flex items with a
-     150px basis mathematically can't both fit on a line (150+150+gap
-     already exceeds it) — flex-grow then stretches the single item
-     that *does* fit to the full row, so every field silently rendered
-     one-per-row instead of two, pushing the actual data rows in the
-     grid's scroll box far below the fold. Grid with two 1fr tracks
-     sidesteps that arithmetic entirely. */
+     (not just labels), so it stays visible - reflowed into a compact
+     2-column form. A fixed 2-column grid rather than flex-wrap with a px
+     basis: on a ~390px phone the width after padding is under 300px, so
+     two flex items with a 150px basis mathematically cannot share a
+     line, and flex-grow then stretched the one that fit to the full row
+     - every field silently rendered one per row. */
   .data-table-cards thead tr:last-child:has(.filter-cell) {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
-    padding: 12px 14px;
+    padding: 12px 13px;
     margin-bottom: 12px;
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    background: var(--panel-alt);
+    background: var(--surface-2);
   }
 
   .data-table-cards thead tr:last-child .filter-cell {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    min-width: 0;
     padding: 0;
     background: none;
     text-transform: none;
-    min-width: 0;
   }
 
   .data-table-cards thead tr:last-child .filter-cell:empty {
@@ -1322,10 +2369,204 @@ input {
 
   .data-table-cards thead tr:last-child .filter-cell::before {
     content: attr(data-label);
-    color: var(--muted);
-    font-size: 11px;
-    font-weight: 750;
-    letter-spacing: 0.03em;
+    color: var(--text-muted);
+    font-size: var(--fs-label);
+    font-weight: 650;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   9. Print
+
+   Reports print as plain black-on-white documents: no chrome, no
+   surfaces, no zebra, no status tints beyond the text colour, so output
+   is identical regardless of the browser's background-graphics setting
+   and of the viewer's light/dark theme.
+   --------------------------------------------------------------------- */
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+
+  html,
+  body {
+    /* Floor for all print text; nothing in a report should render
+       smaller than this on the printed A4 page. */
+    font-size: 12px;
+    color: #000;
+    background: #fff;
+  }
+
+  .app {
+    display: block;
+  }
+
+  .sidebar,
+  .appbar,
+  .page-actions,
+  .filter-bar,
+  .filter-banner,
+  .section-actions,
+  .export-toolbar,
+  .pagination,
+  .selection-bar,
+  .toast-stack,
+  .no-print {
+    display: none !important;
+  }
+
+  .content {
+    max-width: none;
+    padding: 0;
+  }
+
+  .page-header {
+    display: block;
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    font-size: 18px;
+  }
+
+  .page-desc {
+    font-size: 12px;
+  }
+
+  .section,
+  .panel,
+  .table-panel {
+    border: none;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    break-inside: auto;
+  }
+
+  .section-group-head {
+    margin-bottom: 8px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid #666;
+  }
+
+  .section-group-head h2 {
+    font-size: 15px;
+  }
+
+  .section-head {
+    padding: 0 0 4px;
+    border-bottom: 1px solid #999;
+    background: none;
+  }
+
+  .section-title {
+    font-size: 13px;
+  }
+
+  .section-count {
+    padding: 0;
+    background: none;
+  }
+
+  .section-body,
+  .section-body-pad,
+  .panel-body {
+    display: block !important;
+    padding: 0;
+  }
+
+  .table-panel-scroll,
+  .table-wrap {
+    overflow: visible !important;
+  }
+
+  /* Screen layout reserves a minimum per tile, which doesn't reliably
+     fit four across A4's printable width; drop the minimum so tiles
+     always divide the page evenly instead of wrapping unpredictably. */
+  .metric-grid,
+  .stat-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+
+  .metric-card,
+  .stat {
+    min-height: 0;
+    gap: 2px;
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    background: none !important;
+    box-shadow: none;
+    break-inside: avoid;
+  }
+
+  .metric-head,
+  .metric-card .metric-value,
+  .metric-sub {
+    color: #000 !important;
+    font-size: 11px;
+  }
+
+  .metric-card .metric-value {
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .data-table {
+    width: 100%;
+    font-size: 12px;
+  }
+
+  .data-table th,
+  .data-table td {
+    position: static;
+    padding: 5px 7px;
+    font-size: 12px;
+    color: #000;
+    background: none !important;
+  }
+
+  .data-table th {
+    border-bottom: 1px solid #666;
+  }
+
+  .data-table thead {
+    display: table-header-group;
+  }
+
+  /* Browsers default <tfoot> to table-footer-group, which repeats it at
+     the bottom of every printed page. Reports with a subtotal row per
+     table (Silai by Group) want it once, right after that table's rows. */
+  .data-table tfoot {
+    display: table-row-group;
+  }
+
+  .data-table tr {
+    break-inside: avoid;
+  }
+
+  .status-pill,
+  .pill {
+    border: 0;
+    padding: 0;
+    background: none !important;
+    color: #000 !important;
+    font-weight: 650;
+  }
+
+  .cell-success,
+  .cell-warning,
+  .cell-danger {
+    color: #000 !important;
+  }
+
+  .cell-success::before,
+  .cell-warning::before,
+  .cell-danger::before {
+    display: none;
   }
 }

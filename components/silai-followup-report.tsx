@@ -2,8 +2,9 @@
 
 import { useMemo } from "react";
 import { formatCurrency } from "@/lib/format";
-import { ExportToolbar } from "@/components/export-toolbar";
-import { CollapsibleSection } from "@/components/collapsible-section";
+import { ExportMenu } from "@/components/ui/export-menu";
+import { Section } from "@/components/ui/section";
+import { ReportToolbar } from "@/components/ui/report-toolbar";
 import {
   exportSectionsToCsv,
   exportSectionsToHtml,
@@ -115,61 +116,77 @@ export function SilaiFollowUpReport({ members }: SilaiFollowUpReportProps) {
   ];
 
   return (
-    <div>
-      <ExportToolbar
-        onExportCsv={() => exportSectionsToCsv("silai-followup-report.csv", fullReportSections())}
-        onExportHtml={() => exportSectionsToHtml("silai-followup-report.html", "Silai Follow-up Report", fullReportSections())}
-        onExportPdf={exportPdf}
-        onExportImage={exportImage}
-        onExportExcel={exportExcel}
-        onCopyWhatsAppText={copyWhatsAppText}
-      />
+    <div className="stack">
+      <ReportToolbar
+        actions={
+          <ExportMenu
+            label="Export report"
+            onExportCsv={() => exportSectionsToCsv("silai-followup-report.csv", fullReportSections())}
+            onExportHtml={() =>
+              exportSectionsToHtml(
+                "silai-followup-report.html",
+                "Silai Follow-up Report",
+                fullReportSections()
+              )
+            }
+            onExportPdf={exportPdf}
+            onExportImage={exportImage}
+            onExportExcel={exportExcel}
+            onCopyWhatsAppText={copyWhatsAppText}
+          />
+        }
+      >
+        <span className="muted">
+          {followUpRows.length} member{followUpRows.length === 1 ? "" : "s"} still to follow up
+        </span>
+      </ReportToolbar>
 
+      {/* This report exists to chase what's missing, so the two counts take
+          the colours their status already means elsewhere in the app, and
+          the money outstanding leads. */}
       <div className="metric-grid" aria-label="Silai follow-up summary">
-        <article className="metric-card">
-          <div className="metric-head">
-            <span>Not Paid</span>
-          </div>
-          <div className="metric-value">{notPaidCount}</div>
-          <div className="metric-sub">Members with no contribution recorded</div>
-        </article>
-        <article className="metric-card">
-          <div className="metric-head">
-            <span>Partially Paid</span>
-          </div>
-          <div className="metric-value">{partiallyPaidCount}</div>
-          <div className="metric-sub">Below the fund minimum</div>
-        </article>
-        <article className="metric-card">
+        <article className="metric-card" data-emphasis="lead">
           <div className="metric-head">
             <span>Total Balance Due</span>
           </div>
           <div className="metric-value">{formatCurrency(totalBalanceDue)}</div>
           <div className="metric-sub">Outstanding across both sections</div>
         </article>
+        <article className="metric-card" data-state={notPaidCount > 0 ? "critical" : "positive"}>
+          <div className="metric-head">
+            <span>Not Paid</span>
+          </div>
+          <div className="metric-value">{notPaidCount}</div>
+          <div className="metric-sub">Members with no contribution recorded</div>
+        </article>
+        <article className="metric-card" data-state={partiallyPaidCount > 0 ? "warning" : "positive"}>
+          <div className="metric-head">
+            <span>Partially Paid</span>
+          </div>
+          <div className="metric-value">{partiallyPaidCount}</div>
+          <div className="metric-sub">Below the fund minimum</div>
+        </article>
       </div>
 
       {followUpRows.length > 0 ? (
         sections.map((section) => (
-          <CollapsibleSection
+          <Section
             key={section.status}
+            count={section.rows.length}
             title={
-              <>
-                <span className={`status-pill ${STATUS_CLASS[section.status]}`}>{section.sectionName}</span>{" "}
-                ({section.rows.length})
-              </>
+              <span className={`status-pill ${STATUS_CLASS[section.status]}`}>{section.sectionName}</span>
             }
           >
             {section.rows.length > 0 ? (
-              <div className="table-panel table-panel-scroll">
+              <div className="table-panel-scroll">
                 <table className="data-table data-table-cards">
                   <thead>
                     <tr>
                       <th>Name</th>
                       <th>Phone</th>
                       <th>Address</th>
-                      <th>Paid</th>
-                      <th>Balance Due</th>
+                      <th className="num">Paid</th>
+                      <th className="num">Balance Due</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -178,15 +195,21 @@ export function SilaiFollowUpReport({ members }: SilaiFollowUpReportProps) {
                         <td>{row.name}</td>
                         <td data-label="Phone">{row.phone ?? "—"}</td>
                         <td data-label="Address">{row.address ?? "—"}</td>
-                        <td data-label="Paid">{row.paid > 0 ? formatCurrency(row.paid) : "—"}</td>
-                        <td data-label="Balance Due">{formatCurrency(row.balanceDue)}</td>
+                        <td data-label="Paid" className="num">
+                          {row.paid > 0 ? formatCurrency(row.paid) : "—"}
+                        </td>
+                        <td data-label="Balance Due" className="num">
+                          {formatCurrency(row.balanceDue)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
                     <tr>
                       <td colSpan={4}>Subtotal</td>
-                      <td data-label="Balance Due">{formatCurrency(section.balanceDueSubtotal)}</td>
+                      <td data-label="Balance Due" className="num">
+                        {formatCurrency(section.balanceDueSubtotal)}
+                      </td>
                     </tr>
                   </tfoot>
                 </table>
@@ -196,7 +219,7 @@ export function SilaiFollowUpReport({ members }: SilaiFollowUpReportProps) {
                 <p>No members in this section.</p>
               </div>
             )}
-          </CollapsibleSection>
+          </Section>
         ))
       ) : (
         <div className="empty-state">

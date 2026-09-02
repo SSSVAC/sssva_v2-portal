@@ -33,3 +33,19 @@ where email = 'staff@example.com';
 ```
 
 Every write made through the Records API (edits, bulk deletes, resyncs) is logged to the `audit_log` table with the acting user's email, so it doubles as a history you can review from the Supabase table editor.
+
+## Function arrangements
+
+`/functions` tracks what each temple function needs, who has committed to it, and what it actually cost. A function holds ordered sections; a section holds ordered line items. The section's type decides which columns appear — a requirements list, a menu with its own vendor/estimate/settlement block, or a printed agenda — so the same three tables cover every planning sheet the temple keeps.
+
+Load the two existing plans (Maha Kumbabhishekam 2026 and the Annathanam food order) by running `supabase/seed-functions.sql` in the Supabase SQL editor after `supabase/schema.sql`. It deletes and reinserts those two functions by slug, so run it once at setup — re-running discards any edits made in the app for them.
+
+## Guest access
+
+Staff sign in with email and password. Anyone else can be given a **guest pass**: a shared code, valid until a date you choose, that grants read-only access to the function trackers and the Silai and Event reports. Records, the dashboard and the financial reports stay staff-only.
+
+1. Set `GUEST_SESSION_SECRET` to any random string of 16 characters or more. Guest sign-in stays disabled until you do.
+2. As an admin, open **Guest access** in the sidebar, give the pass a label ("Kalluri Salai contributors") and an expiry date, and create it.
+3. The code is shown **once** — copy it then. Codes are stored hashed, so a lost code can't be recovered, only replaced with **New code**, which invalidates the old one immediately.
+
+Every request re-checks the pass against the database, so revoking one or letting it expire takes effect straight away rather than when a cookie happens to lapse. Guests can't write anything: every mutation route rejects them with a 403.

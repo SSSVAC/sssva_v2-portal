@@ -1,9 +1,11 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Topbar } from "@/components/topbar";
+import { AppShell } from "@/components/shell/app-shell";
+import { PageHeader } from "@/components/shell/page-header";
 import { ReportGalleryCard } from "@/components/reports/report-gallery-card";
 import { CATEGORY_META, getReportsByCategory } from "@/lib/reports/registry";
-import { requireAuthedSupabase } from "@/lib/reports/require-auth";
+import { CATEGORY_ACCENT, CATEGORY_ACCENT_SOFT } from "@/lib/nav";
+import { requireViewer, viewerChrome } from "@/lib/auth/viewer";
+import { guestCanSeeReportCategory } from "@/lib/auth/guest-scope";
 import type { ReportCategory } from "@/lib/reports/types";
 
 export const dynamic = "force-dynamic";
@@ -13,33 +15,43 @@ type PageProps = {
 };
 
 export default async function ReportCategoryPage({ params }: PageProps) {
-  await requireAuthedSupabase();
+  const viewer = await requireViewer();
 
   const { category } = await params;
   const meta = CATEGORY_META[category as ReportCategory];
   const reports = getReportsByCategory(category);
   if (!meta || reports.length === 0) notFound();
 
-  return (
-    <main className="shell">
-      <Topbar active="reports" />
-      <div className="main">
-        <section className="hero-band">
-          <div>
-            <nav className="breadcrumb muted no-print" aria-label="Breadcrumb">
-              <Link href="/reports">Reports</Link> <span aria-hidden="true">/</span> {meta.label}
-            </nav>
-            <h1>{meta.label}</h1>
-            <p className="muted">{meta.description}</p>
-          </div>
-        </section>
+  // 404 rather than a redirect: a guest shouldn't be able to tell an
+  // off-limits family apart from one that doesn't exist.
+  if (viewer.kind === "guest" && !guestCanSeeReportCategory(category)) notFound();
 
-        <div className="metric-grid" aria-label={`${meta.label} list`}>
-          {reports.map((report) => (
-            <ReportGalleryCard key={report.slug} report={report} />
-          ))}
-        </div>
+  return (
+    <AppShell
+      viewer={viewerChrome(viewer)}
+      crumbs={[{ label: "Reports", href: "/reports" }, { label: meta.short }]}
+    >
+      <PageHeader
+        title={meta.label}
+        description={meta.description}
+        eyebrow={
+          <span
+            className="cat-chip"
+            style={{
+              ["--cat" as string]: CATEGORY_ACCENT[category as ReportCategory],
+              ["--cat-soft" as string]: CATEGORY_ACCENT_SOFT[category as ReportCategory]
+            }}
+          >
+            {reports.length} report{reports.length === 1 ? "" : "s"}
+          </span>
+        }
+      />
+
+      <div className="card-grid">
+        {reports.map((report) => (
+          <ReportGalleryCard key={report.slug} report={report} />
+        ))}
       </div>
-    </main>
+    </AppShell>
   );
 }

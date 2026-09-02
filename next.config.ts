@@ -6,7 +6,9 @@ const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: https://images.unsplash.com",
+  // The login page's art is built from gradients now, so no remote
+  // image host needs allowing.
+  "img-src 'self' data:",
   "font-src 'self' data:",
   "connect-src 'self'",
   "frame-ancestors 'none'",

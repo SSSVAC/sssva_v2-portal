@@ -34,10 +34,28 @@ export function getReportsByCategory(category: string) {
   return REPORT_REGISTRY.filter((report) => report.category === category);
 }
 
-export const CATEGORY_META: Record<ReportCategory, { label: string; description: string }> = {
-  financial: { label: "Financial Reports", description: "Monthly income, donations & donor activity" },
-  silai: { label: "Silai Reports", description: "Statue fund contributions & collection tracking" },
-  events: { label: "Event Reports", description: "Annual festival funds, by year" }
+// `label` is the full page title; `short` is the one-word family name used
+// in the sidebar, breadcrumbs and category chips, where "Financial Reports"
+// inside a list already headed "Reports" is just noise.
+export const CATEGORY_META: Record<
+  ReportCategory,
+  { label: string; short: string; description: string }
+> = {
+  financial: {
+    label: "Financial Reports",
+    short: "Financial",
+    description: "Monthly income, donations & donor activity"
+  },
+  silai: {
+    label: "Silai Reports",
+    short: "Silai",
+    description: "Statue fund contributions & collection tracking"
+  },
+  events: {
+    label: "Event Reports",
+    short: "Events",
+    description: "Annual festival funds, by year"
+  }
 };
 
 export const CATEGORY_ORDER: ReportCategory[] = ["financial", "silai", "events"];

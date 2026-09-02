@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { formatCurrency } from "@/lib/format";
-import { ExportToolbar } from "@/components/export-toolbar";
+import { Search } from "lucide-react";
+import { ExportMenu } from "@/components/ui/export-menu";
+import { Section } from "@/components/ui/section";
 import { SortableTh, type SortDirection } from "@/components/sortable-th";
 import {
   exportSectionsToCsv,
@@ -91,15 +93,16 @@ export function MonthlyDonationsReport({ months, donors }: MonthlyDonationsRepor
   ];
 
   return (
-    <div>
+    <div className="stack">
       <div className="metric-grid" aria-label="Monthly donations summary">
-        <article className="metric-card">
+        <article className="metric-card" data-emphasis="lead">
           <div className="metric-head">
             <span>Total Collected</span>
           </div>
           <div className="metric-value">{formatCurrency(grandTotal)}</div>
           <div className="metric-sub">
-            Last {months.length} months{months.length > 0 ? ` (${months[0].label} – ${months[months.length - 1].label})` : ""}
+            Last {months.length} months
+            {months.length > 0 ? ` (${months[0].label} – ${months[months.length - 1].label})` : ""}
           </div>
         </article>
         <article className="metric-card">
@@ -118,25 +121,44 @@ export function MonthlyDonationsReport({ months, donors }: MonthlyDonationsRepor
         </article>
       </div>
 
-      <ExportToolbar
-        onExportCsv={() => exportSectionsToCsv("member-monthly-donation.csv", exportSections())}
-        onExportHtml={() => exportSectionsToHtml("member-monthly-donation.html", "Member Monthly Donation", exportSections())}
-        onExportPdf={() => printReportSection("member-monthly-donation")}
-        onExportImage={() => exportSectionToImage("member-monthly-donation", "member-monthly-donation.png")}
-      />
+      <Section
+        title="Member Monthly Donation"
+        count={`${sortedDonors.length} of ${donors.length}`}
+        actions={
+          <ExportMenu
+            onExportCsv={() => exportSectionsToCsv("member-monthly-donation.csv", exportSections())}
+            onExportHtml={() =>
+              exportSectionsToHtml(
+                "member-monthly-donation.html",
+                "Member Monthly Donation",
+                exportSections()
+              )
+            }
+            onExportPdf={() => printReportSection("member-monthly-donation")}
+            onExportImage={() =>
+              exportSectionToImage("member-monthly-donation", "member-monthly-donation.png")
+            }
+          />
+        }
+      >
+        <div className="records-toolbar no-print" style={{ padding: "12px 16px 0", marginBottom: 12 }}>
+          <div className="searchbox">
+            <Search size={14} />
+            <input
+              type="search"
+              placeholder="Search by name…"
+              aria-label="Search members by name"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className="input"
+              style={{ paddingTop: 6, paddingBottom: 6 }}
+            />
+          </div>
+        </div>
 
-      <input
-        type="text"
-        placeholder="Search by name…"
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        className="filter-input no-print"
-        style={{ maxWidth: 280, marginBottom: 16 }}
-      />
-
-      {sortedDonors.length > 0 ? (
-        <div className="table-panel table-panel-scroll">
-          <table className="data-table data-table-cards">
+        {sortedDonors.length > 0 ? (
+          <div className="table-panel-scroll">
+            <table className="data-table data-table-cards">
             <thead>
               <tr>
                 <SortableTh
@@ -162,40 +184,45 @@ export function MonthlyDonationsReport({ months, donors }: MonthlyDonationsRepor
                 />
               </tr>
             </thead>
-            <tbody>
-              {sortedDonors.map((donor) => (
-                <tr key={donor.id}>
-                  <td>{donor.donorName}</td>
-                  {months.map((month) => {
-                    const amount = donor.amounts[month.key] ?? 0;
-                    return (
-                      <td key={month.key} data-label={month.label}>
-                        {amount > 0 ? formatCurrency(amount) : "—"}
-                      </td>
-                    );
-                  })}
-                  <td data-label="Total">{formatCurrency(donor.total)}</td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td>Total</td>
-                {monthTotals.map((amount, index) => (
-                  <td key={months[index].key} data-label={months[index].label}>
-                    {formatCurrency(amount)}
-                  </td>
+              <tbody>
+                {sortedDonors.map((donor) => (
+                  <tr key={donor.id}>
+                    <td>{donor.donorName}</td>
+                    {months.map((month) => {
+                      const amount = donor.amounts[month.key] ?? 0;
+                      return (
+                        <td key={month.key} data-label={month.label} className="num">
+                          {amount > 0 ? formatCurrency(amount) : "—"}
+                        </td>
+                      );
+                    })}
+                    <td data-label="Total" className="num">
+                      {formatCurrency(donor.total)}
+                    </td>
+                  </tr>
                 ))}
-                <td data-label="Total">{formatCurrency(grandTotal)}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      ) : (
-        <div className="empty-state">
-          <p>No members match this filter.</p>
-        </div>
-      )}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td>Total</td>
+                  {monthTotals.map((amount, index) => (
+                    <td key={months[index].key} data-label={months[index].label} className="num">
+                      {formatCurrency(amount)}
+                    </td>
+                  ))}
+                  <td data-label="Total" className="num">
+                    {formatCurrency(grandTotal)}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        ) : (
+          <div className="empty-state">
+            <p>No members match this filter.</p>
+          </div>
+        )}
+      </Section>
     </div>
   );
 }

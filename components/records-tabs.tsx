@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { ExternalLink } from "lucide-react";
 import { EditableDataTable, type RecordColumn } from "@/components/editable-data-table";
+import { useUrlParamSetter } from "@/lib/reports/use-url-param";
+import { RECORD_TABLES, type RecordTableId } from "@/lib/nav";
 
 type Row = Record<string, unknown>;
 
@@ -15,22 +18,21 @@ type RecordsTabsProps = {
   invoices: Row[];
   expenses: Row[];
   bills: Row[];
-  initialTab?: TabId;
+  initialTab?: RecordTableId;
   initialCustomerFilter?: CustomerFilter | null;
   isAdmin: boolean;
 };
 
 // Column order is what staff actually scan for day to day: the
-// human-readable identifier leads (and doubles as the mobile card
-// title), then the fields people look up or edit most, with the
-// internal Zoho id trailing at the end for the rare cross-reference —
-// not hidden, just out of the way. The raw Supabase `id` (a UUID) isn't
-// listed at all: EditableDataTable already keys/edits/deletes rows off
-// row.id directly regardless of whether it's a visible column, so
-// showing it bought nothing but wasted the first column on every table.
-// currency_code is dropped outright rather than reordered — every row
-// across all 437 invoices is "INR", so it's not a column, it's a
-// constant.
+// human-readable identifier leads (and doubles as the mobile card title),
+// then the fields people look up or edit most, with the internal Zoho id
+// trailing at the end for the rare cross-reference — not hidden, just out
+// of the way. The raw Supabase `id` (a UUID) isn't listed at all:
+// EditableDataTable keys/edits/deletes rows off row.id regardless of
+// whether it's a visible column, so showing it bought nothing but the
+// first column of every table. currency_code is dropped outright rather
+// than reordered — every row across all invoices is "INR", so it's not a
+// column, it's a constant.
 const CUSTOMER_COLUMNS: RecordColumn[] = [
   { key: "display_name", label: "Name", type: "text", editable: true, cardTitle: true },
   { key: "company_name", label: "Company", type: "text", editable: true },
@@ -86,14 +88,7 @@ const BILL_COLUMNS: RecordColumn[] = [
   { key: "zoho_bill_id", label: "Zoho ID", type: "text", editable: false }
 ];
 
-const TABS = [
-  { id: "customers", label: "Customers" },
-  { id: "invoices", label: "Invoices" },
-  { id: "expenses", label: "Expenses" },
-  { id: "bills", label: "Bills" }
-] as const;
-
-type TabId = (typeof TABS)[number]["id"];
+type TabId = RecordTableId;
 
 export function RecordsTabs({
   customers,
@@ -105,7 +100,20 @@ export function RecordsTabs({
   isAdmin
 }: RecordsTabsProps) {
   const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? "customers");
-  const [customerFilter, setCustomerFilter] = useState<CustomerFilter | null>(initialCustomerFilter ?? null);
+  const [customerFilter, setCustomerFilter] = useState<CustomerFilter | null>(
+    initialCustomerFilter ?? null
+  );
+  const setUrlParams = useUrlParamSetter();
+
+  const rowsByTab: Record<TabId, Row[]> = { customers, invoices, expenses, bills };
+
+  // Keeps ?tab= in sync so the sidebar highlights the table you're looking
+  // at and the view stays shareable, without a server round-trip — all four
+  // tables are already on the client.
+  function selectTab(tab: TabId) {
+    setActiveTab(tab);
+    setUrlParams({ tab: tab === "customers" ? null : tab });
+  }
 
   function viewCustomerInvoices(customer: Row) {
     const id = String(customer.zoho_customer_id ?? "");
@@ -118,64 +126,101 @@ export function RecordsTabs({
   }
 
   return (
-    <div className="table-panel" style={{ minWidth: 0 }}>
-      <div className="report-tablist" role="tablist" aria-label="Record tables">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            role="tab"
-            type="button"
-            aria-selected={activeTab === tab.id}
-            className={`report-tab ${activeTab === tab.id ? "report-tab-active" : ""}`}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            {tab.label}
-          </button>
-        ))}
+    <div>
+      {/* A segmented control carrying each table's row count, so you can see
+          how much data is behind a tab before opening it. The old underlined
+          tab strip gave no such signal and read like the report category
+          tabs elsewhere in the app, which navigate rather than switch. */}
+      <div className="records-toolbar">
+        <div className="segmented" role="tablist" aria-label="Record tables">
+          {RECORD_TABLES.map((tab) => (
+            <button
+              key={tab.id}
+              role="tab"
+              type="button"
+              aria-selected={activeTab === tab.id}
+              className={`segment${activeTab === tab.id ? " segment-active" : ""}`}
+              onClick={() => selectTab(tab.id)}
+            >
+              {tab.label}
+              <span className="segment-count">{rowsByTab[tab.id].length}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {activeTab === "customers" && (
         <EditableDataTable
+          key="customers"
           table="zoho_customers"
+          title="Customers"
           columns={CUSTOMER_COLUMNS}
           rows={customers}
           isAdmin={isAdmin}
           actionColumn={{
             label: "Invoices",
             render: (row) => (
-              <button type="button" className="button secondary" onClick={() => viewCustomerInvoices(row)}>
-                View Invoices
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => viewCustomerInvoices(row)}
+              >
+                <ExternalLink size={13} />
+                Invoices
               </button>
             )
           }}
         />
       )}
+
       {activeTab === "invoices" && (
-        <>
-          {customerFilter && (
-            <div className="filter-banner">
-              <span>
-                Showing invoices for <strong>{customerFilter.name}</strong>
-              </span>
-              <button type="button" className="button secondary" onClick={() => setCustomerFilter(null)}>
-                Clear filter
-              </button>
-            </div>
-          )}
-          <EditableDataTable
-            table="zoho_invoices"
-            columns={INVOICE_COLUMNS}
-            rows={invoices}
-            isAdmin={isAdmin}
-            presetFilter={customerFilter ? (row) => row.customer_id === customerFilter.id : undefined}
-          />
-        </>
+        <EditableDataTable
+          key="invoices"
+          table="zoho_invoices"
+          title="Invoices"
+          columns={INVOICE_COLUMNS}
+          rows={invoices}
+          isAdmin={isAdmin}
+          presetFilter={customerFilter ? (row) => row.customer_id === customerFilter.id : undefined}
+          banner={
+            customerFilter && (
+              <>
+                <span>
+                  Filtered to <strong>{customerFilter.name}</strong>
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => setCustomerFilter(null)}
+                >
+                  Clear
+                </button>
+              </>
+            )
+          }
+        />
       )}
+
       {activeTab === "expenses" && (
-        <EditableDataTable table="zoho_expenses" columns={EXPENSE_COLUMNS} rows={expenses} isAdmin={isAdmin} />
+        <EditableDataTable
+          key="expenses"
+          table="zoho_expenses"
+          title="Expenses"
+          columns={EXPENSE_COLUMNS}
+          rows={expenses}
+          isAdmin={isAdmin}
+        />
       )}
+
       {activeTab === "bills" && (
-        <EditableDataTable table="zoho_bills" columns={BILL_COLUMNS} rows={bills} isAdmin={isAdmin} />
+        <EditableDataTable
+          key="bills"
+          table="zoho_bills"
+          title="Bills"
+          columns={BILL_COLUMNS}
+          rows={bills}
+          isAdmin={isAdmin}
+        />
       )}
     </div>
   );

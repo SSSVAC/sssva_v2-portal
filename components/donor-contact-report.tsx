@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { formatCurrency } from "@/lib/format";
-import { ExportToolbar } from "@/components/export-toolbar";
+import { Search } from "lucide-react";
+import { ExportMenu } from "@/components/ui/export-menu";
+import { Section } from "@/components/ui/section";
 import { SortableTh, type SortDirection } from "@/components/sortable-th";
 import {
   exportSectionsToCsv,
@@ -87,45 +89,59 @@ export function DonorContactReport({ months, donors }: DonorContactReportProps) 
   ];
 
   return (
-    <div>
+    <div className="stack">
       <div className="metric-grid" aria-label="Donor contact summary">
-        <article className="metric-card">
-          <div className="metric-head">
-            <span>Contributors</span>
-          </div>
-          <div className="metric-value">{sortedDonors.length}</div>
-          <div className="metric-sub">
-            Contributed in last {months.length} months{months.length > 0 ? ` (${months[0].label} – ${months[months.length - 1].label})` : ""}
-          </div>
-        </article>
-        <article className="metric-card">
+        <article className="metric-card" data-emphasis="lead">
           <div className="metric-head">
             <span>Total Collected</span>
           </div>
           <div className="metric-value">{formatCurrency(grandTotal)}</div>
           <div className="metric-sub">Across the period</div>
         </article>
+        <article className="metric-card">
+          <div className="metric-head">
+            <span>Contributors</span>
+          </div>
+          <div className="metric-value">{sortedDonors.length}</div>
+          <div className="metric-sub">
+            Contributed in last {months.length} months
+            {months.length > 0 ? ` (${months[0].label} – ${months[months.length - 1].label})` : ""}
+          </div>
+        </article>
       </div>
 
-      <ExportToolbar
-        onExportCsv={() => exportSectionsToCsv("monthly-donors.csv", exportSections())}
-        onExportHtml={() => exportSectionsToHtml("monthly-donors.html", "Monthly Donors", exportSections())}
-        onExportPdf={() => printReportSection("monthly-donors")}
-        onExportImage={() => exportSectionToImage("monthly-donors", "monthly-donors.png")}
-      />
+      <Section
+        title="Monthly Donors"
+        count={`${sortedDonors.length} of ${donors.length}`}
+        actions={
+          <ExportMenu
+            onExportCsv={() => exportSectionsToCsv("monthly-donors.csv", exportSections())}
+            onExportHtml={() =>
+              exportSectionsToHtml("monthly-donors.html", "Monthly Donors", exportSections())
+            }
+            onExportPdf={() => printReportSection("monthly-donors")}
+            onExportImage={() => exportSectionToImage("monthly-donors", "monthly-donors.png")}
+          />
+        }
+      >
+        <div className="records-toolbar no-print" style={{ padding: "12px 16px 0", marginBottom: 12 }}>
+          <div className="searchbox">
+            <Search size={14} />
+            <input
+              type="search"
+              placeholder="Search by name or address…"
+              aria-label="Search donors by name or address"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className="input"
+              style={{ paddingTop: 6, paddingBottom: 6 }}
+            />
+          </div>
+        </div>
 
-      <input
-        type="text"
-        placeholder="Search by name or address…"
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        className="filter-input no-print"
-        style={{ maxWidth: 280, marginBottom: 16 }}
-      />
-
-      {sortedDonors.length > 0 ? (
-        <div className="table-panel table-panel-scroll">
-          <table className="data-table data-table-cards">
+        {sortedDonors.length > 0 ? (
+          <div className="table-panel-scroll">
+            <table className="data-table data-table-cards">
             <thead>
               <tr>
                 <SortableTh
@@ -157,30 +173,33 @@ export function DonorContactReport({ months, donors }: DonorContactReportProps) 
                 />
               </tr>
             </thead>
-            <tbody>
-              {sortedDonors.map((donor) => (
-                <tr key={donor.id}>
-                  <td>{donor.donorName}</td>
-                  <td data-label="Address">{donor.address ?? "—"}</td>
-                  {months.map((month) => {
-                    const amount = donor.amounts[month.key] ?? 0;
-                    return (
-                      <td key={month.key} data-label={month.label}>
-                        {amount > 0 ? formatCurrency(amount) : "—"}
-                      </td>
-                    );
-                  })}
-                  <td data-label="Total">{formatCurrency(donor.total)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="empty-state">
-          <p>No contributors match this filter.</p>
-        </div>
-      )}
+              <tbody>
+                {sortedDonors.map((donor) => (
+                  <tr key={donor.id}>
+                    <td>{donor.donorName}</td>
+                    <td data-label="Address">{donor.address ?? "—"}</td>
+                    {months.map((month) => {
+                      const amount = donor.amounts[month.key] ?? 0;
+                      return (
+                        <td key={month.key} data-label={month.label} className="num">
+                          {amount > 0 ? formatCurrency(amount) : "—"}
+                        </td>
+                      );
+                    })}
+                    <td data-label="Total" className="num">
+                      {formatCurrency(donor.total)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="empty-state">
+            <p>No contributors match this filter.</p>
+          </div>
+        )}
+      </Section>
     </div>
   );
 }

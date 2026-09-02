@@ -2,8 +2,10 @@
 
 import { useMemo } from "react";
 import { formatCurrency } from "@/lib/format";
-import { ExportToolbar } from "@/components/export-toolbar";
-import { CollapsibleSection } from "@/components/collapsible-section";
+import { ExportMenu } from "@/components/ui/export-menu";
+import { Section } from "@/components/ui/section";
+import { SectionGroup } from "@/components/ui/section-group";
+import { ReportToolbar } from "@/components/ui/report-toolbar";
 import {
   exportSectionsToCsv,
   exportSectionsToHtml,
@@ -101,18 +103,30 @@ export function SilaiGroupedReport({ rows }: SilaiGroupedReportProps) {
   ];
 
   return (
-    <div>
-      <ExportToolbar
-        onExportCsv={() => exportSectionsToCsv("silai-grouped-report.csv", fullReportSections())}
-        onExportHtml={() => exportSectionsToHtml("silai-grouped-report.html", "Silai Grouped Report", fullReportSections())}
-        onExportPdf={exportPdf}
-        onExportImage={exportImage}
-        onExportExcel={exportExcel}
-        onCopyWhatsAppText={copyWhatsAppText}
-      />
+    <div className="stack">
+      <ReportToolbar
+        actions={
+          <ExportMenu
+            label="Export report"
+            onExportCsv={() => exportSectionsToCsv("silai-grouped-report.csv", fullReportSections())}
+            onExportHtml={() =>
+              exportSectionsToHtml("silai-grouped-report.html", "Silai Grouped Report", fullReportSections())
+            }
+            onExportPdf={exportPdf}
+            onExportImage={exportImage}
+            onExportExcel={exportExcel}
+            onCopyWhatsAppText={copyWhatsAppText}
+          />
+        }
+      >
+        <span className="muted">
+          {contributorCount} contributor{contributorCount === 1 ? "" : "s"} across {groups.length} group
+          {groups.length === 1 ? "" : "s"}
+        </span>
+      </ReportToolbar>
 
       <div className="metric-grid" aria-label="Silai grouped summary">
-        <article className="metric-card">
+        <article className="metric-card" data-emphasis="lead">
           <div className="metric-head">
             <span>Total Collected</span>
           </div>
@@ -124,48 +138,56 @@ export function SilaiGroupedReport({ rows }: SilaiGroupedReportProps) {
             <span>Members Contributed</span>
           </div>
           <div className="metric-value">{contributorCount}</div>
-          <div className="metric-sub">Across {groups.length} group{groups.length === 1 ? "" : "s"}</div>
+          <div className="metric-sub">
+            Across {groups.length} group{groups.length === 1 ? "" : "s"}
+          </div>
         </article>
       </div>
 
-      {groups.length > 0 ? (
-        groups.map((group) => (
-          <CollapsibleSection key={group.groupName} title={`${group.groupName} (${group.rows.length})`}>
-            <div className="table-panel table-panel-scroll">
-              <table className="data-table data-table-cards">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Phone</th>
-                    <th>Address</th>
-                    <th>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {group.rows.map((row) => (
-                    <tr key={row.id}>
-                      <td>{row.name}</td>
-                      <td data-label="Phone">{row.phone ?? "—"}</td>
-                      <td data-label="Address">{row.address ?? "—"}</td>
-                      <td data-label="Total">{row.total > 0 ? formatCurrency(row.total) : "—"}</td>
+      <SectionGroup title="Contributors by group">
+        {groups.length > 0 ? (
+          groups.map((group) => (
+            <Section key={group.groupName} title={group.groupName} count={group.rows.length}>
+              <div className="table-panel-scroll">
+                <table className="data-table data-table-cards">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Phone</th>
+                      <th>Address</th>
+                      <th className="num">Total</th>
                     </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td colSpan={3}>Subtotal</td>
-                    <td data-label="Total">{formatCurrency(group.subtotal)}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </CollapsibleSection>
-        ))
-      ) : (
-        <div className="empty-state">
-          <p>No Silai contributions recorded.</p>
-        </div>
-      )}
+                  </thead>
+                  <tbody>
+                    {group.rows.map((row) => (
+                      <tr key={row.id}>
+                        <td>{row.name}</td>
+                        <td data-label="Phone">{row.phone ?? "—"}</td>
+                        <td data-label="Address">{row.address ?? "—"}</td>
+                        <td data-label="Total" className="num">
+                          {row.total > 0 ? formatCurrency(row.total) : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colSpan={3}>Subtotal</td>
+                      <td data-label="Total" className="num">
+                        {formatCurrency(group.subtotal)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </Section>
+          ))
+        ) : (
+          <div className="empty-state">
+            <p>No Silai contributions recorded.</p>
+          </div>
+        )}
+      </SectionGroup>
     </div>
   );
 }

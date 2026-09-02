@@ -8,6 +8,8 @@ type ConfirmDialogProps = {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
+  /** Colours the confirm button for an irreversible action. */
+  tone?: "default" | "danger";
   onConfirm: () => void;
   onCancel: () => void;
 };
@@ -18,6 +20,7 @@ export function ConfirmDialog({
   message,
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
+  tone = "default",
   onConfirm,
   onCancel
 }: ConfirmDialogProps) {
@@ -52,10 +55,15 @@ export function ConfirmDialog({
           {message}
         </p>
         <div className="modal-actions">
-          <button type="button" className="button secondary" onClick={onCancel}>
+          <button type="button" className="btn btn-secondary" onClick={onCancel}>
             {cancelLabel}
           </button>
-          <button type="button" className="button" ref={confirmButtonRef} onClick={onConfirm}>
+          <button
+            type="button"
+            className={tone === "danger" ? "btn btn-danger" : "btn"}
+            ref={confirmButtonRef}
+            onClick={onConfirm}
+          >
             {confirmLabel}
           </button>
         </div>

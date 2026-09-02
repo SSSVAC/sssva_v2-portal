@@ -1,11 +1,10 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getViewer } from "@/lib/auth/viewer";
+import { GUEST_HOME } from "@/lib/auth/guest-scope";
 
 export default async function HomePage() {
-  const supabase = await createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const viewer = await getViewer();
 
-  redirect(user ? "/dashboard" : "/login");
+  if (!viewer) redirect("/login");
+  redirect(viewer.kind === "guest" ? GUEST_HOME : "/dashboard");
 }
