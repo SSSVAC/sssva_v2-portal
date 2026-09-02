@@ -1282,10 +1282,18 @@ input {
 
   /* editable-data-table's second header row holds live filter inputs
      (not just labels), so it stays visible — reflowed into a compact
-     wrapping form instead of a table row. */
+     2-column form instead of a table row. A fixed 2-column grid rather
+     than flex-wrap with a px basis: on a ~390px phone the available
+     width after padding/gap is under 300px, so two flex items with a
+     150px basis mathematically can't both fit on a line (150+150+gap
+     already exceeds it) — flex-grow then stretches the single item
+     that *does* fit to the full row, so every field silently rendered
+     one-per-row instead of two, pushing the actual data rows in the
+     grid's scroll box far below the fold. Grid with two 1fr tracks
+     sidesteps that arithmetic entirely. */
   .data-table-cards thead tr:last-child:has(.filter-cell) {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
     padding: 12px 14px;
     margin-bottom: 12px;
@@ -1295,13 +1303,13 @@ input {
   }
 
   .data-table-cards thead tr:last-child .filter-cell {
-    flex: 1 1 150px;
     display: flex;
     flex-direction: column;
     gap: 4px;
     padding: 0;
     background: none;
     text-transform: none;
+    min-width: 0;
   }
 
   .data-table-cards thead tr:last-child .filter-cell:empty {
