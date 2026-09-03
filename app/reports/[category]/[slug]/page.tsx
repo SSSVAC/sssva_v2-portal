@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/shell/app-shell";
 import { ReportShell } from "@/components/reports/report-shell";
 import { CATEGORY_META, getReport, REPORT_REGISTRY } from "@/lib/reports/registry";
-import { requireViewer, viewerChrome } from "@/lib/auth/viewer";
+import { requireViewerForPath, viewerChrome } from "@/lib/auth/viewer";
+import { ShareLinkButton } from "@/components/share/share-link-button";
 import { guestCanSeeReportCategory } from "@/lib/auth/guest-scope";
 import type { ReportCategory } from "@/lib/reports/types";
 
@@ -16,9 +17,8 @@ type PageProps = {
 export default async function ReportPage({ params, searchParams }: PageProps) {
   // Auth always runs BEFORE the registry lookup, so an anonymous visitor
   // gets the same redirect for a valid slug and a typo. Don't reorder this.
-  const viewer = await requireViewer();
-
   const { category, slug } = await params;
+  const viewer = await requireViewerForPath(`/reports/${category}/${slug}`);
   const definition = getReport(category, slug);
   if (!definition) notFound();
   if (viewer.kind === "guest" && !guestCanSeeReportCategory(category)) notFound();
@@ -43,6 +43,11 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
         slug={definition.slug}
         title={definition.title}
         description={definition.description}
+        actions={
+          viewer.isAdmin && guestCanSeeReportCategory(category) ? (
+            <ShareLinkButton path={`/reports/${category}/${slug}`} title={definition.title} />
+          ) : undefined
+        }
       >
         <Component {...data} />
       </ReportShell>

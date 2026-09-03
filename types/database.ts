@@ -378,6 +378,8 @@ export type Database = {
           created_by: string | null;
           last_used_at: string | null;
           use_count: number;
+          scope_path: string | null;
+          kind: string;
           created_at: string;
           updated_at: string;
         };
@@ -391,6 +393,8 @@ export type Database = {
           created_by?: string | null;
           last_used_at?: string | null;
           use_count?: number;
+          scope_path?: string | null;
+          kind?: string;
           created_at?: string;
           updated_at?: string;
         };

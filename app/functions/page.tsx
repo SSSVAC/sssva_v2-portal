@@ -3,14 +3,15 @@ import type { Route } from "next";
 import { ArrowRight, CalendarDays } from "lucide-react";
 import { AppShell } from "@/components/shell/app-shell";
 import { PageHeader } from "@/components/shell/page-header";
-import { requireViewer, viewerChrome } from "@/lib/auth/viewer";
+import { requireViewerForPath, viewerChrome } from "@/lib/auth/viewer";
+import { ShareLinkButton } from "@/components/share/share-link-button";
 import { getFunctionSummaries } from "@/lib/functions/queries";
 import { formatCurrency, formatDateOnly } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
 export default async function FunctionsPage() {
-  const viewer = await requireViewer();
+  const viewer = await requireViewerForPath("/functions");
   const functions = await getFunctionSummaries(viewer.supabase);
 
   return (
@@ -18,6 +19,9 @@ export default async function FunctionsPage() {
       <PageHeader
         title="Function arrangements"
         description="What each function needs, who has committed to it, and what it has cost so far."
+        actions={
+          viewer.isAdmin ? <ShareLinkButton path="/functions" title="Function arrangements" /> : undefined
+        }
       />
 
       {functions.length === 0 ? (

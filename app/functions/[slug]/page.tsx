@@ -5,7 +5,8 @@ import { PageHeader } from "@/components/shell/page-header";
 import { FunctionSectionCard } from "@/components/functions/function-section-card";
 import { AddSectionButton } from "@/components/functions/add-section-button";
 import { FunctionExportMenu } from "@/components/functions/function-export-menu";
-import { requireViewer, viewerChrome } from "@/lib/auth/viewer";
+import { requireViewerForPath, viewerChrome } from "@/lib/auth/viewer";
+import { ShareLinkButton } from "@/components/share/share-link-button";
 import { getFunctionDetail } from "@/lib/functions/queries";
 import { formatCurrency, formatDateOnly } from "@/lib/format";
 
@@ -16,8 +17,8 @@ type PageProps = {
 };
 
 export default async function FunctionDetailPage({ params }: PageProps) {
-  const viewer = await requireViewer();
   const { slug } = await params;
+  const viewer = await requireViewerForPath(`/functions/${slug}`);
 
   const fn = await getFunctionDetail(viewer.supabase, slug);
   if (!fn) notFound();
@@ -44,6 +45,7 @@ export default async function FunctionDetailPage({ params }: PageProps) {
           actions={
             <>
               <FunctionExportMenu fn={fn} />
+              {viewer.isAdmin && <ShareLinkButton path={`/functions/${slug}`} title={fn.title} />}
               {canEdit && <AddSectionButton functionId={fn.id} />}
             </>
           }

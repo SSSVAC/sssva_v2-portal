@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getViewer } from "@/lib/auth/viewer";
 import { checkRateLimit, getClientIp, rateLimitResponseInit } from "@/lib/rate-limit";
 import { codeHint, generateGuestCode, guestSessionsEnabled, hashGuestCode } from "@/lib/auth/guest-pass";
+import { isShareablePath } from "@/lib/auth/guest-scope";
 import type { Json } from "@/types/database";
 
 async function requireAdmin(request: NextRequest, key: string, max: number) {
@@ -58,9 +59,17 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
   const label = typeof body?.label === "string" ? body.label.trim() : "";
   const expiresOn = typeof body?.expiresOn === "string" ? body.expiresOn : "";
+  const scopePath = typeof body?.scopePath === "string" ? body.scopePath.trim() : "";
 
   if (!label) {
     return NextResponse.json({ error: "Give the pass a label so you can recognise it later." }, { status: 400 });
+  }
+
+  // A share link's scope becomes a redirect target in /s/[code], so it is
+  // validated against the shape of the pages that may be shared rather than
+  // stored as given — otherwise a link would be an open redirect.
+  if (scopePath && !isShareablePath(scopePath)) {
+    return NextResponse.json({ error: "That page can't be shared." }, { status: 400 });
   }
 
   // The form sends a date; a pass should stay usable through the whole of
@@ -83,7 +92,9 @@ export async function POST(request: NextRequest) {
       code_hash: hashGuestCode(code),
       code_hint: codeHint(code),
       expires_at: expiresAt.toISOString(),
-      created_by: gate.viewer.email
+      created_by: gate.viewer.email,
+      scope_path: scopePath || null,
+      kind: scopePath ? "link" : "code"
     })
     .select("*")
     .single();
@@ -93,7 +104,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Could not create the pass" }, { status: 500 });
   }
 
-  await logAudit(admin, gate.viewer.email, "create", [data.id], { label, expires_at: data.expires_at });
+  await logAudit(admin, gate.viewer.email, "create", [data.id], {
+    label,
+    expires_at: data.expires_at,
+    scope_path: scopePath || null
+  });
 
   return NextResponse.json({ ok: true, pass: data, code });
 }

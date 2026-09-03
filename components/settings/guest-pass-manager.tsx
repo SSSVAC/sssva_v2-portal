@@ -17,6 +17,8 @@ export type GuestPassView = {
   createdBy: string | null;
   lastUsedAt: string | null;
   useCount: number;
+  /** Set for a share link: the single page it opens. */
+  scopePath: string | null;
 };
 
 type Props = {
@@ -224,7 +226,7 @@ export function GuestPassManager({ passes, enabled }: Props) {
               <thead>
                 <tr>
                   <th>Label</th>
-                  <th>Code</th>
+                  <th>Opens</th>
                   <th>Status</th>
                   <th>Expires</th>
                   <th>Last used</th>
@@ -242,8 +244,18 @@ export function GuestPassManager({ passes, enabled }: Props) {
                       <td data-label="Label" className="data-table-card-title">
                         {pass.label}
                       </td>
-                      <td data-label="Code">
-                        <span className="muted">••••-{pass.codeHint}</span>
+                      <td data-label="Opens">
+                        {pass.scopePath ? (
+                          <>
+                            <span className="pill pill-info">Link</span>{" "}
+                            <span className="muted">{pass.scopePath}</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="pill pill-neutral">Code</span>{" "}
+                            <span className="muted">••••-{pass.codeHint}</span>
+                          </>
+                        )}
                       </td>
                       <td data-label="Status">
                         <span className={`pill ${STATE_PILL[state]}`}>{STATE_LABEL[state]}</span>

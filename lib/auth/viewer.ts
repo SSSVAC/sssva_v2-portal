@@ -1,10 +1,11 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import type { Route } from "next";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { GUEST_COOKIE_NAME, readGuestSessionToken } from "@/lib/auth/guest-pass";
-import { GUEST_HOME } from "@/lib/auth/guest-scope";
+import { guestCanAccessPath, guestLandingPath } from "@/lib/auth/guest-scope";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -42,6 +43,8 @@ export type GuestViewer = {
   label: string;
   passId: string;
   expiresAt: Date;
+  /** Set for a share link: the one page this pass may open. */
+  scopePath: string | null;
 };
 
 export type Viewer = StaffViewer | GuestViewer;
@@ -58,6 +61,8 @@ export type ViewerChrome = {
   isGuest: boolean;
   /** ISO string, guests only — the shell shows when their access lapses. */
   expiresAt: string | null;
+  /** Set for a share link, so the shell can hide navigation they can't use. */
+  scopePath: string | null;
 };
 
 export function viewerChrome(viewer: Viewer): ViewerChrome {
@@ -66,7 +71,8 @@ export function viewerChrome(viewer: Viewer): ViewerChrome {
     label: viewer.label,
     isAdmin: viewer.isAdmin,
     isGuest: viewer.isGuest,
-    expiresAt: viewer.kind === "guest" ? viewer.expiresAt.toISOString() : null
+    expiresAt: viewer.kind === "guest" ? viewer.expiresAt.toISOString() : null,
+    scopePath: viewer.kind === "guest" ? viewer.scopePath : null
   };
 }
 
@@ -101,9 +107,14 @@ export async function getViewer(): Promise<Viewer | null> {
   if (!claims) return null;
 
   const admin = createAdminClient();
+  // `select("*")` rather than a column list on purpose. Naming scope_path
+  // explicitly would make this query — and therefore every existing guest
+  // session — fail outright on a deployment where the share-link migration
+  // hasn't been applied yet. With `*` the column is simply absent and the
+  // pass falls back to unscoped, which is exactly what it was before.
   const { data: pass } = await admin
     .from("guest_passes")
-    .select("id, label, expires_at, revoked_at")
+    .select("*")
     .eq("id", claims.passId)
     .maybeSingle();
 
@@ -120,7 +131,8 @@ export async function getViewer(): Promise<Viewer | null> {
     isGuest: true,
     label: pass.label,
     passId: pass.id,
-    expiresAt: new Date(pass.expires_at)
+    expiresAt: new Date(pass.expires_at),
+    scopePath: pass.scope_path ?? null
   };
 }
 
@@ -137,7 +149,22 @@ export async function requireViewer(): Promise<Viewer> {
  */
 export async function requireStaffViewer(): Promise<StaffViewer> {
   const viewer = await requireViewer();
-  if (viewer.kind !== "staff") redirect(GUEST_HOME);
+  if (viewer.kind !== "staff") redirect(guestLandingPath(viewer.scopePath) as Route);
+  return viewer;
+}
+
+/**
+ * A viewer for a page a guest may reach, given that page's own path.
+ *
+ * Staff pass straight through. A guest holding a share link is sent back to
+ * their own page rather than shown a 404, so following a stale bookmark
+ * lands them somewhere useful instead of looking broken.
+ */
+export async function requireViewerForPath(pathname: string): Promise<Viewer> {
+  const viewer = await requireViewer();
+  if (viewer.kind === "guest" && !guestCanAccessPath(viewer.scopePath, pathname)) {
+    redirect(guestLandingPath(viewer.scopePath) as Route);
+  }
   return viewer;
 }
 

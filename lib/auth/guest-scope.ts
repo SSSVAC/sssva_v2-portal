@@ -15,5 +15,35 @@ export function guestCanSeeReportCategory(category: string) {
   return (GUEST_REPORT_CATEGORIES as string[]).includes(category);
 }
 
-/** Where a guest lands, and where they are sent back to when blocked. */
+/** Where an unscoped guest lands, and where a blocked one is sent back to. */
 export const GUEST_HOME = "/functions";
+
+/**
+ * A pass pinned to one page — a share link — may open only that page.
+ *
+ * `scopePath` null means the pass is a code covering the whole guest area,
+ * which is the original behaviour and what every pass issued before share
+ * links had. The check is exact rather than prefix-based on purpose: a link
+ * to `/reports/silai` should not also open `/reports/silai/silai-fund`,
+ * because the person sharing it picked the narrower page deliberately.
+ */
+export function guestCanAccessPath(scopePath: string | null, pathname: string) {
+  if (!scopePath) return true;
+  return scopePath === pathname;
+}
+
+/** Where a scoped guest belongs — their one page, or the guest home. */
+export function guestLandingPath(scopePath: string | null) {
+  return scopePath ?? GUEST_HOME;
+}
+
+// The pages a share link may point at. A link is only ever created from one
+// of these pages, but the value arrives from a request body, so it is
+// validated against this shape before being stored — otherwise a share link
+// would be an open redirect into any path an admin could be tricked into
+// posting.
+const SHAREABLE_PATH = /^\/(functions(\/[a-z0-9-]+)?|reports\/(silai|events)(\/[a-z0-9-]+)?)$/;
+
+export function isShareablePath(path: string) {
+  return SHAREABLE_PATH.test(path);
+}

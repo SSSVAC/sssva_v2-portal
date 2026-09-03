@@ -4,7 +4,8 @@ import { PageHeader } from "@/components/shell/page-header";
 import { ReportGalleryCard } from "@/components/reports/report-gallery-card";
 import { CATEGORY_META, getReportsByCategory } from "@/lib/reports/registry";
 import { CATEGORY_ACCENT, CATEGORY_ACCENT_SOFT } from "@/lib/nav";
-import { requireViewer, viewerChrome } from "@/lib/auth/viewer";
+import { requireViewerForPath, viewerChrome } from "@/lib/auth/viewer";
+import { ShareLinkButton } from "@/components/share/share-link-button";
 import { guestCanSeeReportCategory } from "@/lib/auth/guest-scope";
 import type { ReportCategory } from "@/lib/reports/types";
 
@@ -15,9 +16,8 @@ type PageProps = {
 };
 
 export default async function ReportCategoryPage({ params }: PageProps) {
-  const viewer = await requireViewer();
-
   const { category } = await params;
+  const viewer = await requireViewerForPath(`/reports/${category}`);
   const meta = CATEGORY_META[category as ReportCategory];
   const reports = getReportsByCategory(category);
   if (!meta || reports.length === 0) notFound();
@@ -34,6 +34,11 @@ export default async function ReportCategoryPage({ params }: PageProps) {
       <PageHeader
         title={meta.label}
         description={meta.description}
+        actions={
+          viewer.isAdmin && guestCanSeeReportCategory(category) ? (
+            <ShareLinkButton path={`/reports/${category}`} title={meta.label} />
+          ) : undefined
+        }
         eyebrow={
           <span
             className="cat-chip"
