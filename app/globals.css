@@ -2378,27 +2378,72 @@ input[type="checkbox"] {
 }
 
 /* ---------------------------------------------------------------------
+/* ---------------------------------------------------------------------
    9. Print
 
-   Reports print as plain black-on-white documents: no chrome, no
-   surfaces, no zebra, no status tints beyond the text colour, so output
-   is identical regardless of the browser's background-graphics setting
-   and of the viewer's light/dark theme.
+   Reports print as a plain document: no app chrome, no panel edges, no
+   zebra. Two things this block is responsible for.
+
+   1. A LIGHT PALETTE, ALWAYS. Printing from the dark theme otherwise draws
+      every rule and cell edge from the dark tokens, which come out as heavy
+      near-black lines on paper. The role tokens are redefined here so the
+      whole sheet is consistent regardless of the reader's theme, and so
+      output doesn't depend on the browser's background-graphics setting.
+
+   2. SCOPING. printReportSection() marks the element being printed with
+      data-printing and sets data-print-scoped on <body>. The rules at the
+      end of this block then hide, inside each container that can hold a
+      printable block, every child that is neither the target nor an
+      ancestor of it — so a section's export menu prints that section, and
+      the page-level menu prints the whole report.
    --------------------------------------------------------------------- */
 
 @media print {
   @page {
     size: A4;
-    margin: 14mm;
+    margin: 15mm 14mm;
+  }
+
+  /* All four selectors are needed. The dark theme is applied by
+     `:root:not([data-theme="light"])` inside a prefers-color-scheme query,
+     which has higher specificity than a bare `:root` — so for the common
+     case of a viewer on system dark who never touched the toggle, a plain
+     `:root` override here loses and every rule prints in the dark theme's
+     near-black. Print media does not beat specificity. */
+  :root,
+  :root:not([data-theme="light"]),
+  :root[data-theme="dark"],
+  :root[data-theme="light"] {
+    color-scheme: light;
+
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface-2: #ffffff;
+    --surface-3: #ffffff;
+    --border: #d9d4cd;
+    --border-strong: #b3aca3;
+    --text: #1b1815;
+    --text-strong: #000000;
+    --text-secondary: #3c3730;
+    --text-muted: #5c554e;
+    --brand: #000000;
+    --brand-tint: transparent;
+    --row-hover: transparent;
+
+    --shadow-xs: none;
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lg: none;
   }
 
   html,
   body {
-    /* Floor for all print text; nothing in a report should render
-       smaller than this on the printed A4 page. */
+    /* Floor for all print text; nothing in a report should render smaller
+       than this on the printed A4 page. */
     font-size: 12px;
-    color: #000;
+    color: var(--text);
     background: #fff;
+    line-height: 1.45;
   }
 
   .app {
@@ -2407,14 +2452,19 @@ input[type="checkbox"] {
 
   .sidebar,
   .appbar,
+  .sidebar-backdrop,
   .page-actions,
   .filter-bar,
   .filter-banner,
   .section-actions,
+  .section-group-actions,
+  .section-chevron,
   .export-toolbar,
+  .records-toolbar,
   .pagination,
   .selection-bar,
   .toast-stack,
+  .viewer-banner,
   .no-print {
     display: none !important;
   }
@@ -2424,149 +2474,298 @@ input[type="checkbox"] {
     padding: 0;
   }
 
+  /* --- Document header --- */
+
   .page-header {
     display: block;
-    margin-bottom: 12px;
+    margin-bottom: 18px;
+    padding-bottom: 10px;
+    border-bottom: 1.5px solid var(--border-strong);
   }
 
   h1 {
-    font-size: 18px;
+    font-size: 19px;
+    letter-spacing: -0.01em;
   }
 
   .page-desc {
+    margin-top: 4px;
     font-size: 12px;
+    color: var(--text-secondary);
   }
+
+  .cat-chip {
+    padding: 0;
+    color: var(--text-muted) !important;
+    background: none !important;
+    font-size: 11px;
+  }
+
+  /* --- Containers --- */
 
   .section,
   .panel,
-  .table-panel {
+  .table-panel,
+  .stack,
+  .section-group-body {
     border: none;
     border-radius: 0;
     background: none;
     box-shadow: none;
+  }
+
+  .stack,
+  .section-group-body {
+    display: block;
+  }
+
+  .section,
+  .panel {
+    margin-top: 18px;
+    /* A long table must be allowed to run onto the next page; only the rows
+       themselves are kept whole (see .data-table tr below). */
     break-inside: auto;
   }
 
+  .section:first-child,
+  .panel:first-child {
+    margin-top: 0;
+  }
+
+  .section-head {
+    display: block;
+    padding: 0 0 5px;
+    border-bottom: 1px solid var(--border-strong);
+    background: none;
+    break-after: avoid;
+  }
+
+  .section-title {
+    font-size: 13.5px;
+    font-weight: 700;
+  }
+
+  .section-code {
+    color: var(--text-muted);
+  }
+
+  .section-count {
+    padding: 0 0 0 6px;
+    color: var(--text-muted);
+    background: none;
+    font-weight: 400;
+  }
+
   .section-group-head {
-    margin-bottom: 8px;
-    padding-bottom: 3px;
-    border-bottom: 1px solid #666;
+    margin-bottom: 10px;
+    padding-bottom: 4px;
+    border-bottom: 1.5px solid var(--border-strong);
+    break-after: avoid;
   }
 
   .section-group-head h2 {
     font-size: 15px;
   }
 
-  .section-head {
-    padding: 0 0 4px;
-    border-bottom: 1px solid #999;
-    background: none;
-  }
-
-  .section-title {
-    font-size: 13px;
-  }
-
-  .section-count {
-    padding: 0;
-    background: none;
-  }
-
   .section-body,
   .section-body-pad,
-  .panel-body {
+  .panel-body,
+  .section-form {
     display: block !important;
     padding: 0;
+    border: none;
+    background: none;
+  }
+
+  /* The section's own fields (ubhayam, vendor, estimate) read as a caption
+     line under the heading rather than a form row. */
+  .section-form {
+    margin: 6px 0 2px;
+    font-size: 11.5px;
+    color: var(--text-secondary);
+  }
+
+  .field-inline {
+    display: inline;
+    margin-right: 16px;
   }
 
   .table-panel-scroll,
   .table-wrap {
     overflow: visible !important;
+    padding: 0 !important;
   }
 
-  /* Screen layout reserves a minimum per tile, which doesn't reliably
-     fit four across A4's printable width; drop the minimum so tiles
-     always divide the page evenly instead of wrapping unpredictably. */
+  /* --- Stat tiles --- */
+
   .metric-grid,
   .stat-grid {
+    /* The screen layout reserves a minimum width per tile, which doesn't
+       reliably fit four across A4's printable width; drop the minimum so
+       tiles always divide the page evenly instead of wrapping oddly. */
     grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
+    gap: 0;
+    margin-bottom: 4px;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
   }
 
   .metric-card,
   .stat {
     min-height: 0;
-    gap: 2px;
-    padding: 6px 8px;
-    border: 1px solid #ccc;
+    gap: 1px;
+    padding: 8px 12px 8px 0;
+    border: none !important;
     background: none !important;
     box-shadow: none;
     break-inside: avoid;
   }
 
-  .metric-head,
-  .metric-card .metric-value,
-  .metric-sub {
-    color: #000 !important;
-    font-size: 11px;
+  .metric-head {
+    font-size: 9.5px;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+  }
+
+  .metric-head svg {
+    display: none;
   }
 
   .metric-card .metric-value {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 700;
+    color: var(--text-strong) !important;
   }
+
+  .metric-sub {
+    font-size: 10.5px;
+    color: var(--text-muted);
+  }
+
+  /* --- Tables --- */
 
   .data-table {
     width: 100%;
-    font-size: 12px;
+    font-size: 11.5px;
+    break-inside: auto;
   }
 
   .data-table th,
   .data-table td {
-    position: static;
-    padding: 5px 7px;
-    font-size: 12px;
-    color: #000;
+    padding: 6px 10px 6px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
     background: none !important;
+    vertical-align: top;
   }
 
   .data-table th {
-    border-bottom: 1px solid #666;
+    border-bottom: 1px solid var(--border-strong);
+    color: var(--text-muted);
+    font-size: 9.5px;
+    letter-spacing: 0.06em;
   }
 
   .data-table thead {
     display: table-header-group;
   }
 
-  /* Browsers default <tfoot> to table-footer-group, which repeats it at
-     the bottom of every printed page. Reports with a subtotal row per
-     table (Silai by Group) want it once, right after that table's rows. */
+  /* Browsers default <tfoot> to table-footer-group, which repeats it at the
+     bottom of every printed page. A report with a subtotal row per table
+     (Silai by Group) wants it once, right after that table's own rows. */
   .data-table tfoot {
     display: table-row-group;
+  }
+
+  .data-table tfoot td {
+    border-top: 1px solid var(--border-strong);
+    border-bottom: none;
+    color: var(--text-strong);
+    font-weight: 700;
   }
 
   .data-table tr {
     break-inside: avoid;
   }
 
+  .data-table td.num,
+  .data-table th.num {
+    text-align: right;
+  }
+
+  /* Status reads as plain bold text. Tinted pills depend on the browser's
+     "background graphics" setting being on, and a colour-coded amount is
+     meaningless once the page is photocopied. */
   .status-pill,
   .pill {
     border: 0;
     padding: 0;
+    color: var(--text) !important;
     background: none !important;
-    color: #000 !important;
     font-weight: 650;
   }
 
   .cell-success,
   .cell-warning,
   .cell-danger {
-    color: #000 !important;
+    color: var(--text) !important;
+    font-weight: 650;
   }
 
-  .cell-success::before,
-  .cell-warning::before,
-  .cell-danger::before {
+  /* Scoped to `.data-table` to match the specificity of the rule that draws
+     the dot; a bare `.cell-success::before` here loses to it and the dot
+     prints as a stray coloured mark next to the amount. */
+  .data-table .cell-success::before,
+  .data-table .cell-warning::before,
+  .data-table .cell-danger::before {
+    display: none !important;
+  }
+
+  /* Inline-edit affordances are screen-only. */
+  .editable-cell {
+    box-shadow: none !important;
+  }
+
+  .cell-select,
+  .cell-input {
+    border: none;
+    padding: 0;
+    background: none;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .empty-state,
+  .empty {
+    min-height: 0;
+    padding: 10px 0;
+    text-align: left;
+  }
+
+  .empty-state svg,
+  .empty svg {
     display: none;
+  }
+
+  /* --- Scoping to one section ---------------------------------------
+     Hide, at every level that can hold a printable block, any child that
+     is neither the element being printed nor an ancestor of it. Marking
+     the target element itself (data-printing) rather than matching its id
+     keeps this independent of how deeply a section is nested.
+     ------------------------------------------------------------------- */
+
+  /* `:has([data-printing])` on the container is what makes this safe for a
+     whole-report print. There the target is the outer wrapper, so no
+     container inside it holds the marker, nothing matches, and the entire
+     report prints. Without it, every container BELOW the target would also
+     filter its children and the report would print as just its header. */
+  body[data-print-scoped]
+    :is(.stack, .section-group-body, .card-grid, .dashboard-grid):has([data-printing])
+    > *:not([data-printing]):not(:has([data-printing])) {
+    display: none !important;
+  }
+
+  body[data-print-scoped] [data-printing] {
+    margin-top: 0;
   }
 }

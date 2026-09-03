@@ -9,6 +9,12 @@ type SectionProps = {
   actions?: ReactNode;
   /** Adds padding to the body. Leave off when the body is a full-bleed table. */
   padded?: boolean;
+  /**
+   * Makes this section addressable on its own by printReportSection and
+   * exportSectionToImage, so its export menu covers this section rather than
+   * the whole report.
+   */
+  printId?: string;
   children: ReactNode;
 };
 
@@ -32,9 +38,9 @@ type SectionProps = {
 //     title with nothing under it.
 //   * Desktop ignores open/closed entirely (see globals.css); only the
 //     <=960px rule hides a body, so collapsing needs no JavaScript.
-export function Section({ title, count, actions, padded = false, children }: SectionProps) {
+export function Section({ title, count, actions, padded = false, printId, children }: SectionProps) {
   return (
-    <section className="section">
+    <section className="section" data-print-id={printId}>
       <div className="section-head">
         <details className="report-section">
           <summary className="report-section-summary">

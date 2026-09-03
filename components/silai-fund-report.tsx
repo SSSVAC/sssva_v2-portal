@@ -142,6 +142,13 @@ export function SilaiFundReport({
   const exportPdf = () => printReportSection(printTarget);
   const exportImage = () => exportSectionToImage(printTarget, `${fileSlug}-report.png`);
 
+  // Each section is addressable on its own, so its export menu covers that
+  // section rather than the whole report. printTarget is unique per page, so
+  // suffixing it is enough to keep these ids distinct.
+  const sectionId = (part: string) => `${printTarget}-${part}`;
+  const printPart = (part: string) => () => printReportSection(sectionId(part));
+  const imagePart = (part: string) => () => exportSectionToImage(sectionId(part), `${fileSlug}-${part}.png`);
+
   const metricsExportHeaders = ["Metric", "Value"];
   const metricsExportRows = () => [
     ["Total Contributions", formatCurrency(totalContributions)],
@@ -274,6 +281,7 @@ export function SilaiFundReport({
       </div>
 
       <SectionGroup
+        printId={sectionId("contributions")}
         title="Contributions"
         description={`${visibleContributionRows.length} contributor${
           visibleContributionRows.length === 1 ? "" : "s"
@@ -291,8 +299,8 @@ export function SilaiFundReport({
                 contributionExportSections()
               )
             }
-            onExportPdf={exportPdf}
-            onExportImage={exportImage}
+            onExportPdf={printPart("contributions")}
+            onExportImage={imagePart("contributions")}
           />
         }
       >
@@ -342,6 +350,7 @@ export function SilaiFundReport({
 
       {nonCashDonationRows.length > 0 && (
         <Section
+          printId={sectionId("non-cash-donations")}
           title="Non-Cash Donations"
           count={nonCashDonationRows.length}
           actions={
@@ -357,8 +366,8 @@ export function SilaiFundReport({
                   nonCashExportRows()
                 )
               }
-              onExportPdf={exportPdf}
-              onExportImage={exportImage}
+              onExportPdf={printPart("non-cash-donations")}
+              onExportImage={imagePart("non-cash-donations")}
             />
           }
         >
@@ -386,6 +395,7 @@ export function SilaiFundReport({
       )}
 
       <Section
+        printId={sectionId("expenses")}
         title="Expenses"
         count={expenseRows.length}
         actions={
@@ -401,8 +411,8 @@ export function SilaiFundReport({
                 expenseExportRows()
               )
             }
-            onExportPdf={exportPdf}
-            onExportImage={exportImage}
+            onExportPdf={printPart("expenses")}
+            onExportImage={imagePart("expenses")}
           />
         }
       >
@@ -445,6 +455,7 @@ export function SilaiFundReport({
       </Section>
 
       <Section
+        printId={sectionId("bills")}
         title="Bills"
         count={billRows.length}
         actions={
@@ -453,8 +464,8 @@ export function SilaiFundReport({
             onExportHtml={() =>
               exportToHtml(`${fileSlug}-bills.html`, `${title} — Bills`, billExportHeaders, billExportRows())
             }
-            onExportPdf={exportPdf}
-            onExportImage={exportImage}
+            onExportPdf={printPart("bills")}
+            onExportImage={imagePart("bills")}
           />
         }
       >

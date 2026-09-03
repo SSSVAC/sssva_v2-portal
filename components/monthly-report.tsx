@@ -185,6 +185,13 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
   const exportPdf = () => printReportSection("monthly-report");
   const exportImage = () => exportSectionToImage("monthly-report", `monthly-report-${selectedMonth}.png`);
 
+  // Each section is addressable on its own, so its export menu covers that
+  // section rather than the whole report.
+  const sectionId = (part: string) => `monthly-report-${part}`;
+  const printPart = (part: string) => () => printReportSection(sectionId(part));
+  const imagePart = (part: string) => () =>
+    exportSectionToImage(sectionId(part), `monthly-report-${part}-${selectedMonth}.png`);
+
   const fullReportTitle = `Monthly Report — ${selectedMonthLabel}`;
   const fullReportSections = (): ExportSection[] => [
     { title: "Metrics", headers: metricsExportHeaders, rows: metricsExportRows() },
@@ -209,8 +216,8 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
                 fullReportSections()
               )
             }
-            onExportPdf={exportPdf}
-            onExportImage={exportImage}
+            onExportPdf={printPart("income")}
+            onExportImage={imagePart("income")}
           />
         }
       >
@@ -268,6 +275,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
       </div>
 
       <Section
+        printId={sectionId("income")}
         title="Income"
         actions={
           <ExportMenu
@@ -286,8 +294,8 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
                 incomeExportRows()
               )
             }
-            onExportPdf={exportPdf}
-            onExportImage={exportImage}
+            onExportPdf={printPart("donations")}
+            onExportImage={imagePart("donations")}
           />
         }
       >
@@ -338,6 +346,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
       </Section>
 
       <Section
+        printId={sectionId("donations")}
         title="Monthly Donations — Donor Detail"
         count={donationDonorRows.length}
         actions={
@@ -357,8 +366,8 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
                 donationDonorExportRows()
               )
             }
-            onExportPdf={exportPdf}
-            onExportImage={exportImage}
+            onExportPdf={printPart("others")}
+            onExportImage={imagePart("others")}
           />
         }
       >
@@ -399,6 +408,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
       </Section>
 
       <Section
+        printId={sectionId("others")}
         title="Others — Detail"
         count={othersDonorRows.length}
         actions={
@@ -418,8 +428,8 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
                 othersDonorExportRows()
               )
             }
-            onExportPdf={exportPdf}
-            onExportImage={exportImage}
+            onExportPdf={printPart("expenses")}
+            onExportImage={imagePart("expenses")}
           />
         }
       >
@@ -460,6 +470,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
       </Section>
 
       <Section
+        printId={sectionId("expenses")}
         title="Expenses"
         count={monthExpenseRows.length}
         actions={
@@ -479,8 +490,8 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
                 expenseExportRows()
               )
             }
-            onExportPdf={exportPdf}
-            onExportImage={exportImage}
+            onExportPdf={printPart("bills")}
+            onExportImage={imagePart("bills")}
           />
         }
       >
@@ -525,6 +536,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
       </Section>
 
       <Section
+        printId={sectionId("bills")}
         title="Bills"
         count={monthBillRows.length}
         actions={

@@ -157,6 +157,12 @@ export function EventFundReport({
 
   const exportPdf = () => printReportSection(printTarget);
   const exportImage = () => exportSectionToImage(printTarget, `${fileSlug}-${selectedYear}.png`);
+  // Each section is addressable on its own, so its export menu covers that
+  // section rather than the whole report.
+  const sectionId = (part: string) => `${printTarget}-${part}`;
+  const printPart = (part: string) => () => printReportSection(sectionId(part));
+  const imagePart = (part: string) => () =>
+    exportSectionToImage(sectionId(part), `${fileSlug}-${part}-${selectedYear}.png`);
 
   const metricsExportHeaders = ["Metric", "Value"];
   const metricsExportRows = () => [
@@ -296,6 +302,7 @@ export function EventFundReport({
       </div>
 
       <SectionGroup
+        printId={sectionId("contributions")}
         title="Contributions"
         description={`${selectedYear} · ${contributionGroups.length} street${
           contributionGroups.length === 1 ? "" : "s"
@@ -316,8 +323,8 @@ export function EventFundReport({
                 contributionExportSections()
               )
             }
-            onExportPdf={exportPdf}
-            onExportImage={exportImage}
+            onExportPdf={printPart("contributions")}
+            onExportImage={imagePart("contributions")}
           />
         }
       >
@@ -366,6 +373,7 @@ export function EventFundReport({
       </SectionGroup>
 
       <Section
+        printId={sectionId("expenses")}
         title="Expenses"
         count={yearExpenseRows.length}
         actions={
@@ -385,8 +393,8 @@ export function EventFundReport({
                 expenseExportRows()
               )
             }
-            onExportPdf={exportPdf}
-            onExportImage={exportImage}
+            onExportPdf={printPart("expenses")}
+            onExportImage={imagePart("expenses")}
           />
         }
       >
@@ -429,6 +437,7 @@ export function EventFundReport({
       </Section>
 
       <Section
+        printId={sectionId("bills")}
         title="Bills"
         count={yearBillRows.length}
         actions={
@@ -444,8 +453,8 @@ export function EventFundReport({
                 billExportRows()
               )
             }
-            onExportPdf={exportPdf}
-            onExportImage={exportImage}
+            onExportPdf={printPart("bills")}
+            onExportImage={imagePart("bills")}
           />
         }
       >
