@@ -35,6 +35,41 @@ function money(value: number | null) {
   return value === null ? "" : String(value);
 }
 
+/**
+ * An assigned ubhayam is the fact these sheets exist to record, so a name
+ * reads as a filled chip while an unclaimed line stays quiet — the point is
+ * to scan a long list for what is still open, which is hard when every cell
+ * carries the same weight.
+ *
+ * Returned as `display` rather than baked into the cell, so the empty case
+ * keeps EditableCell's own muted placeholder and the value stays editable.
+ */
+function sponsorTag(name: string | null) {
+  const trimmed = name?.trim();
+  return trimmed ? <span className="sponsor-tag">{trimmed}</span> : undefined;
+}
+
+/**
+ * A line is covered if it has its own ubhayam, or the whole section does.
+ * Same rule as totalsFor() in lib/functions/queries.ts, which is what the
+ * header count and the page's stat tiles are derived from — if the two ever
+ * disagreed, the row marks and the "N open" badge would contradict the
+ * summary above them.
+ */
+function isCovered(itemSponsor: string | null, sectionSponsor: string | null) {
+  return Boolean(itemSponsor?.trim() || sectionSponsor?.trim());
+}
+
+/**
+ * What the "Ubhayam by" cell shows when no name is set on the line itself.
+ * The unclaimed case is the one that needs chasing, so it is stated as a
+ * badge rather than left as an empty-looking cell; a line covered by the
+ * section's own ubhayam says so plainly instead of reading as a gap.
+ */
+function sponsorPlaceholder(sectionSponsor: string | null) {
+  return sectionSponsor?.trim() ? "Covered by section" : "Open";
+}
+
 export function FunctionSectionCard({
   section,
   functionSlug,
@@ -123,6 +158,14 @@ export function FunctionSectionCard({
           </>
         }
         count={section.items.length}
+        badge={
+          isSchedule || isMenu || section.items.length === 0 ? undefined : section.totals.openCount >
+            0 ? (
+            <span className="pill pill-warning">{section.totals.openCount} open</span>
+          ) : (
+            <span className="pill pill-success">All covered</span>
+          )
+        }
         printId={printId}
         actions={
           <>
@@ -151,6 +194,7 @@ export function FunctionSectionCard({
             <span className="filter-label">Ubhayam / sponsor</span>
             <EditableCell
               value={section.sponsor ?? ""}
+              display={sponsorTag(section.sponsor)}
               placeholder="Unassigned"
               ariaLabel={`Sponsor for ${section.title}`}
               readOnly={readOnly}
@@ -246,9 +290,15 @@ export function FunctionSectionCard({
               <tbody>
                 {section.items.map((item) => {
                   const status = itemStatus(item.status);
+                  const covered = isCovered(item.sponsor, section.sponsor);
 
                   return (
-                    <tr key={item.id}>
+                    <tr
+                      key={item.id}
+                      // Only the requirement lists carry an ubhayam; a menu is
+                      // settled per session and an agenda has no sponsor at all.
+                      data-ubhayam={isSchedule || isMenu ? undefined : covered ? "yes" : "no"}
+                    >
                       {isSchedule && (
                         <td data-label="Time">
                           <EditableCell
@@ -324,7 +374,15 @@ export function FunctionSectionCard({
                           <td data-label="Ubhayam by">
                             <EditableCell
                               value={item.sponsor ?? ""}
-                              placeholder={section.sponsor ? "Covered by section" : "Open"}
+                              display={
+                                sponsorTag(item.sponsor) ??
+                                (covered ? (
+                                  <span className="sponsor-via">Covered by section</span>
+                                ) : (
+                                  <span className="sponsor-open">Open</span>
+                                ))
+                              }
+                              placeholder={sponsorPlaceholder(section.sponsor)}
                               ariaLabel={`Sponsor for ${item.name}`}
                               readOnly={readOnly}
                               onSave={(value) => save("items", item.id, "sponsor", value)}

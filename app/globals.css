@@ -1461,6 +1461,48 @@ input[type="checkbox"] {
   background: var(--surface);
 }
 
+/* An assigned ubhayam — the name of whoever has committed to an item or a
+   whole section. Uses the success palette because "someone has claimed
+   this" is the covered state of that line, the same way an amount uses
+   .cell-success. Deliberately borderless and lighter than a .pill, so it
+   sits beside the status pill in the next column without the two competing
+   to be read first. */
+.sponsor-tag {
+  display: inline-block;
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+  padding: 1px 7px;
+  color: var(--success);
+  background: var(--success-soft);
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+/* A line still needing an ubhayam carries an amber edge, and a claimed one
+   carries nothing. Marking both states would cancel the signal out — what a
+   planner is scanning for is the gaps, so only the gaps are marked. */
+.data-table tr[data-ubhayam="no"] td:first-child {
+  box-shadow: inset 3px 0 0 var(--warning);
+}
+
+/* Stated rather than left blank: an empty-looking cell reads as "not filled
+   in yet", which is indistinguishable from "nobody has taken this". */
+.sponsor-open {
+  display: inline-block;
+  border-radius: var(--radius-sm);
+  padding: 1px 7px;
+  color: var(--warning);
+  background: var(--warning-soft);
+  font-weight: 650;
+}
+
+/* Covered by the section's own ubhayam — a real answer, so it doesn't get
+   the amber treatment, but it isn't this line's own name either. */
+.sponsor-via {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 /* --- Bill payment breakdown ------------------------------------------
    A payment sits under its bill as an indented continuation row, not as
    its own record: it is tinted, has no bottom rule against the next
@@ -2274,6 +2316,14 @@ input[type="checkbox"] {
     margin-bottom: 0;
   }
 
+  .data-table-cards tbody tr[data-ubhayam="no"] {
+    border-left: 3px solid var(--warning);
+  }
+
+  .data-table-cards tr[data-ubhayam="no"] td:first-child {
+    box-shadow: none;
+  }
+
   .data-table-cards tbody tr.payment-row {
     margin-top: -11px;
     margin-bottom: 10px;
@@ -2742,8 +2792,14 @@ input[type="checkbox"] {
   /* Status reads as plain bold text. Tinted pills depend on the browser's
      "background graphics" setting being on, and a colour-coded amount is
      meaningless once the page is photocopied. */
+  .data-table tr[data-ubhayam="no"] td:first-child {
+    box-shadow: none;
+  }
+
   .status-pill,
-  .pill {
+  .pill,
+  .sponsor-open,
+  .sponsor-tag {
     border: 0;
     padding: 0;
     color: var(--text) !important;
