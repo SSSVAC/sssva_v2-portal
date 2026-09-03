@@ -35,6 +35,20 @@ function money(value: number | null) {
   return value === null ? "" : String(value);
 }
 
+/**
+ * An assigned ubhayam is the fact these sheets exist to record, so a name
+ * reads as a filled chip while an unclaimed line stays quiet — the point is
+ * to scan a long list for what is still open, which is hard when every cell
+ * carries the same weight.
+ *
+ * Returned as `display` rather than baked into the cell, so the empty case
+ * keeps EditableCell's own muted placeholder and the value stays editable.
+ */
+function sponsorTag(name: string | null) {
+  const trimmed = name?.trim();
+  return trimmed ? <span className="sponsor-tag">{trimmed}</span> : undefined;
+}
+
 export function FunctionSectionCard({
   section,
   functionSlug,
@@ -151,6 +165,7 @@ export function FunctionSectionCard({
             <span className="filter-label">Ubhayam / sponsor</span>
             <EditableCell
               value={section.sponsor ?? ""}
+              display={sponsorTag(section.sponsor)}
               placeholder="Unassigned"
               ariaLabel={`Sponsor for ${section.title}`}
               readOnly={readOnly}
@@ -324,6 +339,7 @@ export function FunctionSectionCard({
                           <td data-label="Ubhayam by">
                             <EditableCell
                               value={item.sponsor ?? ""}
+                              display={sponsorTag(item.sponsor)}
                               placeholder={section.sponsor ? "Covered by section" : "Open"}
                               ariaLabel={`Sponsor for ${item.name}`}
                               readOnly={readOnly}

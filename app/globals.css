@@ -1461,6 +1461,23 @@ input[type="checkbox"] {
   background: var(--surface);
 }
 
+/* An assigned ubhayam — the name of whoever has committed to an item or a
+   whole section. Uses the success palette because "someone has claimed
+   this" is the covered state of that line, the same way an amount uses
+   .cell-success. Deliberately borderless and lighter than a .pill, so it
+   sits beside the status pill in the next column without the two competing
+   to be read first. */
+.sponsor-tag {
+  display: inline-block;
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+  padding: 1px 7px;
+  color: var(--success);
+  background: var(--success-soft);
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
 /* --- Bill payment breakdown ------------------------------------------
    A payment sits under its bill as an indented continuation row, not as
    its own record: it is tinted, has no bottom rule against the next
@@ -2743,7 +2760,8 @@ input[type="checkbox"] {
      "background graphics" setting being on, and a colour-coded amount is
      meaningless once the page is photocopied. */
   .status-pill,
-  .pill {
+  .pill,
+  .sponsor-tag {
     border: 0;
     padding: 0;
     color: var(--text) !important;
