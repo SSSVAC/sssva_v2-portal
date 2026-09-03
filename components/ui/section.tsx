@@ -5,6 +5,8 @@ type SectionProps = {
   title: ReactNode;
   /** Row count or similar, shown as a quiet pill beside the title. */
   count?: number | string;
+  /** A state worth carrying in the header, e.g. "7 open". */
+  badge?: ReactNode;
   /** Controls that belong to THIS section — normally its export menu. */
   actions?: ReactNode;
   /** Adds padding to the body. Leave off when the body is a full-bleed table. */
@@ -38,7 +40,15 @@ type SectionProps = {
 //     title with nothing under it.
 //   * Desktop ignores open/closed entirely (see globals.css); only the
 //     <=960px rule hides a body, so collapsing needs no JavaScript.
-export function Section({ title, count, actions, padded = false, printId, children }: SectionProps) {
+export function Section({
+  title,
+  count,
+  badge,
+  actions,
+  padded = false,
+  printId,
+  children
+}: SectionProps) {
   return (
     <section className="section" data-print-id={printId}>
       <div className="section-head">
@@ -46,6 +56,7 @@ export function Section({ title, count, actions, padded = false, printId, childr
           <summary className="report-section-summary">
             <h3 className="section-title">{title}</h3>
             {count !== undefined && <span className="section-count">{count}</span>}
+            {badge}
             <span className="section-chevron" aria-hidden="true">
               <ChevronDown size={15} />
             </span>
