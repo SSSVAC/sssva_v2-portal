@@ -5,7 +5,18 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "SSSVA Portal",
-  description: "Supabase-backed finance portal with Zoho Books synchronization"
+  description: "Temple finance, reports and function planning.",
+  // Share links carry their own tags (see lib/share/link-preview.ts); these
+  // are the fallback for any other URL someone pastes into a chat.
+  openGraph: {
+    siteName: "SSSVA Portal",
+    type: "website",
+    title: "SSSVA Portal",
+    description: "Temple finance, reports and function planning."
+  },
+  // The portal is entirely behind a sign-in, so there is nothing for a
+  // search engine to index and no reason to appear in results.
+  robots: { index: false, follow: false }
 };
 
 // Without this, mobile browsers render at a virtual desktop-width viewport

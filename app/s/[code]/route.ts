@@ -9,6 +9,8 @@ import {
 } from "@/lib/auth/guest-pass";
 import { GUEST_HOME, guestLandingPath, isShareablePath } from "@/lib/auth/guest-scope";
 import { checkRateLimit, getClientIp, rateLimitResponseInit } from "@/lib/rate-limit";
+import { isLinkPreviewCrawler, previewDocument } from "@/lib/share/link-preview";
+import { describeSharePath } from "@/lib/share/describe-share-path";
 
 // A share link is capped at a day per visit even when the pass runs for
 // months, so a link opened on a shared or borrowed phone doesn't leave a
@@ -55,6 +57,25 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   const expiresAt = new Date(pass.expires_at);
   if (expiresAt <= new Date()) return deny("expired");
+
+  // Link-preview crawlers get the page's name and nothing else: no session,
+  // no redirect to a login screen, and no bump to use_count. Without this the
+  // crawler follows the redirect to a page it can't read, lands on /login,
+  // and every share of every link unfurls as the same bare site name.
+  if (isLinkPreviewCrawler(request.headers.get("user-agent"))) {
+    const preview = pass.scope_path ? await describeSharePath(pass.scope_path) : null;
+    if (!preview) return deny("invalid");
+
+    return new NextResponse(previewDocument(preview, request.nextUrl.toString()), {
+      status: 200,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        // A preview card should follow the page's current name, but the link
+        // is still a credential — never let a shared cache hold the response.
+        "Cache-Control": "private, max-age=300"
+      }
+    });
+  }
 
   const sessionExpiry = new Date(Math.min(expiresAt.getTime(), Date.now() + SHARE_SESSION_MS));
   const token = createGuestSessionToken(pass.id, sessionExpiry);
