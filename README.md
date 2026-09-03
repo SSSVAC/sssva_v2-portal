@@ -40,6 +40,12 @@ Every write made through the Records API (edits, bulk deletes, resyncs) is logge
 
 Load the two existing plans (Maha Kumbabhishekam 2026 and the Annathanam food order) by running `supabase/seed-functions.sql` in the Supabase SQL editor after `supabase/schema.sql`. It deletes and reinserts those two functions by slug, so run it once at setup — re-running discards any edits made in the app for them.
 
+### Bill payments
+
+Zoho settles a bill through any number of separate payments, and its bill *list* endpoint reports only the net balance. The individual payments come from the per-bill detail endpoint and are stored in `zoho_bill_payments`, so every Bills table can show a breakdown behind **Show payment details**.
+
+A bill is re-fetched from Zoho exactly when the payments recorded here stop adding up to `total - balance`, so a newly paid bill costs one detail call and an unchanged one costs none. Run a Zoho sync after applying the schema to pull the existing payments in; until then the toggle is disabled and says so.
+
 ## Guest access
 
 Staff sign in with email and password. Anyone else can be given a **guest pass**: a shared code, valid until a date you choose, that grants read-only access to the function trackers and the Silai and Event reports. Records, the dashboard and the financial reports stay staff-only.

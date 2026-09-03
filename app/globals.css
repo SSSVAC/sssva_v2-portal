@@ -1461,6 +1461,40 @@ input[type="checkbox"] {
   background: var(--surface);
 }
 
+/* --- Bill payment breakdown ------------------------------------------
+   A payment sits under its bill as an indented continuation row, not as
+   its own record: it is tinted, has no bottom rule against the next
+   payment, and its text is quieter than the bill's.
+   --------------------------------------------------------------------- */
+
+.data-table .payment-row td {
+  padding-top: 5px;
+  padding-bottom: 5px;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: var(--fs-small);
+}
+
+.data-table .payment-row td:first-child {
+  padding-left: 26px;
+}
+
+.data-table .payment-row svg {
+  margin-right: 7px;
+  color: var(--text-muted);
+  vertical-align: -2px;
+}
+
+/* Hover highlights the bill you are pointing at, not its payments. */
+.data-table .payment-row:hover td {
+  background: var(--surface-2);
+}
+
+.payment-count {
+  font-size: var(--fs-label);
+  font-variant-numeric: tabular-nums;
+}
+
 /* --- Function tracker ------------------------------------------------
    A section's own fields (ubhayam, vendor, estimate) are a small form
    above its table, not a row inside it. In the source documents these
@@ -2238,6 +2272,18 @@ input[type="checkbox"] {
 
   .data-table-cards tbody tr:last-child {
     margin-bottom: 0;
+  }
+
+  .data-table-cards tbody tr.payment-row {
+    margin-top: -11px;
+    margin-bottom: 10px;
+    border-top: 0;
+    border-radius: 0 0 var(--radius) var(--radius);
+    background: var(--surface-2);
+  }
+
+  .data-table-cards tr.payment-row td:first-child {
+    padding-left: 13px;
   }
 
   .data-table-cards tbody tr:hover td {

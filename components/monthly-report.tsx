@@ -17,6 +17,8 @@ import {
 } from "@/lib/export";
 import { useUrlParamSetter } from "@/lib/reports/use-url-param";
 import type { DonationMonth } from "@/components/monthly-donations-report";
+import { BillsTable } from "@/components/reports/bills-table";
+import { paymentExportRows, type BillPaymentRow } from "@/lib/reports/bill-payments";
 
 export type MonthlyIncomeCategory = "donations" | "archanai" | "abhishegam" | "others";
 
@@ -43,11 +45,9 @@ export type MonthlyBillRow = {
   date: string | null;
   total: number;
   balance: number;
+  /** Individual Zoho payments applied to this bill. */
+  payments?: BillPaymentRow[];
 };
-
-function dueClass(balance: number) {
-  return balance > 0 ? "cell-danger" : "cell-success";
-}
 
 type MonthlyReportProps = {
   months: DonationMonth[];
@@ -86,6 +86,7 @@ function buildDonorRowsForCategory(rows: MonthlyIncomeRow[], category: MonthlyIn
 export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initialMonth }: MonthlyReportProps) {
   const defaultMonth = months.length > 0 ? months[months.length - 1].key : "";
   const [selectedMonth, setSelectedMonth] = useState(initialMonth ?? defaultMonth);
+  const [showBillPayments, setShowBillPayments] = useState(false);
   const setUrlParams = useUrlParamSetter();
 
   const selectedMonthLabel = months.find((month) => month.key === selectedMonth)?.label ?? selectedMonth;
@@ -171,15 +172,20 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
     ]);
 
   const billExportHeaders = ["Bill #", "Vendor", "Account", "Date", "Total", "Paid", "Due"];
+  // The export mirrors what's on screen: with the breakdown showing, each
+  // bill's payments follow it as indented rows.
   const billExportRows = (): ExportCell[][] =>
-    monthBillRows.map((row) => [
-      row.number ?? "",
-      row.vendorName ?? "",
-      row.accountName ?? "",
-      row.date ? formatDateOnly(row.date) : "",
-      formatCurrency(row.total),
-      formatCurrency(row.total - row.balance),
-      { value: formatCurrency(row.balance), highlight: row.balance > 0 ? "danger" : "success" } as ExportCell
+    monthBillRows.flatMap((row) => [
+      [
+        row.number ?? "",
+        row.vendorName ?? "",
+        row.accountName ?? "",
+        row.date ? formatDateOnly(row.date) : "",
+        formatCurrency(row.total),
+        formatCurrency(row.total - row.balance),
+        { value: formatCurrency(row.balance), highlight: row.balance > 0 ? "danger" : "success" } as ExportCell
+      ],
+      ...(showBillPayments ? paymentExportRows(row.payments ?? [], 7, 5) : [])
     ]);
 
   const exportPdf = () => printReportSection("monthly-report");
@@ -558,54 +564,13 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
         }
       >
         {monthBillRows.length > 0 ? (
-          <div className="table-panel-scroll">
-            <table className="data-table data-table-cards">
-              <thead>
-                <tr>
-                  <th>Bill #</th>
-                  <th>Vendor</th>
-                  <th>Account</th>
-                  <th>Date</th>
-                  <th className="num">Total</th>
-                  <th className="num">Paid</th>
-                  <th className="num">Due</th>
-                </tr>
-              </thead>
-              <tbody>
-                {monthBillRows.map((row) => (
-                  <tr key={row.id}>
-                    <td data-label="Bill #">{row.number ?? "—"}</td>
-                    <td data-label="Vendor">{row.vendorName ?? "—"}</td>
-                    <td data-label="Account">{row.accountName ?? "—"}</td>
-                    <td data-label="Date">{row.date ? formatDateOnly(row.date) : "—"}</td>
-                    <td data-label="Total" className="num">
-                      {formatCurrency(row.total)}
-                    </td>
-                    <td data-label="Paid" className="num">
-                      {formatCurrency(row.total - row.balance)}
-                    </td>
-                    <td data-label="Due" className={`num ${dueClass(row.balance)}`}>
-                      {formatCurrency(row.balance)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td colSpan={4}>Total Bills</td>
-                  <td data-label="Total" className="num">
-                    {formatCurrency(totalBills)}
-                  </td>
-                  <td data-label="Paid" className="num">
-                    {formatCurrency(totalBillsPaid)}
-                  </td>
-                  <td data-label="Due" className="num">
-                    {formatCurrency(totalBillsDue)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+          <BillsTable
+            rows={monthBillRows}
+            showAccount
+            showPayments={showBillPayments}
+            onShowPaymentsChange={setShowBillPayments}
+            totals={{ total: totalBills, paid: totalBillsPaid, due: totalBillsDue }}
+          />
         ) : (
           <div className="empty-state">
             <p>No bills recorded for this month.</p>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { Section } from "@/components/ui/section";
+import { SectionExportMenu } from "@/components/functions/function-export-menu";
 import { EditableCell } from "@/components/ui/editable-cell";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useToast } from "@/components/toast";
@@ -19,6 +20,8 @@ import {
 
 type FunctionSectionCardProps = {
   section: SectionWithItems;
+  /** Used to name exported files and scope this section's print target. */
+  functionSlug: string;
   canEdit: boolean;
   isAdmin: boolean;
 };
@@ -32,7 +35,12 @@ function money(value: number | null) {
   return value === null ? "" : String(value);
 }
 
-export function FunctionSectionCard({ section, canEdit, isAdmin }: FunctionSectionCardProps) {
+export function FunctionSectionCard({
+  section,
+  functionSlug,
+  canEdit,
+  isAdmin
+}: FunctionSectionCardProps) {
   const router = useRouter();
   const { showToast } = useToast();
   const [adding, setAdding] = useState(false);
@@ -87,6 +95,10 @@ export function FunctionSectionCard({ section, canEdit, isAdmin }: FunctionSecti
     }
   }
 
+  // Unique per page: one function renders at a time, and section ids are
+  // unique within it.
+  const printId = `function-section-${section.id}`;
+
   const isSchedule = section.kind === "schedule";
   const isMenu = section.kind === "menu";
   const readOnly = !canEdit;
@@ -111,18 +123,22 @@ export function FunctionSectionCard({ section, canEdit, isAdmin }: FunctionSecti
           </>
         }
         count={section.items.length}
+        printId={printId}
         actions={
-          canEdit ? (
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              disabled={adding}
-              onClick={() => void addItem()}
-            >
-              <Plus size={14} />
-              {adding ? "Adding…" : "Add item"}
-            </button>
-          ) : undefined
+          <>
+            {canEdit && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                disabled={adding}
+                onClick={() => void addItem()}
+              >
+                <Plus size={14} />
+                {adding ? "Adding…" : "Add item"}
+              </button>
+            )}
+            <SectionExportMenu section={section} functionSlug={functionSlug} printId={printId} />
+          </>
         }
       >
         {/* The section's own fields, as a form rather than a table row: an

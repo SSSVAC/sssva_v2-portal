@@ -410,3 +410,53 @@ create index if not exists function_items_section_idx
   on public.function_items (section_id, order_no);
 create index if not exists guest_passes_code_hash_idx
   on public.guest_passes (code_hash);
+
+-- =====================================================================
+-- Bill payments
+--
+-- One row per payment applied to a bill. Zoho's bill LIST endpoint gives
+-- only total and balance; the individual payments come from the per-bill
+-- DETAIL endpoint's `payments[]` array, so these are populated by the same
+-- detail-fetch backfill that fills account_name/item_name.
+--
+-- A single vendor payment can be split across several bills, which Zoho
+-- returns as one entry per bill with a shared payment_id and a distinct
+-- bill_payment_id. payment_key is that per-bill application: the
+-- bill_payment_id when Zoho supplies one, otherwise bill id + payment id.
+-- Keying on it means a payment split across two bills stays two rows.
+-- =====================================================================
+
+create table if not exists public.zoho_bill_payments (
+  id uuid primary key default gen_random_uuid(),
+  payment_key text not null unique,
+  zoho_bill_id text not null,
+  zoho_payment_id text,
+  zoho_bill_payment_id text,
+  payment_number text,
+  date date,
+  amount numeric(14, 2) not null default 0,
+  payment_mode text,
+  reference_number text,
+  description text,
+  paid_through_account_name text,
+  raw jsonb not null default '{}'::jsonb,
+  synced_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+drop trigger if exists set_zoho_bill_payments_updated_at on public.zoho_bill_payments;
+create trigger set_zoho_bill_payments_updated_at
+before update on public.zoho_bill_payments
+for each row execute function public.set_updated_at();
+
+alter table public.zoho_bill_payments enable row level security;
+
+drop policy if exists "Authenticated users can read bill payments" on public.zoho_bill_payments;
+create policy "Authenticated users can read bill payments"
+on public.zoho_bill_payments for select
+to authenticated
+using (true);
+
+create index if not exists zoho_bill_payments_bill_idx
+  on public.zoho_bill_payments (zoho_bill_id, date desc);

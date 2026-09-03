@@ -18,6 +18,8 @@ import {
 } from "@/lib/export";
 import { groupKeyFor, sortGroupNames } from "@/lib/silai-groups";
 import { useUrlParamSetter } from "@/lib/reports/use-url-param";
+import { BillsTable } from "@/components/reports/bills-table";
+import { paymentExportRows, type BillPaymentRow } from "@/lib/reports/bill-payments";
 
 export type EventContributionRow = {
   year: string;
@@ -45,6 +47,8 @@ export type EventBillRow = {
   date: string | null;
   total: number;
   balance: number;
+  /** Individual Zoho payments applied to this bill. */
+  payments?: BillPaymentRow[];
 };
 
 // Matches the per-member Silai fund minimum used elsewhere as a general
@@ -62,10 +66,6 @@ function amountCell(total: number): ExportCell {
   if (total >= FULL_AMOUNT_THRESHOLD) return { value, highlight: "success" };
   if (total > 0) return { value, highlight: "warning" };
   return { value, highlight: "danger" };
-}
-
-function dueClass(balance: number) {
-  return balance > 0 ? "cell-danger" : "cell-success";
 }
 
 function sumTotals<T extends { total: number }>(rows: T[]) {
@@ -104,6 +104,7 @@ export function EventFundReport({
   }, [contributionRows, expenseRows, billRows]);
 
   const [selectedYear, setSelectedYear] = useState(initialYear ?? years[0] ?? "");
+  const [showBillPayments, setShowBillPayments] = useState(false);
   const [showAllMembers, setShowAllMembers] = useState(initialShowAllMembers);
   const setUrlParams = useUrlParamSetter();
 
@@ -192,14 +193,19 @@ export function EventFundReport({
   ];
 
   const billExportHeaders = ["Bill #", "Vendor", "Date", "Total", "Paid", "Due"];
+  // The export mirrors what's on screen: with the breakdown showing, each
+  // bill's payments follow it as indented rows.
   const billExportRows = (): ExportCell[][] => [
-    ...yearBillRows.map((row) => [
-      row.number ?? "",
-      row.vendorName ?? "",
-      row.date ? formatDateOnly(row.date) : "",
-      formatCurrency(row.total),
-      formatCurrency(row.total - row.balance),
-      { value: formatCurrency(row.balance), highlight: row.balance > 0 ? "danger" : "success" } as ExportCell
+    ...yearBillRows.flatMap((row) => [
+      [
+        row.number ?? "",
+        row.vendorName ?? "",
+        row.date ? formatDateOnly(row.date) : "",
+        formatCurrency(row.total),
+        formatCurrency(row.total - row.balance),
+        { value: formatCurrency(row.balance), highlight: row.balance > 0 ? "danger" : "success" } as ExportCell
+      ],
+      ...(showBillPayments ? paymentExportRows(row.payments ?? [], 6, 4) : [])
     ]),
     ["Total", "", "", formatCurrency(totalBills), formatCurrency(totalBillsPaid), formatCurrency(totalBillsDue)]
   ];
@@ -459,52 +465,12 @@ export function EventFundReport({
         }
       >
         {yearBillRows.length > 0 ? (
-          <div className="table-panel-scroll">
-            <table className="data-table data-table-cards">
-              <thead>
-                <tr>
-                  <th>Bill #</th>
-                  <th>Vendor</th>
-                  <th>Date</th>
-                  <th className="num">Total</th>
-                  <th className="num">Paid</th>
-                  <th className="num">Due</th>
-                </tr>
-              </thead>
-              <tbody>
-                {yearBillRows.map((row) => (
-                  <tr key={row.id}>
-                    <td data-label="Bill #">{row.number ?? "—"}</td>
-                    <td data-label="Vendor">{row.vendorName ?? "—"}</td>
-                    <td data-label="Date">{row.date ? formatDateOnly(row.date) : "—"}</td>
-                    <td data-label="Total" className="num">
-                      {formatCurrency(row.total)}
-                    </td>
-                    <td data-label="Paid" className="num">
-                      {formatCurrency(row.total - row.balance)}
-                    </td>
-                    <td data-label="Due" className={`num ${dueClass(row.balance)}`}>
-                      {formatCurrency(row.balance)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td colSpan={3}>Total Bills</td>
-                  <td data-label="Total" className="num">
-                    {formatCurrency(totalBills)}
-                  </td>
-                  <td data-label="Paid" className="num">
-                    {formatCurrency(totalBillsPaid)}
-                  </td>
-                  <td data-label="Due" className="num">
-                    {formatCurrency(totalBillsDue)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+          <BillsTable
+            rows={yearBillRows}
+            showPayments={showBillPayments}
+            onShowPaymentsChange={setShowBillPayments}
+            totals={{ total: totalBills, paid: totalBillsPaid, due: totalBillsDue }}
+          />
         ) : (
           <div className="empty-state">
             <p>No bills recorded.</p>

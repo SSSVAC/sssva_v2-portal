@@ -223,6 +223,46 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["audit_log"]["Insert"]>;
         Relationships: [];
       };
+      zoho_bill_payments: {
+        Row: {
+          id: string;
+          payment_key: string;
+          zoho_bill_id: string;
+          zoho_payment_id: string | null;
+          zoho_bill_payment_id: string | null;
+          payment_number: string | null;
+          date: string | null;
+          amount: number;
+          payment_mode: string | null;
+          reference_number: string | null;
+          description: string | null;
+          paid_through_account_name: string | null;
+          raw: Json;
+          synced_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          payment_key: string;
+          zoho_bill_id: string;
+          zoho_payment_id?: string | null;
+          zoho_bill_payment_id?: string | null;
+          payment_number?: string | null;
+          date?: string | null;
+          amount?: number;
+          payment_mode?: string | null;
+          reference_number?: string | null;
+          description?: string | null;
+          paid_through_account_name?: string | null;
+          raw?: Json;
+          synced_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["zoho_bill_payments"]["Insert"]>;
+        Relationships: [];
+      };
       event_functions: {
         Row: {
           id: string;

@@ -76,6 +76,14 @@ Zoho's list endpoints omit some fields the app needs (invoice `item_name`, `subj
 
 If you add a new field that needs this treatment, follow the same shape: a `load...` map function, a call-site check for "missing", a narrow patch merge, and only cache "already have it" (not "already tried").
 
+### Bill payments
+
+`zoho_bill_payments` holds one row per payment applied to one bill. A single vendor payment can be split across several bills, which Zoho returns as one entry per bill sharing a `payment_id` but with distinct `bill_payment_id`s — so the stable key is that per-bill application (`payment_key`), not the payment.
+
+The refetch rule is the useful part. Payments only appear in the per-bill **detail** response, and re-fetching every bill on every sync would waste Zoho's quota, so `needsPaymentBackfill()` in `lib/zoho/client.ts` compares `total - balance` from the cheap list call against the sum of payments already stored. They diverge exactly when a payment has been added or removed in Zoho, so a bill costs one detail call per change and nothing otherwise — and it self-heals rather than needing a manual backfill flag.
+
+`mergeBillDetail` deliberately leaves `payments` **off** the bills it returns from cache. Its absence is what tells the sync "this bill wasn't re-fetched, leave its stored payments alone"; an empty array would read as "Zoho says there are none" and wipe them. For bills that *were* re-fetched, the sync deletes and reinserts their payment rows, so a payment deleted in Zoho disappears here too.
+
 ### Sync-failure notification
 
 `lib/alerts.ts`'s `notifySyncFailure(message)` is called from the `catch` block in `runZohoBooksSync`. It's a no-op unless `SYNC_ALERT_WEBHOOK_URL` is set (Slack or Discord incoming webhook — the JSON payload includes both `text` and `content` keys so either platform picks it up). A broken webhook can never fail the sync itself; the POST is wrapped in its own `try/catch` with a 10s timeout.
@@ -133,6 +141,12 @@ Report filters go in one `<ReportToolbar>` directly under the page header, not i
 Cells save on Enter or blur through `PATCH /api/functions/[entity]`, which takes an entity (`functions` / `sections` / `items`), a column and a value. Columns are allowlisted per entity with a text-or-numeric coercion, so ids, `order_no` and timestamps can't be written through it. An empty string clears a field to `null` rather than writing `0` — a blank quantity and a quantity of zero are different facts, and the source sheets are full of blanks that must stay blank.
 
 `components/ui/editable-cell.tsx` is the click-to-edit primitive: it takes an `onSave` callback rather than knowing about any endpoint. Records still has its own copy of the same interaction inside `editable-data-table.tsx`; converging the two is worth doing, but wasn't done in the change that introduced this.
+
+### Exporting a tracker
+
+`lib/functions/export.ts` builds the export rows, and it branches on the section's `kind` for the same reason the UI does: exporting a menu with the requirements columns would emit empty Expected/Actual columns, and an agenda would gain a Qty column it never had. Section-level settlement fields (vendor, estimate, advance) export as their own small block, because they belong to the session rather than to any one line.
+
+Both the page header and each section header carry an export menu, wired to the same `printId` scoping described under Print/export.
 
 ## Guest access
 

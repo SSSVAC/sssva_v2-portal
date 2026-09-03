@@ -17,13 +17,17 @@ import {
   MONTHLY_REPORT_EXCLUDED_ACCOUNTS
 } from "@/lib/reports/constants";
 import type { Database } from "@/types/database";
+import { fetchBillPayments } from "@/lib/reports/bill-payments";
 
 type InvoiceRow = Database["public"]["Tables"]["zoho_invoices"]["Row"];
 type ExpenseRow = Database["public"]["Tables"]["zoho_expenses"]["Row"];
 type BillRow = Database["public"]["Tables"]["zoho_bills"]["Row"];
 type MonthlyIncomeInvoice = Pick<InvoiceRow, "date" | "total" | "item_name" | "customer_name">;
 type MonthlyExpenseSource = Pick<ExpenseRow, "id" | "description" | "account_name" | "date" | "total">;
-type MonthlyBillSource = Pick<BillRow, "id" | "bill_number" | "vendor_name" | "account_name" | "date" | "total" | "balance">;
+type MonthlyBillSource = Pick<
+  BillRow,
+  "id" | "zoho_bill_id" | "bill_number" | "vendor_name" | "account_name" | "date" | "total" | "balance"
+>;
 
 type Props = {
   months: DonationMonth[];
@@ -71,7 +75,7 @@ async function loadMonthlyReport({ supabase, searchParams }: ReportLoaderContext
       .returns<MonthlyExpenseSource[]>(),
     supabase
       .from("zoho_bills")
-      .select("id, bill_number, vendor_name, account_name, date, total, balance")
+      .select("id, zoho_bill_id, bill_number, vendor_name, account_name, date, total, balance")
       .is("archived_at", null)
       .gte("date", rangeStart)
       .order("date", { ascending: false })
@@ -96,17 +100,24 @@ async function loadMonthlyReport({ supabase, searchParams }: ReportLoaderContext
       total: Number(expense.total ?? 0)
     }));
 
-  const billRows: MonthlyBillRow[] = (bills ?? [])
-    .filter((bill) => !MONTHLY_REPORT_EXCLUDED_ACCOUNTS.includes(bill.account_name ?? ""))
-    .map((bill) => ({
-      id: bill.id,
-      number: bill.bill_number,
-      vendorName: bill.vendor_name,
-      accountName: bill.account_name,
-      date: bill.date,
-      total: Number(bill.total ?? 0),
-      balance: Number(bill.balance ?? 0)
-    }));
+  const visibleBills = (bills ?? []).filter(
+    (bill) => !MONTHLY_REPORT_EXCLUDED_ACCOUNTS.includes(bill.account_name ?? "")
+  );
+  const paymentsByBill = await fetchBillPayments(
+    supabase,
+    visibleBills.map((bill) => bill.zoho_bill_id)
+  );
+
+  const billRows: MonthlyBillRow[] = visibleBills.map((bill) => ({
+    id: bill.id,
+    number: bill.bill_number,
+    vendorName: bill.vendor_name,
+    accountName: bill.account_name,
+    date: bill.date,
+    total: Number(bill.total ?? 0),
+    balance: Number(bill.balance ?? 0),
+    payments: paymentsByBill.get(bill.zoho_bill_id) ?? []
+  }));
 
   return { months, incomeRows, expenseRows, billRows, initialMonth };
 }
