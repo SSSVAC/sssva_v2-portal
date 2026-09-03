@@ -4,6 +4,7 @@ import { AppShell } from "@/components/shell/app-shell";
 import { PageHeader } from "@/components/shell/page-header";
 import { FunctionSectionCard } from "@/components/functions/function-section-card";
 import { AddSectionButton } from "@/components/functions/add-section-button";
+import { FunctionExportMenu } from "@/components/functions/function-export-menu";
 import { requireViewer, viewerChrome } from "@/lib/auth/viewer";
 import { getFunctionDetail } from "@/lib/functions/queries";
 import { formatCurrency, formatDateOnly } from "@/lib/format";
@@ -40,7 +41,12 @@ export default async function FunctionDetailPage({ params }: PageProps) {
               {dates.length > 0 ? dates.join(" – ") : fn.status}
             </span>
           }
-          actions={canEdit ? <AddSectionButton functionId={fn.id} /> : undefined}
+          actions={
+            <>
+              <FunctionExportMenu fn={fn} />
+              {canEdit && <AddSectionButton functionId={fn.id} />}
+            </>
+          }
         />
 
         <div className="stack">
@@ -110,6 +116,7 @@ export default async function FunctionDetailPage({ params }: PageProps) {
               <FunctionSectionCard
                 key={section.id}
                 section={section}
+                functionSlug={fn.slug}
                 canEdit={canEdit}
                 isAdmin={viewer.isAdmin}
               />

@@ -76,6 +76,14 @@ Zoho's list endpoints omit some fields the app needs (invoice `item_name`, `subj
 
 If you add a new field that needs this treatment, follow the same shape: a `load...` map function, a call-site check for "missing", a narrow patch merge, and only cache "already have it" (not "already tried").
 
+### Bill payments
+
+`zoho_bill_payments` holds one row per payment applied to one bill. A single vendor payment can be split across several bills, which Zoho returns as one entry per bill sharing a `payment_id` but with distinct `bill_payment_id`s — so the stable key is that per-bill application (`payment_key`), not the payment.
+
+The refetch rule is the useful part. Payments only appear in the per-bill **detail** response, and re-fetching every bill on every sync would waste Zoho's quota, so `needsPaymentBackfill()` in `lib/zoho/client.ts` compares `total - balance` from the cheap list call against the sum of payments already stored. They diverge exactly when a payment has been added or removed in Zoho, so a bill costs one detail call per change and nothing otherwise — and it self-heals rather than needing a manual backfill flag.
+
+`mergeBillDetail` deliberately leaves `payments` **off** the bills it returns from cache. Its absence is what tells the sync "this bill wasn't re-fetched, leave its stored payments alone"; an empty array would read as "Zoho says there are none" and wipe them. For bills that *were* re-fetched, the sync deletes and reinserts their payment rows, so a payment deleted in Zoho disappears here too.
+
 ### Sync-failure notification
 
 `lib/alerts.ts`'s `notifySyncFailure(message)` is called from the `catch` block in `runZohoBooksSync`. It's a no-op unless `SYNC_ALERT_WEBHOOK_URL` is set (Slack or Discord incoming webhook — the JSON payload includes both `text` and `content` keys so either platform picks it up). A broken webhook can never fail the sync itself; the POST is wrapped in its own `try/catch` with a 10s timeout.
@@ -134,6 +142,12 @@ Cells save on Enter or blur through `PATCH /api/functions/[entity]`, which takes
 
 `components/ui/editable-cell.tsx` is the click-to-edit primitive: it takes an `onSave` callback rather than knowing about any endpoint. Records still has its own copy of the same interaction inside `editable-data-table.tsx`; converging the two is worth doing, but wasn't done in the change that introduced this.
 
+### Exporting a tracker
+
+`lib/functions/export.ts` builds the export rows, and it branches on the section's `kind` for the same reason the UI does: exporting a menu with the requirements columns would emit empty Expected/Actual columns, and an agenda would gain a Qty column it never had. Section-level settlement fields (vendor, estimate, advance) export as their own small block, because they belong to the session rather than to any one line.
+
+Both the page header and each section header carry an export menu, wired to the same `printId` scoping described under Print/export.
+
 ## Guest access
 
 A guest is **not** a Supabase account. `guest_passes` holds a label, an expiry, and a SHA-256 of a generated code — never the code itself. Plain SHA-256 is right here rather than bcrypt: codes carry ~60 bits of entropy because they are generated rather than chosen, so there is nothing to grind offline, and the lookup has to be one indexed equality check instead of a scan with a slow hash over every row.
@@ -169,6 +183,10 @@ The table renders as a `Section` with a search box and a **Filters** toggle in i
 
 `lib/export.ts` provides CSV, Excel, HTML, PDF-via-print and PNG-via-`html-to-image`, surfaced through one `<ExportMenu>` per section plus a whole-report menu in the `ReportToolbar`.
 
-- **PDF**: `printReportSection(target)` sets `data-print-target` on `<body>` and calls `window.print()`. Nothing reads that attribute any more — each report is its own page, so the `@media print` block in `app/globals.css` styles unconditionally. Printed output is plain black-on-white: no surfaces, no zebra, no status tints beyond text colour, so it renders identically regardless of the browser's background-graphics setting **and of the viewer's light/dark theme**. Anything added to the print block must set explicit `#000`/`#fff`, never a role token.
+- **PDF**: `printReportSection(target)` marks the element carrying `data-print-id="target"` with `data-printing`, sets `data-print-scoped` on `<body>`, and calls `window.print()`. The scoping rules at the end of the `@media print` block then hide, inside each container that can hold a printable block, every child that is neither the target nor an ancestor of it. So a section's export menu prints that section and the page-level menu prints the whole report — before this, every menu on the page printed the entire report.
+
+  The container half of that selector ends in `:has([data-printing])`, and it is load-bearing. On a whole-report print the target is the outer wrapper, so no container *inside* it holds the marker and nothing is hidden. Drop it and every container below the target would also filter its children, leaving the report printing as just its header. Pass a `printId` to `<Section>` or `<SectionGroup>` to make it addressable.
+
+- **Print palette**: the print block redefines the role tokens to a light palette rather than setting `#000`/`#fff` per rule. Its selector list must include `:root:not([data-theme="light"])`, not just `:root` — the dark theme is applied through that selector inside a `prefers-color-scheme` query, so a bare `:root` override loses on specificity and a viewer on system dark prints every rule and cell edge in the dark theme's near-black. **Print media does not beat specificity**: the same trap catches `.data-table .cell-*::before`, where a single-class print rule loses to the two-class rule that draws the status dot.
 - **PNG**: `exportSectionToImage(target, filename)` rasterises `[data-print-id="…"]`, which `ReportShell` puts around the page header *and* the body so the image carries the report's title. Everything marked `.no-print` is filtered out — so any new control must carry that class or it will appear in exported images.
 - Both the mobile breakpoints and the collapsible-section rules are `screen`-scoped. A4 portrait is narrower than 960px, so an unscoped mobile rule silently breaks every printed and exported report.

@@ -580,16 +580,39 @@ export async function copySilaiFollowUpToWhatsApp(
   await copyTextToClipboard(lines.join("\n"));
 }
 
-// Prints only the report section marked with data-print-id="target" by
-// stamping data-print-target on <body>; global print CSS uses that attribute
-// to hide everything else. Lets users "Save as PDF" via the browser's print
-// dialog, which renders Tamil/unicode text correctly (unlike canvas-based
-// PDF libraries).
+// Prints the element marked with data-print-id="target". Uses the browser's
+// own print path so Tamil renders correctly (unlike canvas-based PDF
+// libraries).
+//
+// The element is stamped with data-printing and <body> with
+// data-print-scoped; the print CSS then walks the containers between the two
+// and hides every child that is neither the target nor one of its ancestors.
+// Marking the element itself rather than matching on the id in CSS keeps the
+// selector independent of how deeply a section happens to be nested.
+//
+// Passing the report's own id prints the whole report, so a section's menu
+// exports that section and the page-level menu exports everything — before
+// this, every menu on the page printed the entire report.
 export function printReportSection(target: string) {
+  const element = document.querySelector<HTMLElement>(`[data-print-id="${target}"]`);
+
+  // A collapsed section (mobile) would print as a heading with nothing under
+  // it, exactly as it would export to a blank image — force it open for the
+  // print, then restore what the reader had open.
+  const collapsed = element
+    ? Array.from(element.querySelectorAll<HTMLDetailsElement>("details.report-section:not([open])"))
+    : [];
+  collapsed.forEach((details) => details.setAttribute("open", ""));
+
+  element?.setAttribute("data-printing", "");
   document.body.setAttribute("data-print-target", target);
+  if (element) document.body.setAttribute("data-print-scoped", "");
 
   const cleanup = () => {
+    element?.removeAttribute("data-printing");
     document.body.removeAttribute("data-print-target");
+    document.body.removeAttribute("data-print-scoped");
+    collapsed.forEach((details) => details.removeAttribute("open"));
     window.removeEventListener("afterprint", cleanup);
   };
   window.addEventListener("afterprint", cleanup);

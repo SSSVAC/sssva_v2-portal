@@ -4,6 +4,7 @@ type CustomerInsert = Database["public"]["Tables"]["zoho_customers"]["Insert"];
 type InvoiceInsert = Database["public"]["Tables"]["zoho_invoices"]["Insert"];
 type ExpenseInsert = Database["public"]["Tables"]["zoho_expenses"]["Insert"];
 type BillInsert = Database["public"]["Tables"]["zoho_bills"]["Insert"];
+type BillPaymentInsert = Database["public"]["Tables"]["zoho_bill_payments"]["Insert"];
 
 export function mapZohoCustomer(raw: Record<string, unknown>): CustomerInsert {
 
@@ -109,6 +110,53 @@ export function mapZohoBill(raw: Record<string, unknown>): BillInsert {
     raw: raw as Json,
     synced_at: new Date().toISOString()
   };
+}
+
+/**
+ * Pulls the payments off a bill's DETAIL response. Returns null — not an
+ * empty array — when the bill carries no `payments` key at all, which means
+ * this bill was served from the list endpoint and its stored payments must
+ * be left alone. An empty array is a real answer: Zoho says nothing has
+ * been paid against it.
+ */
+export function mapZohoBillPayments(raw: Record<string, unknown>): BillPaymentInsert[] | null {
+  const billId = optionalString(raw, "bill_id");
+  if (!billId || !Array.isArray(raw.payments)) {
+    return null;
+  }
+
+  const syncedAt = new Date().toISOString();
+
+  return (raw.payments as unknown[]).flatMap((entry) => {
+    if (!entry || typeof entry !== "object") return [];
+    const payment = entry as Record<string, unknown>;
+
+    const paymentId = optionalString(payment, "payment_id");
+    const billPaymentId = optionalString(payment, "bill_payment_id");
+
+    // One vendor payment can be split across several bills, so the stable
+    // identity is the per-bill application, not the payment itself.
+    const key = billPaymentId ?? (paymentId ? `${billId}:${paymentId}` : null);
+    if (!key) return [];
+
+    return [
+      {
+        payment_key: key,
+        zoho_bill_id: billId,
+        zoho_payment_id: paymentId,
+        zoho_bill_payment_id: billPaymentId,
+        payment_number: optionalString(payment, "payment_number"),
+        date: optionalString(payment, "date"),
+        amount: optionalNumber(payment, "amount") ?? 0,
+        payment_mode: optionalString(payment, "payment_mode"),
+        reference_number: optionalString(payment, "reference_number"),
+        description: optionalString(payment, "description"),
+        paid_through_account_name: optionalString(payment, "paid_through_account_name"),
+        raw: payment as Json,
+        synced_at: syncedAt
+      }
+    ];
+  });
 }
 
 function requiredString(raw: Record<string, unknown>, key: string) {

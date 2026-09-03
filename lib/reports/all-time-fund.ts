@@ -2,6 +2,7 @@ import type { SilaiBillRow, SilaiContributionRow, SilaiExpenseRow } from "@/comp
 import { groupByStreet } from "@/lib/silai-groups";
 import { getAllCustomers, type ReportCustomer } from "@/lib/reports/shared-queries";
 import type { ReportLoaderContext } from "@/lib/reports/types";
+import { fetchBillPayments, type BillPaymentRow } from "@/lib/reports/bill-payments";
 
 export type AllTimeFundInvoice = {
   customer_id: string | null;
@@ -27,6 +28,7 @@ export type AllTimeFundExpense = {
 
 export type AllTimeFundBill = {
   id: string;
+  zoho_bill_id: string;
   bill_number: string | null;
   vendor_name: string | null;
   date: string | null;
@@ -182,14 +184,18 @@ export function buildAllTimeExpenseRows(expenses: AllTimeFundExpense[]): SilaiEx
   }));
 }
 
-export function buildAllTimeBillRows(bills: AllTimeFundBill[]): SilaiBillRow[] {
+export function buildAllTimeBillRows(
+  bills: AllTimeFundBill[],
+  paymentsByBill: Map<string, BillPaymentRow[]> = new Map()
+): SilaiBillRow[] {
   return bills.map((bill) => ({
     id: bill.id,
     number: bill.bill_number,
     vendorName: bill.vendor_name,
     date: bill.date,
     total: Number(bill.total ?? 0),
-    balance: Number(bill.balance ?? 0)
+    balance: Number(bill.balance ?? 0),
+    payments: paymentsByBill.get(bill.zoho_bill_id) ?? []
   }));
 }
 
@@ -222,17 +228,22 @@ export async function fetchAllTimeFundReportData(
       .returns<AllTimeFundExpense[]>(),
     supabase
       .from("zoho_bills")
-      .select("id, bill_number, vendor_name, date, total, balance")
+      .select("id, zoho_bill_id, bill_number, vendor_name, date, total, balance")
       .is("archived_at", null)
       .in("account_name", config.expenseAccountNames)
       .order("date", { ascending: false })
       .returns<AllTimeFundBill[]>()
   ]);
 
+  const paymentsByBill = await fetchBillPayments(
+    supabase,
+    (bills ?? []).map((bill) => bill.zoho_bill_id)
+  );
+
   return {
     contributionRows: buildAllTimeContributionRows(invoices ?? [], customers),
     nonCashDonationRows: buildNonCashDonationRows(invoices ?? [], customers),
     expenseRows: buildAllTimeExpenseRows(expenses ?? []),
-    billRows: buildAllTimeBillRows(bills ?? [])
+    billRows: buildAllTimeBillRows(bills ?? [], paymentsByBill)
   };
 }

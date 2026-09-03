@@ -5,6 +5,8 @@ type SectionGroupProps = {
   description?: ReactNode;
   /** Controls covering every section in the group — e.g. "export all streets". */
   actions?: ReactNode;
+  /** Makes the whole group addressable by the print and image exporters. */
+  printId?: string;
   children: ReactNode;
 };
 
@@ -12,9 +14,9 @@ type SectionGroupProps = {
 // h1 (report) > h2 (group) > h3 (section) instead of a flat run of
 // same-weight headings with no way to tell a street apart from a top-level
 // part of the report.
-export function SectionGroup({ title, description, actions, children }: SectionGroupProps) {
+export function SectionGroup({ title, description, actions, printId, children }: SectionGroupProps) {
   return (
-    <section>
+    <section data-print-id={printId}>
       <div className="section-group-head">
         <h2>{title}</h2>
         {description && <span className="muted">{description}</span>}

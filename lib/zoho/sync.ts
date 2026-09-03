@@ -12,7 +12,13 @@ import {
   type BillDetail,
   type CustomerFieldOverride
 } from "@/lib/zoho/client";
-import { mapZohoBill, mapZohoCustomer, mapZohoExpense, mapZohoInvoice } from "@/lib/zoho/mappers";
+import {
+  mapZohoBill,
+  mapZohoBillPayments,
+  mapZohoCustomer,
+  mapZohoExpense,
+  mapZohoInvoice
+} from "@/lib/zoho/mappers";
 import { notifySyncFailure } from "@/lib/alerts";
 
 export const ZOHO_SYNC_RESOURCES = ["customers", "invoices", "expenses", "bills"] as const;
@@ -202,6 +208,38 @@ export async function runZohoBooksSync(options: ZohoSyncOptions = DEFAULT_SYNC_O
         .upsert(mappedBills, { onConflict: "zoho_bill_id" });
 
       if (error) throw error;
+    }
+
+    // Only bills that came back from the detail endpoint carry `payments`.
+    // For those the stored set is replaced, so a payment deleted in Zoho
+    // disappears here too; bills served from the list endpoint are absent
+    // from refreshedBillIds and keep whatever they already had.
+    if (resolvedOptions.bills) {
+      const refreshedBillIds: string[] = [];
+      const mappedPayments = bills.flatMap((bill) => {
+        const payments = mapZohoBillPayments(bill);
+        if (payments === null) return [];
+        const billId = typeof bill.bill_id === "string" ? bill.bill_id : null;
+        if (billId) refreshedBillIds.push(billId);
+        return payments;
+      });
+
+      if (refreshedBillIds.length > 0) {
+        const { error: deleteError } = await supabase
+          .from("zoho_bill_payments")
+          .delete()
+          .in("zoho_bill_id", refreshedBillIds);
+
+        if (deleteError) throw deleteError;
+      }
+
+      if (mappedPayments.length > 0) {
+        const { error: paymentError } = await supabase
+          .from("zoho_bill_payments")
+          .upsert(mappedPayments, { onConflict: "payment_key" });
+
+        if (paymentError) throw paymentError;
+      }
     }
 
     // A full sync fetches each resource's *complete* current Zoho list
@@ -487,9 +525,25 @@ async function loadExistingBillDetails(supabase: ReturnType<typeof createAdminCl
     return map;
   }
 
+  // Sum what's already recorded per bill, so fetchZohoBills can tell a bill
+  // whose payments are fully captured from one that has been paid against
+  // since the last sync.
+  const paidByBill = new Map<string, number>();
+  const { data: payments } = await supabase.from("zoho_bill_payments").select("zoho_bill_id, amount");
+  for (const payment of payments ?? []) {
+    paidByBill.set(
+      payment.zoho_bill_id,
+      (paidByBill.get(payment.zoho_bill_id) ?? 0) + Number(payment.amount ?? 0)
+    );
+  }
+
   for (const row of data) {
     if (row.account_name && row.item_name) {
-      map.set(row.zoho_bill_id, { accountName: row.account_name, itemName: row.item_name });
+      map.set(row.zoho_bill_id, {
+        accountName: row.account_name,
+        itemName: row.item_name,
+        paidRecorded: paidByBill.get(row.zoho_bill_id) ?? 0
+      });
     }
   }
 

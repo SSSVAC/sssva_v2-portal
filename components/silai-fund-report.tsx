@@ -19,6 +19,8 @@ import {
 import { groupKeyFor, sortGroupNames } from "@/lib/silai-groups";
 import { useUrlParamSetter } from "@/lib/reports/use-url-param";
 import type { NonCashDonationRow } from "@/lib/reports/all-time-fund";
+import { BillsTable } from "@/components/reports/bills-table";
+import { paymentExportRows, type BillPaymentRow } from "@/lib/reports/bill-payments";
 
 export type SilaiContributionRow = {
   donorName: string | null;
@@ -62,11 +64,9 @@ export type SilaiBillRow = {
   date: string | null;
   total: number;
   balance: number;
+  /** Individual Zoho payments applied to this bill. */
+  payments?: BillPaymentRow[];
 };
-
-function dueClass(balance: number) {
-  return balance > 0 ? "cell-danger" : "cell-success";
-}
 
 type SilaiFundReportProps = {
   title?: string;
@@ -96,6 +96,7 @@ export function SilaiFundReport({
   initialShowAllMembers = false
 }: SilaiFundReportProps) {
   const [showAllMembers, setShowAllMembers] = useState(initialShowAllMembers);
+  const [showBillPayments, setShowBillPayments] = useState(false);
   const setUrlParams = useUrlParamSetter();
 
   const handleShowAllMembersChange = (checked: boolean) => {
@@ -142,6 +143,13 @@ export function SilaiFundReport({
   const exportPdf = () => printReportSection(printTarget);
   const exportImage = () => exportSectionToImage(printTarget, `${fileSlug}-report.png`);
 
+  // Each section is addressable on its own, so its export menu covers that
+  // section rather than the whole report. printTarget is unique per page, so
+  // suffixing it is enough to keep these ids distinct.
+  const sectionId = (part: string) => `${printTarget}-${part}`;
+  const printPart = (part: string) => () => printReportSection(sectionId(part));
+  const imagePart = (part: string) => () => exportSectionToImage(sectionId(part), `${fileSlug}-${part}.png`);
+
   const metricsExportHeaders = ["Metric", "Value"];
   const metricsExportRows = () => [
     ["Total Contributions", formatCurrency(totalContributions)],
@@ -184,14 +192,19 @@ export function SilaiFundReport({
   ];
 
   const billExportHeaders = ["Bill #", "Vendor", "Date", "Total", "Paid", "Due"];
+  // The export mirrors what's on screen: with the breakdown showing, each
+  // bill's payments follow it as indented rows.
   const billExportRows = (): ExportCell[][] => [
-    ...billRows.map((row) => [
-      row.number ?? "",
-      row.vendorName ?? "",
-      row.date ? formatDateOnly(row.date) : "",
-      formatCurrency(row.total),
-      formatCurrency(row.total - row.balance),
-      { value: formatCurrency(row.balance), highlight: row.balance > 0 ? "danger" : "success" } as ExportCell
+    ...billRows.flatMap((row) => [
+      [
+        row.number ?? "",
+        row.vendorName ?? "",
+        row.date ? formatDateOnly(row.date) : "",
+        formatCurrency(row.total),
+        formatCurrency(row.total - row.balance),
+        { value: formatCurrency(row.balance), highlight: row.balance > 0 ? "danger" : "success" } as ExportCell
+      ],
+      ...(showBillPayments ? paymentExportRows(row.payments ?? [], 6, 4) : [])
     ]),
     ["Total", "", "", formatCurrency(totalBills), formatCurrency(totalBillsPaid), formatCurrency(totalBillsDue)]
   ];
@@ -274,6 +287,7 @@ export function SilaiFundReport({
       </div>
 
       <SectionGroup
+        printId={sectionId("contributions")}
         title="Contributions"
         description={`${visibleContributionRows.length} contributor${
           visibleContributionRows.length === 1 ? "" : "s"
@@ -291,8 +305,8 @@ export function SilaiFundReport({
                 contributionExportSections()
               )
             }
-            onExportPdf={exportPdf}
-            onExportImage={exportImage}
+            onExportPdf={printPart("contributions")}
+            onExportImage={imagePart("contributions")}
           />
         }
       >
@@ -342,6 +356,7 @@ export function SilaiFundReport({
 
       {nonCashDonationRows.length > 0 && (
         <Section
+          printId={sectionId("non-cash-donations")}
           title="Non-Cash Donations"
           count={nonCashDonationRows.length}
           actions={
@@ -357,8 +372,8 @@ export function SilaiFundReport({
                   nonCashExportRows()
                 )
               }
-              onExportPdf={exportPdf}
-              onExportImage={exportImage}
+              onExportPdf={printPart("non-cash-donations")}
+              onExportImage={imagePart("non-cash-donations")}
             />
           }
         >
@@ -386,6 +401,7 @@ export function SilaiFundReport({
       )}
 
       <Section
+        printId={sectionId("expenses")}
         title="Expenses"
         count={expenseRows.length}
         actions={
@@ -401,8 +417,8 @@ export function SilaiFundReport({
                 expenseExportRows()
               )
             }
-            onExportPdf={exportPdf}
-            onExportImage={exportImage}
+            onExportPdf={printPart("expenses")}
+            onExportImage={imagePart("expenses")}
           />
         }
       >
@@ -445,6 +461,7 @@ export function SilaiFundReport({
       </Section>
 
       <Section
+        printId={sectionId("bills")}
         title="Bills"
         count={billRows.length}
         actions={
@@ -453,58 +470,18 @@ export function SilaiFundReport({
             onExportHtml={() =>
               exportToHtml(`${fileSlug}-bills.html`, `${title} — Bills`, billExportHeaders, billExportRows())
             }
-            onExportPdf={exportPdf}
-            onExportImage={exportImage}
+            onExportPdf={printPart("bills")}
+            onExportImage={imagePart("bills")}
           />
         }
       >
         {billRows.length > 0 ? (
-          <div className="table-panel-scroll">
-            <table className="data-table data-table-cards">
-              <thead>
-                <tr>
-                  <th>Bill #</th>
-                  <th>Vendor</th>
-                  <th>Date</th>
-                  <th className="num">Total</th>
-                  <th className="num">Paid</th>
-                  <th className="num">Due</th>
-                </tr>
-              </thead>
-              <tbody>
-                {billRows.map((row) => (
-                  <tr key={row.id}>
-                    <td data-label="Bill #">{row.number ?? "—"}</td>
-                    <td data-label="Vendor">{row.vendorName ?? "—"}</td>
-                    <td data-label="Date">{row.date ? formatDateOnly(row.date) : "—"}</td>
-                    <td data-label="Total" className="num">
-                      {formatCurrency(row.total)}
-                    </td>
-                    <td data-label="Paid" className="num">
-                      {formatCurrency(row.total - row.balance)}
-                    </td>
-                    <td data-label="Due" className={`num ${dueClass(row.balance)}`}>
-                      {formatCurrency(row.balance)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td colSpan={3}>Total Bills</td>
-                  <td data-label="Total" className="num">
-                    {formatCurrency(totalBills)}
-                  </td>
-                  <td data-label="Paid" className="num">
-                    {formatCurrency(totalBillsPaid)}
-                  </td>
-                  <td data-label="Due" className="num">
-                    {formatCurrency(totalBillsDue)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+          <BillsTable
+            rows={billRows}
+            showPayments={showBillPayments}
+            onShowPaymentsChange={setShowBillPayments}
+            totals={{ total: totalBills, paid: totalBillsPaid, due: totalBillsDue }}
+          />
         ) : (
           <div className="empty-state">
             <p>No bills recorded.</p>

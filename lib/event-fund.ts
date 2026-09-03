@@ -1,6 +1,7 @@
 import type { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 import type { EventBillRow, EventContributionRow, EventExpenseRow } from "@/components/event-fund-report";
+import { fetchBillPayments, type BillPaymentRow } from "@/lib/reports/bill-payments";
 
 type CustomerRow = Database["public"]["Tables"]["zoho_customers"]["Row"];
 
@@ -25,6 +26,7 @@ export type EventFundExpense = {
 
 export type EventFundBill = {
   id: string;
+  zoho_bill_id: string;
   bill_number: string | null;
   vendor_name: string | null;
   date: string | null;
@@ -140,7 +142,10 @@ export function buildEventExpenseRows(expenses: EventFundExpense[]): EventExpens
   }));
 }
 
-export function buildEventBillRows(bills: EventFundBill[]): EventBillRow[] {
+export function buildEventBillRows(
+  bills: EventFundBill[],
+  paymentsByBill: Map<string, BillPaymentRow[]> = new Map()
+): EventBillRow[] {
   return bills.map((bill) => ({
     id: bill.id,
     number: bill.bill_number,
@@ -148,7 +153,8 @@ export function buildEventBillRows(bills: EventFundBill[]): EventBillRow[] {
     date: bill.date,
     year: yearOf(bill.date),
     total: Number(bill.total ?? 0),
-    balance: Number(bill.balance ?? 0)
+    balance: Number(bill.balance ?? 0),
+    payments: paymentsByBill.get(bill.zoho_bill_id) ?? []
   }));
 }
 
@@ -182,7 +188,7 @@ export async function fetchEventFundReportData(
       .returns<EventFundExpense[]>(),
     supabase
       .from("zoho_bills")
-      .select("id, bill_number, vendor_name, date, total, balance")
+      .select("id, zoho_bill_id, bill_number, vendor_name, date, total, balance")
       .is("archived_at", null)
       .in("account_name", config.expenseAccountNames)
       .order("date", { ascending: false })
@@ -194,10 +200,15 @@ export async function fetchEventFundReportData(
       .returns<EventFundCustomer[]>()
   ]);
 
+  const paymentsByBill = await fetchBillPayments(
+    supabase,
+    (bills ?? []).map((bill) => bill.zoho_bill_id)
+  );
+
   return {
     contributionRows: buildEventContributionRows(invoices ?? [], customers ?? []),
     expenseRows: buildEventExpenseRows(expenses ?? []),
-    billRows: buildEventBillRows(bills ?? [])
+    billRows: buildEventBillRows(bills ?? [], paymentsByBill)
   };
 }
 

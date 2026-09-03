@@ -248,7 +248,29 @@ export async function fetchZohoExpenses(accessToken: string) {
   return ExpenseResponse.parse(payload).expenses;
 }
 
-export type BillDetail = { accountName: string | null; itemName: string | null };
+export type BillDetail = {
+  accountName: string | null;
+  itemName: string | null;
+  /** Sum of the bill's already-stored payment rows, used to spot new ones. */
+  paidRecorded: number;
+};
+
+function billAmountPaid(bill: Record<string, unknown>) {
+  const total = Number(bill.total ?? 0);
+  const balance = Number(bill.balance ?? 0);
+  const paid = total - balance;
+  return Number.isFinite(paid) ? paid : 0;
+}
+
+// Zoho's bill LIST endpoint reports total and balance but not the payments
+// behind them, so a bill whose recorded payments don't add up to
+// total - balance has a payment we haven't captured. That difference shows
+// up in the cheap list call, so a bill costs a detail fetch exactly once
+// per new payment rather than on every sync.
+function needsPaymentBackfill(bill: Record<string, unknown>, existing: BillDetail | undefined) {
+  if (!existing) return true;
+  return Math.abs(billAmountPaid(bill) - existing.paidRecorded) > 0.005;
+}
 
 export async function fetchZohoBills(accessToken: string, existingBillDetails = new Map<string, BillDetail>()) {
   const payload = await fetchZohoList(accessToken, "bills");
@@ -269,11 +291,13 @@ export async function fetchZohoBills(accessToken: string, existingBillDetails = 
 
     billsById.set(billId, bill);
 
-    // Already-synced bills with both an account and item name skip the
-    // detail call entirely to conserve Zoho's daily API limit; bills that
-    // are still missing either value (e.g. from before this backfill) keep
-    // getting retried until Zoho returns line items for them.
-    if (!existingBillDetails.has(billId)) {
+    // Already-synced bills with both an account and item name, and whose
+    // stored payments already account for everything paid, skip the detail
+    // call entirely to conserve Zoho's daily API limit. Bills still missing
+    // either value keep getting retried until Zoho returns line items for
+    // them, and a bill that has since been paid against is re-fetched once
+    // to pick up the new payment.
+    if (needsPaymentBackfill(bill, existingBillDetails.get(billId))) {
       billIdsForDetail.push(billId);
     }
   });
@@ -281,6 +305,7 @@ export async function fetchZohoBills(accessToken: string, existingBillDetails = 
   if (billIdsForDetail.length === 0) {
     return bills.map((bill) => mergeBillDetail(bill, existingBillDetails));
   }
+
 
   const detailedBills = await mapWithConcurrency(
     billIdsForDetail,
@@ -305,7 +330,7 @@ export async function fetchZohoBills(accessToken: string, existingBillDetails = 
       return bill;
     }
 
-    if (existingBillDetails.has(billId)) {
+    if (!needsPaymentBackfill(bill, existingBillDetails.get(billId))) {
       return mergeBillDetail(bill, existingBillDetails);
     }
 
@@ -313,6 +338,10 @@ export async function fetchZohoBills(accessToken: string, existingBillDetails = 
   });
 }
 
+// Deliberately leaves `payments` off the returned object. Its absence is
+// how the sync knows this bill was not re-fetched and its stored payment
+// rows must be left as they are — an empty array would read as "Zoho says
+// this bill has no payments" and wipe them.
 function mergeBillDetail(bill: Record<string, unknown>, existingBillDetails: Map<string, BillDetail>) {
   const billId = getBillId(bill);
   const existing = billId ? existingBillDetails.get(billId) : undefined;
