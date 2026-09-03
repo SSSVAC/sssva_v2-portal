@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { usePathname, useSearchParams } from "next/navigation";
-import { CalendarDays, Database, KeyRound, LayoutDashboard, LogOut, PieChart } from "lucide-react";
+import { CalendarDays, Database, Eye, KeyRound, LayoutDashboard, LogOut, PieChart } from "lucide-react";
 import { CATEGORY_META, CATEGORY_ORDER, getReportsByCategory } from "@/lib/reports/registry";
 import { CATEGORY_ACCENT, RECORD_TABLES } from "@/lib/nav";
 import { guestCanSeeReportCategory } from "@/lib/auth/guest-scope";
@@ -30,6 +30,8 @@ export function Sidebar({ viewer, onNavigate }: SidebarProps) {
   const activeRecordTab = searchParams.get("tab") ?? "customers";
 
   const isStaff = viewer.kind === "staff";
+  // A share link opens exactly one page, so there is nothing to navigate to.
+  const scoped = Boolean(viewer.scopePath);
   const onRecords = pathname.startsWith("/records");
   const onFunctions = pathname.startsWith("/functions");
 
@@ -50,7 +52,16 @@ export function Sidebar({ viewer, onNavigate }: SidebarProps) {
       </div>
 
       <nav className="sidebar-nav">
-        {isStaff && (
+        {scoped && (
+          <div className="nav-group">
+            <span className="nav-item nav-item-active" aria-current="page">
+              <Eye size={16} />
+              Shared with you
+            </span>
+          </div>
+        )}
+
+        {!scoped && isStaff && (
           <div className="nav-group">
             <Link
               href="/dashboard"
@@ -64,6 +75,7 @@ export function Sidebar({ viewer, onNavigate }: SidebarProps) {
           </div>
         )}
 
+        {!scoped && (
         <div className="nav-group">
           <Link
             href="/functions"
@@ -75,8 +87,9 @@ export function Sidebar({ viewer, onNavigate }: SidebarProps) {
             Functions
           </Link>
         </div>
+        )}
 
-        {isStaff && (
+        {!scoped && isStaff && (
           <div className="nav-group">
             <div className="nav-group-label">Records</div>
             <Link
@@ -107,6 +120,7 @@ export function Sidebar({ viewer, onNavigate }: SidebarProps) {
           </div>
         )}
 
+        {!scoped && (
         <div className="nav-group">
           <div className="nav-group-label">Reports</div>
           <Link
@@ -161,6 +175,7 @@ export function Sidebar({ viewer, onNavigate }: SidebarProps) {
             );
           })}
         </div>
+        )}
 
         {viewer.isAdmin && (
           <div className="nav-group">

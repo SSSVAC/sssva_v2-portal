@@ -54,4 +54,10 @@ Staff sign in with email and password. Anyone else can be given a **guest pass**
 2. As an admin, open **Guest access** in the sidebar, give the pass a label ("Kalluri Salai contributors") and an expiry date, and create it.
 3. The code is shown **once** — copy it then. Codes are stored hashed, so a lost code can't be recovered, only replaced with **New code**, which invalidates the old one immediately.
 
+### Share links
+
+A **Share** button on each report and function page (admins only) creates a link like `https://…/s/SSSVA-XXXX-XXXX-XXXX`. Anyone with the link sees that one page, read-only, with no sign-in — and **only** that page: a link to the Silai Fund report doesn't also open the event reports.
+
+Share links are guest passes with a page pinned to them, so they appear in the same **Guest access** list, expire on the date you choose, and can be revoked there. The link is shown once, at creation, and copied to the clipboard automatically — it can't be shown again, only replaced.
+
 Every request re-checks the pass against the database, so revoking one or letting it expire takes effect straight away rather than when a cookie happens to lapse. Guests can't write anything: every mutation route rejects them with a 403.

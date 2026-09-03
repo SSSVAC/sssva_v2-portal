@@ -460,3 +460,17 @@ using (true);
 
 create index if not exists zoho_bill_payments_bill_idx
   on public.zoho_bill_payments (zoho_bill_id, date desc);
+
+-- Share links.
+--
+-- A share link is a guest pass whose code travels in the URL rather than
+-- being typed, and which is pinned to one page. `scope_path` null keeps the
+-- original behaviour — a code that opens everything a guest may see — so
+-- existing passes are unaffected.
+alter table public.guest_passes
+add column if not exists scope_path text;
+
+-- Distinguishes a link you send from a code you dictate, so the admin list
+-- can show the right thing to copy. 'code' | 'link'
+alter table public.guest_passes
+add column if not exists kind text not null default 'code';

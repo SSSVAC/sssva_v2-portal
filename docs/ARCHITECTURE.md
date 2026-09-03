@@ -158,6 +158,16 @@ Signing in sets a signed cookie of `<passId>.<expiryMs>.<hmac>` (`lib/auth/guest
 
 **The thing to be careful about**: a guest has no JWT, so RLS cannot authorise their reads. Their queries run through the service-role client, which bypasses RLS entirely. `lib/auth/guest-scope.ts` is therefore the single source of truth for what a guest may reach, and it is enforced by the *pages*, never by the database. Anything you add to that allowlist must be reviewed for what it exposes — Records and the financial reports are deliberately excluded because they carry customer emails, phone numbers and billing addresses. Off-limits report families 404 rather than redirect, so a guest can't tell one apart from a family that doesn't exist.
 
+### Share links
+
+A share link is the same `guest_passes` row with `scope_path` set, so revocation, expiry, last-used and the admin screen all work unchanged. `scope_path` null is a code covering the whole guest area — every pass issued before this feature — so the two coexist without a migration of existing rows.
+
+`guestCanAccessPath()` matches **exactly**, not by prefix. Prefix matching would quietly widen a link: sharing `/reports/silai` would also share every report inside it, which is not what the person picking the narrower page meant. Guest-reachable pages call `requireViewerForPath()` with their own path; a scoped guest who wanders off it is redirected back to their page rather than 404'd, so a stale bookmark lands somewhere useful.
+
+**A stored `scope_path` becomes a redirect target in `/s/[code]`**, so it is validated by `isShareablePath()` both when written and again when read. Validating only on write would leave the redirect trusting whatever is in the row. `lib/auth/guest-pass.test.ts` covers the refusals — other report families, staff pages, `//host` and absolute URLs.
+
+`getViewer()` reads the pass with `select("*")` rather than naming `scope_path`. Naming it would make the query, and therefore **every existing guest session**, fail outright on a deployment where the migration hasn't run yet; with `*` the column is simply absent and the pass falls back to unscoped.
+
 Writes are staff-only everywhere: `/api/functions/[entity]` and `/api/guest-passes` both reject a guest with a 403 before touching anything, and `requireStaffViewer()` bounces them out of staff pages to `/functions` rather than to the login page — they are signed in, just not to that.
 
 ## Auth & authorization

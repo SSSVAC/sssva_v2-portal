@@ -4,10 +4,23 @@ import { guestSessionsEnabled } from "@/lib/auth/guest-pass";
 import { GUEST_HOME } from "@/lib/auth/guest-scope";
 import { getViewer } from "@/lib/auth/viewer";
 
-export default async function LoginPage() {
+const SHARE_PROBLEM: Record<string, string> = {
+  invalid: "That share link isn't valid. Please ask whoever sent it for a new one.",
+  revoked: "That share link has been revoked. Please ask whoever sent it for a new one.",
+  expired: "That share link has expired. Please ask whoever sent it for a new one.",
+  disabled: "Share links aren't enabled on this deployment."
+};
+
+type LoginPageProps = {
+  searchParams: Promise<{ share?: string }>;
+};
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
   // Guests hold a cookie rather than a Supabase session, so checking only
   // auth.getUser() here would show them the sign-in form again after they
   // had already been let in.
+  const { share } = await searchParams;
+  const shareProblem = share ? SHARE_PROBLEM[share] : undefined;
   const viewer = await getViewer();
 
   if (viewer) {
@@ -45,6 +58,11 @@ export default async function LoginPage() {
         <div className="auth-card">
           <h2>Sign in</h2>
           <p className="muted">Use your portal account, or a guest code, to continue.</p>
+          {shareProblem && (
+            <div className="error-box" role="alert" style={{ marginTop: 16 }}>
+              {shareProblem}
+            </div>
+          )}
           <LoginForm guestEnabled={guestSessionsEnabled()} />
         </div>
       </section>

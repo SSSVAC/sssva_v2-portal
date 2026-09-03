@@ -8,6 +8,7 @@ import {
   normalizeGuestCode,
   readGuestSessionToken
 } from "./guest-pass";
+import { guestCanAccessPath, guestLandingPath, isShareablePath } from "./guest-scope";
 
 const SECRET = "test-secret-at-least-16-chars";
 
@@ -121,5 +122,63 @@ describe("guest session tokens", () => {
     process.env.GUEST_SESSION_SECRET = "short";
     expect(guestSessionsEnabled()).toBe(false);
     expect(createGuestSessionToken("pass-123", future())).toBeNull();
+  });
+});
+
+describe("share link scope", () => {
+  it("lets an unscoped code reach anything the guest area allows", () => {
+    expect(guestCanAccessPath(null, "/functions")).toBe(true);
+    expect(guestCanAccessPath(null, "/reports/silai/silai-fund")).toBe(true);
+  });
+
+  it("pins a share link to exactly its own page", () => {
+    const scope = "/reports/silai/silai-fund";
+    expect(guestCanAccessPath(scope, scope)).toBe(true);
+    expect(guestCanAccessPath(scope, "/reports/silai")).toBe(false);
+    expect(guestCanAccessPath(scope, "/reports/events/ugadi")).toBe(false);
+    expect(guestCanAccessPath(scope, "/functions")).toBe(false);
+  });
+
+  // Prefix matching would quietly widen a link: sharing a category would
+  // also share every report inside it.
+  it("does not treat a parent path as covering its children", () => {
+    expect(guestCanAccessPath("/reports/silai", "/reports/silai/silai-fund")).toBe(false);
+    expect(guestCanAccessPath("/functions", "/functions/kumbabhishekam-2026")).toBe(false);
+  });
+
+  it("sends a scoped guest to their page and an unscoped one home", () => {
+    expect(guestLandingPath("/functions/kumbabhishekam-2026")).toBe("/functions/kumbabhishekam-2026");
+    expect(guestLandingPath(null)).toBe("/functions");
+  });
+
+  it("accepts only the pages that may be shared", () => {
+    for (const path of [
+      "/functions",
+      "/functions/kumbabhishekam-2026",
+      "/reports/silai",
+      "/reports/silai/silai-fund",
+      "/reports/events/ugadi"
+    ]) {
+      expect(isShareablePath(path)).toBe(true);
+    }
+  });
+
+  // A stored scope becomes a redirect target, so anything outside the
+  // allowlist — another family, a staff page, or an absolute URL — has to be
+  // refused before it is written.
+  it("refuses paths that would leak access or redirect off-site", () => {
+    for (const path of [
+      "/reports/financial",
+      "/reports/financial/monthly-report",
+      "/records",
+      "/dashboard",
+      "/settings/access",
+      "//evil.example.com",
+      "https://evil.example.com",
+      "/functions/../records",
+      ""
+    ]) {
+      expect(isShareablePath(path)).toBe(false);
+    }
   });
 });

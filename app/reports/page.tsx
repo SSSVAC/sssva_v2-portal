@@ -3,13 +3,13 @@ import { PageHeader } from "@/components/shell/page-header";
 import { ReportGalleryCard } from "@/components/reports/report-gallery-card";
 import { CATEGORY_META, CATEGORY_ORDER, getReportsByCategory, REPORT_REGISTRY } from "@/lib/reports/registry";
 import { CATEGORY_ACCENT, CATEGORY_ACCENT_SOFT } from "@/lib/nav";
-import { requireViewer, viewerChrome } from "@/lib/auth/viewer";
+import { requireViewerForPath, viewerChrome } from "@/lib/auth/viewer";
 import { guestCanSeeReportCategory } from "@/lib/auth/guest-scope";
 
 export const dynamic = "force-dynamic";
 
 export default async function ReportsIndexPage() {
-  const viewer = await requireViewer();
+  const viewer = await requireViewerForPath("/reports");
 
   // A guest only ever sees the families on the allowlist, so the count in
   // the description has to describe what's actually on the page.

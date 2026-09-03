@@ -41,7 +41,8 @@ export default async function GuestAccessPage() {
           revokedAt: pass.revoked_at,
           createdBy: pass.created_by,
           lastUsedAt: pass.last_used_at,
-          useCount: pass.use_count
+          useCount: pass.use_count,
+          scopePath: pass.scope_path
         }))}
         enabled={guestSessionsEnabled()}
       />

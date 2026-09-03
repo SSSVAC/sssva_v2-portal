@@ -9,6 +9,8 @@ type ReportShellProps = {
   slug: string;
   title: string;
   description: string;
+  /** Page-level controls — the Share button. Exports live per section. */
+  actions?: ReactNode;
   children: ReactNode;
 };
 
@@ -20,7 +22,14 @@ type ReportShellProps = {
 // data-print-id wraps the header as well as the body, so a PNG export
 // carries the report's title and description. The export filter drops
 // .no-print, which is what keeps the action buttons out of the image.
-export function ReportShell({ category, slug, title, description, children }: ReportShellProps) {
+export function ReportShell({
+  category,
+  slug,
+  title,
+  description,
+  actions,
+  children
+}: ReportShellProps) {
   const meta = CATEGORY_META[category];
 
   return (
@@ -28,6 +37,7 @@ export function ReportShell({ category, slug, title, description, children }: Re
       <PageHeader
         title={title}
         description={description}
+        actions={actions}
         eyebrow={
           <span
             className="cat-chip"
