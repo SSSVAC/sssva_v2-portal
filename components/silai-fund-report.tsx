@@ -119,7 +119,12 @@ export function SilaiFundReport({
   const totalBillsPaid = totalBills - totalBillsDue;
   const totalSpent = totalExpenses + totalBills;
   const totalPaid = totalExpenses + totalBillsPaid;
+  // Cash actually in hand right now: what came in, less what has gone out.
   const balance = totalContributions - totalPaid;
+  // Where the fund lands once the outstanding bills are settled — the same
+  // as `balance - totalBillsDue`, expressed against everything incurred so
+  // the two figures can't drift apart.
+  const projectedBalance = totalContributions - totalSpent;
 
   // visibleContributionRows already arrive sorted in street walking order,
   // so bucketing here by group preserves the correct order within each
@@ -151,15 +156,18 @@ export function SilaiFundReport({
   const imagePart = (part: string) => () => exportSectionToImage(sectionId(part), `${fileSlug}-${part}.png`);
 
   const metricsExportHeaders = ["Metric", "Value"];
+  // Leads with the same five figures the tiles show, then the breakdown
+  // behind them — so an exported sheet and the screen agree.
   const metricsExportRows = () => [
     ["Total Contributions", formatCurrency(totalContributions)],
-    ["Total Spent", formatCurrency(totalSpent)],
     ["Total Paid", formatCurrency(totalPaid)],
-    ["Balance", formatCurrency(balance)],
+    ["Current Balance", formatCurrency(balance)],
+    ["Bills Due", formatCurrency(totalBillsDue)],
+    ["P&L post settling dues", formatCurrency(projectedBalance)],
     ["Expenses", formatCurrency(totalExpenses)],
     ["Bills", formatCurrency(totalBills)],
     ["Bills Paid", formatCurrency(totalBillsPaid)],
-    ["Bills Due", formatCurrency(totalBillsDue)]
+    ["Total Spent", formatCurrency(totalSpent)]
   ];
 
   const contributionExportHeaders = ["Donor", "Phone", "Address", "Amount"];
@@ -246,6 +254,11 @@ export function SilaiFundReport({
           carries the lead emphasis. Bills Due is the only tile whose value
           can be in a bad state, so it is the only one that ever takes a
           semantic colour — the rest stay neutral. */}
+      {/* Contributions is the figure the report exists to report, so it
+          carries the lead emphasis. The three tiles that can be in a bad
+          state — a fund in deficit now, bills outstanding, or a shortfall
+          once those are settled — take a semantic colour; the rest stay
+          neutral. */}
       <div className="metric-grid" aria-label={`${title} summary`}>
         <article className="metric-card" data-emphasis="lead">
           <div className="metric-head">
@@ -256,24 +269,19 @@ export function SilaiFundReport({
         </article>
         <article className="metric-card">
           <div className="metric-head">
-            <span>Total Spent</span>
-          </div>
-          <div className="metric-value">{formatCurrency(totalSpent)}</div>
-          <div className="metric-sub">Expenses + Bills</div>
-        </article>
-        <article className="metric-card">
-          <div className="metric-head">
             <span>Total Paid</span>
           </div>
           <div className="metric-value">{formatCurrency(totalPaid)}</div>
-          <div className="metric-sub">Expenses + Bills Paid</div>
+          <div className="metric-sub">
+            {formatCurrency(totalExpenses)} expenses + {formatCurrency(totalBillsPaid)} bills paid
+          </div>
         </article>
-        <article className="metric-card">
+        <article className="metric-card" data-state={balance < 0 ? "critical" : "positive"}>
           <div className="metric-head">
-            <span>Balance</span>
+            <span>Current Balance</span>
           </div>
           <div className="metric-value">{formatCurrency(balance)}</div>
-          <div className="metric-sub">Contributions minus paid</div>
+          <div className="metric-sub">Contributions minus what has been paid out</div>
         </article>
         <article className="metric-card" data-state={totalBillsDue > 0 ? "critical" : "positive"}>
           <div className="metric-head">
@@ -282,6 +290,17 @@ export function SilaiFundReport({
           <div className="metric-value">{formatCurrency(totalBillsDue)}</div>
           <div className="metric-sub">
             {formatCurrency(totalBillsPaid)} paid of {formatCurrency(totalBills)}
+          </div>
+        </article>
+        <article className="metric-card" data-state={projectedBalance < 0 ? "critical" : "positive"}>
+          <div className="metric-head">
+            <span>P&amp;L post settling dues</span>
+          </div>
+          <div className="metric-value">{formatCurrency(projectedBalance)}</div>
+          <div className="metric-sub">
+            {totalBillsDue > 0
+              ? `After clearing the ${formatCurrency(totalBillsDue)} still due`
+              : "Nothing left to settle"}
           </div>
         </article>
       </div>
