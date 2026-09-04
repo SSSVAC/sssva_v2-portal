@@ -18,7 +18,7 @@ import {
 } from "@/lib/export";
 import { groupKeyFor, sortGroupNames } from "@/lib/silai-groups";
 import { useUrlParamSetter } from "@/lib/reports/use-url-param";
-import type { NonCashDonationRow } from "@/lib/reports/all-time-fund";
+import type { ContributionEntryRow, NonCashDonationRow } from "@/lib/reports/all-time-fund";
 import { BillsTable } from "@/components/reports/bills-table";
 import { paymentExportRows, type BillPaymentRow } from "@/lib/reports/bill-payments";
 
@@ -68,16 +68,21 @@ export type SilaiBillRow = {
   payments?: BillPaymentRow[];
 };
 
+/** Contributions summed per donor, or listed receipt by receipt. */
+export type ContributionView = "members" | "entries";
+
 type SilaiFundReportProps = {
   title?: string;
   subtitle?: string;
   fileSlug?: string;
   printTarget?: string;
   contributionRows: SilaiContributionRow[];
+  contributionEntries?: ContributionEntryRow[];
   nonCashDonationRows?: NonCashDonationRow[];
   expenseRows: SilaiExpenseRow[];
   billRows: SilaiBillRow[];
   initialShowAllMembers?: boolean;
+  initialContributionView?: ContributionView;
 };
 
 function sumTotals<T extends { total: number }>(rows: T[]) {
@@ -90,18 +95,26 @@ export function SilaiFundReport({
   fileSlug = "silai-fund",
   printTarget = "silai-fund",
   contributionRows,
+  contributionEntries = [],
   nonCashDonationRows = [],
   expenseRows,
   billRows,
-  initialShowAllMembers = false
+  initialShowAllMembers = false,
+  initialContributionView = "members"
 }: SilaiFundReportProps) {
   const [showAllMembers, setShowAllMembers] = useState(initialShowAllMembers);
+  const [contributionView, setContributionView] = useState<ContributionView>(initialContributionView);
   const [showBillPayments, setShowBillPayments] = useState(false);
   const setUrlParams = useUrlParamSetter();
 
   const handleShowAllMembersChange = (checked: boolean) => {
     setShowAllMembers(checked);
     setUrlParams({ all: checked ? "1" : null });
+  };
+
+  const handleContributionViewChange = (view: ContributionView) => {
+    setContributionView(view);
+    setUrlParams({ view: view === "entries" ? "entries" : null });
   };
 
   // contributionRows includes every member (even those with total: 0) so
@@ -113,6 +126,10 @@ export function SilaiFundReport({
   );
 
   const totalContributions = sumTotals(contributionRows);
+  // Equal to totalContributions by construction (the entries builder drops
+  // only zero-total invoices), but summed from what is actually on screen so
+  // the footer can't quietly disagree with the rows above it.
+  const totalContributionEntries = sumTotals(contributionEntries);
   const totalExpenses = sumTotals(expenseRows);
   const totalBills = sumTotals(billRows);
   const totalBillsDue = billRows.reduce((sum, row) => sum + row.balance, 0);
@@ -178,12 +195,28 @@ export function SilaiFundReport({
     ...rows.map((row) => [row.donorName ?? "", row.phone ?? "", row.address ?? "", amountCell(row.total)]),
     ["Subtotal", "", "", amountCell(subtotal)]
   ];
+
+  const entryExportHeaders = ["Date", "Donor", "Address", "Amount"];
+  const entryExportRows = (): ExportCell[][] => [
+    ...contributionEntries.map((row) => [
+      row.date ? formatDateOnly(row.date) : "",
+      row.donorName ?? "",
+      row.address ?? "",
+      formatCurrency(row.total)
+    ]),
+    ["Total", "", "", formatCurrency(totalContributionEntries)]
+  ];
+
+  // Exports follow the view on screen, the same way the bills export
+  // follows the payments toggle.
   const contributionExportSections = (): ExportSection[] =>
-    contributionGroups.map((group) => ({
-      title: `${group.groupName} (${group.rows.length})`,
-      headers: contributionExportHeaders,
-      rows: contributionGroupExportRows(group.rows, group.subtotal)
-    }));
+    contributionView === "entries"
+      ? [{ title: "All Contributions", headers: entryExportHeaders, rows: entryExportRows() }]
+      : contributionGroups.map((group) => ({
+          title: `${group.groupName} (${group.rows.length})`,
+          headers: contributionExportHeaders,
+          rows: contributionGroupExportRows(group.rows, group.subtotal)
+        }));
 
   const nonCashExportHeaders = ["Donor", "Address", "Detail"];
   const nonCashExportRows = () =>
@@ -240,14 +273,42 @@ export function SilaiFundReport({
           />
         }
       >
-        <label className="checkbox-row">
-          <input
-            type="checkbox"
-            checked={showAllMembers}
-            onChange={(event) => handleShowAllMembersChange(event.target.checked)}
-          />
-          Show all members (including not yet paid)
-        </label>
+        {/* Two ways to read the same money: who has paid, or what came in
+            and when. The choice rides in the URL so a shared link opens on
+            the view its sender was looking at. */}
+        <div className="segmented" role="tablist" aria-label="Contributions view">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={contributionView === "members"}
+            className={`segment${contributionView === "members" ? " segment-active" : ""}`}
+            onClick={() => handleContributionViewChange("members")}
+          >
+            By member
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={contributionView === "entries"}
+            className={`segment${contributionView === "entries" ? " segment-active" : ""}`}
+            onClick={() => handleContributionViewChange("entries")}
+          >
+            All contributions
+          </button>
+        </div>
+
+        {/* Nothing to reveal in the entries view: it lists receipts, and a
+            member who hasn't paid has none. */}
+        {contributionView === "members" && (
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={showAllMembers}
+              onChange={(event) => handleShowAllMembersChange(event.target.checked)}
+            />
+            Show all members (including not yet paid)
+          </label>
+        )}
       </ReportToolbar>
 
       {/* Contributions is the figure the report exists to report, so it
@@ -308,9 +369,15 @@ export function SilaiFundReport({
       <SectionGroup
         printId={sectionId("contributions")}
         title="Contributions"
-        description={`${visibleContributionRows.length} contributor${
-          visibleContributionRows.length === 1 ? "" : "s"
-        } across ${contributionGroups.length} street${contributionGroups.length === 1 ? "" : "s"}`}
+        description={
+          contributionView === "entries"
+            ? `${contributionEntries.length} contribution${
+                contributionEntries.length === 1 ? "" : "s"
+              }, newest first`
+            : `${visibleContributionRows.length} contributor${
+                visibleContributionRows.length === 1 ? "" : "s"
+              } across ${contributionGroups.length} street${contributionGroups.length === 1 ? "" : "s"}`
+        }
         actions={
           <ExportMenu
             label="Export contributions"
@@ -329,7 +396,55 @@ export function SilaiFundReport({
           />
         }
       >
-        {contributionGroups.length > 0 ? (
+        {contributionView === "entries" ? (
+          <Section title="All contributions" count={contributionEntries.length}>
+            {contributionEntries.length > 0 ? (
+              <div className="table-panel-scroll">
+                <table className="data-table data-table-cards">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Donor</th>
+                      <th>Address</th>
+                      <th className="num">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {contributionEntries.map((row) => (
+                      <tr key={row.id}>
+                        <td data-label="Date">{row.date ? formatDateOnly(row.date) : "—"}</td>
+                        {/* The donor, not the date, is what identifies a card
+                            on a phone — see data-table-card-title in globals. */}
+                        <td data-label="Donor" className="data-table-card-title">
+                          {row.donorName ?? "—"}
+                        </td>
+                        <td data-label="Address">{row.address ?? "—"}</td>
+                        {/* No amountClass here: that threshold judges a
+                            member's running total, and a single receipt in a
+                            series of instalments isn't "partial payment". */}
+                        <td data-label="Amount" className="num">
+                          {formatCurrency(row.total)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colSpan={3}>Total</td>
+                      <td data-label="Amount" className="num">
+                        {formatCurrency(totalContributionEntries)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            ) : (
+              <div className="empty-state">
+                <p>No contributions recorded.</p>
+              </div>
+            )}
+          </Section>
+        ) : contributionGroups.length > 0 ? (
           contributionGroups.map((group) => (
             <Section key={group.groupName} title={group.groupName} count={group.rows.length}>
               <div className="table-panel-scroll">

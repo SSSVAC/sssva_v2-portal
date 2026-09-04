@@ -5,6 +5,7 @@ import type { ReportLoaderContext } from "@/lib/reports/types";
 import { fetchBillPayments, type BillPaymentRow } from "@/lib/reports/bill-payments";
 
 export type AllTimeFundInvoice = {
+  id: string;
   customer_id: string | null;
   customer_name: string | null;
   date: string | null;
@@ -141,6 +142,65 @@ export function buildAllTimeContributionRows(
     }));
 }
 
+export type ContributionEntryRow = {
+  id: string;
+  donorName: string | null;
+  group: string | null;
+  address: string | null;
+  date: string | null;
+  total: number;
+};
+
+// The same contributions as buildAllTimeContributionRows, but left as the
+// individual receipts they arrived as rather than summed per donor, newest
+// first. Answers "what has come in lately?", where the per-member view
+// answers "who has paid?".
+//
+// Zero-total invoices are the non-cash ubhayams — they have their own
+// section and no amount to list — so they are left out here, which also
+// keeps this list's total equal to the per-member view's.
+export function buildContributionEntryRows(
+  invoices: AllTimeFundInvoice[],
+  customers: ReportCustomer[]
+): ContributionEntryRow[] {
+  const customerById = new Map<string, ReportCustomer>();
+  const customerByName = new Map<string, ReportCustomer>();
+
+  customers.forEach((customer) => {
+    customerById.set(customer.zoho_customer_id, customer);
+    customerByName.set(customer.display_name.trim().toLowerCase(), customer);
+  });
+
+  return invoices
+    .filter((invoice) => Number(invoice.total ?? 0) > 0)
+    .map((invoice) => {
+      // Id first, then name, and never by name for an invoice that already
+      // carries an id — a display_name shared by two members would
+      // otherwise attach the wrong street to a receipt.
+      const customer = invoice.customer_id
+        ? customerById.get(invoice.customer_id)
+        : invoice.customer_name
+          ? customerByName.get(invoice.customer_name.trim().toLowerCase())
+          : undefined;
+
+      return {
+        id: invoice.id,
+        donorName: invoice.customer_name ?? customer?.display_name ?? null,
+        group: customer?.customer_group ?? null,
+        address: customer?.billing_address ?? null,
+        date: invoice.date,
+        total: Number(invoice.total ?? 0)
+      };
+    })
+    .sort((a, b) => {
+      // Dates are stored as YYYY-MM-DD, so they compare lexicographically.
+      // An undated receipt sinks to the bottom instead of sorting as "".
+      if (!a.date) return b.date ? 1 : 0;
+      if (!b.date) return -1;
+      return b.date.localeCompare(a.date);
+    });
+}
+
 // A direct/non-cash ubhayam: a zero-total invoice whose subject line
 // records what was donated instead of an amount (see fetchZohoInvoices in
 // lib/zoho/client.ts for how `subject` gets backfilled). Kept separate
@@ -201,6 +261,7 @@ export function buildAllTimeBillRows(
 
 export type AllTimeFundReportData = {
   contributionRows: SilaiContributionRow[];
+  contributionEntries: ContributionEntryRow[];
   nonCashDonationRows: NonCashDonationRow[];
   expenseRows: SilaiExpenseRow[];
   billRows: SilaiBillRow[];
@@ -214,7 +275,7 @@ export async function fetchAllTimeFundReportData(
     getAllCustomers(supabase),
     supabase
       .from("zoho_invoices")
-      .select("customer_id, customer_name, date, total, subject")
+      .select("id, customer_id, customer_name, date, total, subject")
       .is("archived_at", null)
       .or(config.incomeItemNames.map((name) => `item_name.ilike.%${name}%`).join(","))
       .order("date", { ascending: false })
@@ -242,6 +303,7 @@ export async function fetchAllTimeFundReportData(
 
   return {
     contributionRows: buildAllTimeContributionRows(invoices ?? [], customers),
+    contributionEntries: buildContributionEntryRows(invoices ?? [], customers),
     nonCashDonationRows: buildNonCashDonationRows(invoices ?? [], customers),
     expenseRows: buildAllTimeExpenseRows(expenses ?? []),
     billRows: buildAllTimeBillRows(bills ?? [], paymentsByBill)

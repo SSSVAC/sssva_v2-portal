@@ -1,9 +1,12 @@
-import { SilaiFundReport } from "@/components/silai-fund-report";
+import { SilaiFundReport, type ContributionView } from "@/components/silai-fund-report";
 import type { ReportDefinition, ReportLoaderContext } from "@/lib/reports/types";
 import { fetchAllTimeFundReportData, type AllTimeFundReportData } from "@/lib/reports/all-time-fund";
 import { FUND_ITEM_NAMES, SILAI_EXPENSE_ACCOUNT_NAME } from "@/lib/reports/constants";
 
-type Props = AllTimeFundReportData & { initialShowAllMembers?: boolean };
+type Props = AllTimeFundReportData & {
+  initialShowAllMembers?: boolean;
+  initialContributionView?: ContributionView;
+};
 
 async function loadSilaiFund({ supabase, searchParams }: ReportLoaderContext): Promise<Props> {
   const data = await fetchAllTimeFundReportData(supabase, {
@@ -11,7 +14,11 @@ async function loadSilaiFund({ supabase, searchParams }: ReportLoaderContext): P
     expenseAccountNames: [SILAI_EXPENSE_ACCOUNT_NAME]
   });
 
-  return { ...data, initialShowAllMembers: searchParams.all === "1" };
+  return {
+    ...data,
+    initialShowAllMembers: searchParams.all === "1",
+    initialContributionView: searchParams.view === "entries" ? "entries" : "members"
+  };
 }
 
 export const silaiFund: ReportDefinition<Props> = {
