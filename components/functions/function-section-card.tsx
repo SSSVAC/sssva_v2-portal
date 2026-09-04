@@ -259,7 +259,11 @@ export function FunctionSectionCard({
           </div>
         ) : (
           <div className="table-panel-scroll">
-            <table className="data-table data-table-cards">
+            {/* data-table-compact: on a phone an item is one card with a
+                small grid inside, rather than one labelled block per column —
+                see globals.css. A requirement line has six columns, which the
+                default card layout turns into six full-width rows. */}
+            <table className="data-table data-table-cards data-table-compact">
               <thead>
                 {isSchedule ? (
                   <tr>
