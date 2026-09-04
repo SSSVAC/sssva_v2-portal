@@ -2240,8 +2240,33 @@ input[type="checkbox"] {
     display: block;
   }
 
+  /* On a phone the title, its count, the "N open" badge and the section's
+     buttons cannot share one line: a long Tamil heading wraps to several
+     lines and squeezes the rest, which clipped the badge mid-word. The
+     summary takes the full first row and the buttons drop beneath it. */
   .section-head {
     padding: 11px 13px;
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+
+  .section-head .report-section {
+    flex: 1 1 100%;
+  }
+
+  .report-section-summary {
+    flex-wrap: wrap;
+  }
+
+  .section-title {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .section-count,
+  .section-head .pill,
+  .section-chevron {
+    flex: 0 0 auto;
   }
 
 }
@@ -2406,7 +2431,13 @@ input[type="checkbox"] {
     display: none;
   }
 
-  .data-table-cards tr:has(td.data-table-card-title) td:first-child {
+  /* Excluded from the compact layout, where the first cell IS the title
+     cell — this rule exists for the Records tables, whose first column is
+     an ordinary value and whose real title is marked further along the row.
+     Note `:has()` takes the specificity of its argument, so this selector
+     outranks anything the compact block can reasonably write; scoping it
+     here is clearer than escalating there. */
+  .data-table-cards:not(.data-table-compact) tr:has(td.data-table-card-title) td:first-child {
     padding: 9px 13px;
     background: var(--surface);
     color: inherit;
@@ -2414,7 +2445,7 @@ input[type="checkbox"] {
     font-weight: 400;
   }
 
-  .data-table-cards tr:has(td.data-table-card-title) td:first-child::before {
+  .data-table-cards:not(.data-table-compact) tr:has(td.data-table-card-title) td:first-child::before {
     display: block;
   }
 
@@ -2429,6 +2460,84 @@ input[type="checkbox"] {
     margin: 0;
     border-radius: 0;
     background: none;
+  }
+
+  /* --- Compact cards -------------------------------------------------
+     The default card layout gives every column its own full-width block,
+     which is right for a wide record (an invoice, a customer) but wrong for
+     a short one: a function tracker item has six columns, so one item read
+     as six stacked sections and a section of forty looked like 240.
+
+     `data-table-compact` keeps the same markup and lays the cells out as a
+     small grid inside a single card — the name across the top, everything
+     else paired label-and-value on one line.
+     --------------------------------------------------------------------- */
+
+  .data-table-cards.data-table-compact tbody tr,
+  .data-table-cards.data-table-compact tfoot tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3px 14px;
+    padding: 11px 13px;
+  }
+
+  .data-table-cards.data-table-compact td {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 6px;
+    padding: 0;
+    border-bottom: 0;
+    background: none;
+    min-width: 0;
+  }
+
+  /* The item's own name leads the card: full width, no label, and the only
+     line at full strength.
+     `tr td` rather than `td` on purpose. The opt-out rule further up —
+     `tr:has(td.data-table-card-title) td:first-child` — is scoped away from
+     this table above, since here the first cell IS the title cell. */
+  .data-table-cards.data-table-compact td:first-child,
+  .data-table-cards.data-table-compact td.data-table-card-title {
+    grid-column: 1 / -1;
+    margin-bottom: 3px;
+    padding: 0;
+    background: none;
+    color: var(--text-strong);
+    font-size: var(--fs-body);
+    font-weight: 650;
+  }
+
+  .data-table-cards.data-table-compact td:first-child::before,
+  .data-table-cards.data-table-compact td.data-table-card-title::before {
+    display: none;
+  }
+
+  .data-table-cards.data-table-compact td::before {
+    flex: 0 0 auto;
+    color: var(--text-muted);
+  }
+
+  /* A cell with nothing in it still occupies a slot in the grid, so its
+     label alone would read as a value that failed to load. */
+  .data-table-cards.data-table-compact td:empty {
+    display: none;
+  }
+
+  /* Actions sit on their own line at the end rather than sharing a column
+     with a value. */
+  .data-table-cards.data-table-compact td[data-label="Remove"] {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+
+  .data-table-cards.data-table-compact td[data-label="Remove"]::before {
+    display: none;
+  }
+
+  .data-table-cards.data-table-compact .cell-select,
+  .data-table-cards.data-table-compact .editable-cell {
+    min-width: 0;
   }
 
   /* editable-data-table's second header row holds live filter inputs
