@@ -1,10 +1,15 @@
 import type { SilaiBillRow, SilaiContributionRow, SilaiExpenseRow } from "@/components/silai-fund-report";
+import {
+  sortContributionEntries,
+  type SilaiContributionEntry
+} from "@/lib/reports/contribution-entries";
 import { groupByStreet } from "@/lib/silai-groups";
 import { getAllCustomers, type ReportCustomer } from "@/lib/reports/shared-queries";
 import type { ReportLoaderContext } from "@/lib/reports/types";
 import { fetchBillPayments, type BillPaymentRow } from "@/lib/reports/bill-payments";
 
 export type AllTimeFundInvoice = {
+  zoho_invoice_id: string;
   customer_id: string | null;
   customer_name: string | null;
   date: string | null;
@@ -141,6 +146,65 @@ export function buildAllTimeContributionRows(
     }));
 }
 
+// The same contributions the street view aggregates, left un-aggregated:
+// one row per contribution invoice, carrying the date it came in. The two
+// views have to add up to the same figure, so this repeats the id-then-name
+// matching buildAllTimeContributionRows uses — an invoice carrying no
+// customer_id whose donor name belongs to a customer already credited by id
+// is that customer's amount counted a second time, and is skipped here just
+// as its name bucket is dropped there.
+//
+// Zero-total invoices are left out: they aren't cash, they're the non-cash
+// donations listed in their own section, and a ledger of ₹0 lines would bury
+// the contributions this view exists to show. They contribute 0 either way,
+// so both views still total the same.
+export function buildAllTimeContributionEntries(
+  invoices: AllTimeFundInvoice[],
+  customers: ReportCustomer[]
+): SilaiContributionEntry[] {
+  const customerById = new Map<string, ReportCustomer>();
+  const customerByName = new Map<string, ReportCustomer>();
+
+  customers.forEach((customer) => {
+    customerById.set(customer.zoho_customer_id, customer);
+    customerByName.set(customer.display_name.trim().toLowerCase(), customer);
+  });
+
+  const idCreditedCustomerIds = new Set(
+    invoices.map((invoice) => invoice.customer_id).filter((id): id is string => Boolean(id))
+  );
+
+  const entries: SilaiContributionEntry[] = [];
+
+  invoices.forEach((invoice) => {
+    const amount = Number(invoice.total ?? 0);
+    if (amount === 0) return;
+
+    const byName = invoice.customer_name
+      ? customerByName.get(invoice.customer_name.trim().toLowerCase())
+      : undefined;
+
+    if (!invoice.customer_id) {
+      if (!invoice.customer_name) return;
+      if (byName && idCreditedCustomerIds.has(byName.zoho_customer_id)) return;
+    }
+
+    const customer = (invoice.customer_id ? customerById.get(invoice.customer_id) : undefined) ?? byName;
+
+    entries.push({
+      id: invoice.zoho_invoice_id,
+      date: invoice.date,
+      donorName: invoice.customer_name ?? customer?.display_name ?? null,
+      group: customer?.customer_group ?? null,
+      phone: customer?.phone ?? null,
+      address: customer?.billing_address ?? null,
+      total: amount
+    });
+  });
+
+  return sortContributionEntries(entries, "desc");
+}
+
 // A direct/non-cash ubhayam: a zero-total invoice whose subject line
 // records what was donated instead of an amount (see fetchZohoInvoices in
 // lib/zoho/client.ts for how `subject` gets backfilled). Kept separate
@@ -201,6 +265,7 @@ export function buildAllTimeBillRows(
 
 export type AllTimeFundReportData = {
   contributionRows: SilaiContributionRow[];
+  contributionEntries: SilaiContributionEntry[];
   nonCashDonationRows: NonCashDonationRow[];
   expenseRows: SilaiExpenseRow[];
   billRows: SilaiBillRow[];
@@ -214,7 +279,7 @@ export async function fetchAllTimeFundReportData(
     getAllCustomers(supabase),
     supabase
       .from("zoho_invoices")
-      .select("customer_id, customer_name, date, total, subject")
+      .select("zoho_invoice_id, customer_id, customer_name, date, total, subject")
       .is("archived_at", null)
       .or(config.incomeItemNames.map((name) => `item_name.ilike.%${name}%`).join(","))
       .order("date", { ascending: false })
@@ -242,6 +307,7 @@ export async function fetchAllTimeFundReportData(
 
   return {
     contributionRows: buildAllTimeContributionRows(invoices ?? [], customers),
+    contributionEntries: buildAllTimeContributionEntries(invoices ?? [], customers),
     nonCashDonationRows: buildNonCashDonationRows(invoices ?? [], customers),
     expenseRows: buildAllTimeExpenseRows(expenses ?? []),
     billRows: buildAllTimeBillRows(bills ?? [], paymentsByBill)

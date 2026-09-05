@@ -17,10 +17,19 @@ import {
   type ExportSection
 } from "@/lib/export";
 import { groupKeyFor, sortGroupNames } from "@/lib/silai-groups";
+import {
+  groupContributionsByDate,
+  type SilaiContributionEntry
+} from "@/lib/reports/contribution-entries";
 import { useUrlParamSetter } from "@/lib/reports/use-url-param";
 import type { NonCashDonationRow } from "@/lib/reports/all-time-fund";
 import { BillsTable } from "@/components/reports/bills-table";
 import { paymentExportRows, type BillPaymentRow } from "@/lib/reports/bill-payments";
+
+export type { SilaiContributionEntry };
+
+/** Which way the Contributions section is cut. */
+export type ContributionView = "street" | "date";
 
 export type SilaiContributionRow = {
   donorName: string | null;
@@ -74,11 +83,78 @@ type SilaiFundReportProps = {
   fileSlug?: string;
   printTarget?: string;
   contributionRows: SilaiContributionRow[];
+  /**
+   * The same money as contributionRows, one row per contribution instead of
+   * one per donor, so the date view can show when each came in. Optional so a
+   * caller that only wants the street view need not build it.
+   */
+  contributionEntries?: SilaiContributionEntry[];
   nonCashDonationRows?: NonCashDonationRow[];
   expenseRows: SilaiExpenseRow[];
   billRows: SilaiBillRow[];
   initialShowAllMembers?: boolean;
+  initialContributionView?: ContributionView;
+  initialDateOrder?: "asc" | "desc";
 };
+
+type ContributionTableRow = {
+  key: string;
+  donorName: string | null;
+  phone: string | null;
+  address: string | null;
+  total: number;
+};
+
+// One table shape for both cuts of the Contributions section — a street's
+// donors and a day's contributions differ only in what a row means and
+// whether the amount carries the paid/partial colouring.
+function ContributionTable({
+  rows,
+  subtotal,
+  colorizeAmounts = false
+}: {
+  rows: ContributionTableRow[];
+  subtotal: number;
+  colorizeAmounts?: boolean;
+}) {
+  return (
+    <div className="table-panel-scroll">
+      <table className="data-table data-table-cards">
+        <thead>
+          <tr>
+            <th>Donor</th>
+            <th>Phone</th>
+            <th>Address</th>
+            <th className="num">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.key}>
+              <td data-label="Donor">{row.donorName ?? "—"}</td>
+              <td data-label="Phone">{row.phone ?? "—"}</td>
+              <td data-label="Address">{row.address ?? "—"}</td>
+              <td
+                data-label="Amount"
+                className={`num${colorizeAmounts ? ` ${amountClass(row.total)}` : ""}`}
+              >
+                {formatCurrency(row.total)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colSpan={3}>Subtotal</td>
+            <td data-label="Amount" className="num">
+              {formatCurrency(subtotal)}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  );
+}
 
 function sumTotals<T extends { total: number }>(rows: T[]) {
   return rows.reduce((sum, row) => sum + row.total, 0);
@@ -90,18 +166,33 @@ export function SilaiFundReport({
   fileSlug = "silai-fund",
   printTarget = "silai-fund",
   contributionRows,
+  contributionEntries = [],
   nonCashDonationRows = [],
   expenseRows,
   billRows,
-  initialShowAllMembers = false
+  initialShowAllMembers = false,
+  initialContributionView = "street",
+  initialDateOrder = "desc"
 }: SilaiFundReportProps) {
   const [showAllMembers, setShowAllMembers] = useState(initialShowAllMembers);
+  const [contributionView, setContributionView] = useState<ContributionView>(initialContributionView);
+  const [dateOrder, setDateOrder] = useState<"asc" | "desc">(initialDateOrder);
   const [showBillPayments, setShowBillPayments] = useState(false);
   const setUrlParams = useUrlParamSetter();
 
   const handleShowAllMembersChange = (checked: boolean) => {
     setShowAllMembers(checked);
     setUrlParams({ all: checked ? "1" : null });
+  };
+
+  const handleViewChange = (view: ContributionView) => {
+    setContributionView(view);
+    setUrlParams({ view: view === "street" ? null : view });
+  };
+
+  const handleDateOrderChange = (order: "asc" | "desc") => {
+    setDateOrder(order);
+    setUrlParams({ order: order === "desc" ? null : order });
   };
 
   // contributionRows includes every member (even those with total: 0) so
@@ -145,6 +236,20 @@ export function SilaiFundReport({
     });
   }, [visibleContributionRows]);
 
+  // The same money cut by when it came in rather than by where the donor
+  // lives. "Show all members" deliberately doesn't apply: a member who
+  // hasn't contributed has no date to file under, so the date view is always
+  // the contributions themselves.
+  const contributionDateGroups = useMemo(
+    () => groupContributionsByDate(contributionEntries, dateOrder),
+    [contributionEntries, dateOrder]
+  );
+
+  // A caller that doesn't supply the per-contribution rows (or a fund with
+  // nothing in it yet) gets no toggle rather than a toggle onto an empty view.
+  const canShowDateView = contributionEntries.length > 0;
+  const showingDateView = canShowDateView && contributionView === "date";
+
   const exportPdf = () => printReportSection(printTarget);
   const exportImage = () => exportSectionToImage(printTarget, `${fileSlug}-report.png`);
 
@@ -178,12 +283,35 @@ export function SilaiFundReport({
     ...rows.map((row) => [row.donorName ?? "", row.phone ?? "", row.address ?? "", amountCell(row.total)]),
     ["Subtotal", "", "", amountCell(subtotal)]
   ];
+  // No paid/partial/unpaid colouring here: that threshold is about a donor's
+  // all-time total, and a single ₹500 contribution on a given day isn't a
+  // partial anything.
+  const contributionDateExportRows = (
+    rows: SilaiContributionEntry[],
+    subtotal: number
+  ): ExportCell[][] => [
+    ...rows.map((row) => [
+      row.donorName ?? "",
+      row.phone ?? "",
+      row.address ?? "",
+      formatCurrency(row.total)
+    ]),
+    ["Subtotal", "", "", formatCurrency(subtotal)]
+  ];
+  // Exports follow the view on screen, so an exported sheet is the report the
+  // person was looking at when they pressed the button.
   const contributionExportSections = (): ExportSection[] =>
-    contributionGroups.map((group) => ({
-      title: `${group.groupName} (${group.rows.length})`,
-      headers: contributionExportHeaders,
-      rows: contributionGroupExportRows(group.rows, group.subtotal)
-    }));
+    showingDateView
+      ? contributionDateGroups.map((group) => ({
+          title: `${group.label} (${group.rows.length})`,
+          headers: contributionExportHeaders,
+          rows: contributionDateExportRows(group.rows, group.subtotal)
+        }))
+      : contributionGroups.map((group) => ({
+          title: `${group.groupName} (${group.rows.length})`,
+          headers: contributionExportHeaders,
+          rows: contributionGroupExportRows(group.rows, group.subtotal)
+        }));
 
   const nonCashExportHeaders = ["Donor", "Address", "Detail"];
   const nonCashExportRows = () =>
@@ -240,14 +368,62 @@ export function SilaiFundReport({
           />
         }
       >
-        <label className="checkbox-row">
-          <input
-            type="checkbox"
-            checked={showAllMembers}
-            onChange={(event) => handleShowAllMembersChange(event.target.checked)}
-          />
-          Show all members (including not yet paid)
-        </label>
+        {canShowDateView && (
+          <div className="filter-group">
+            <span>Contributions</span>
+            {/* Two cuts of the same money — by street (who gave, where) and
+                by date (what came in, when). A segmented control rather than
+                two report pages: the totals, expenses and bills below are
+                identical either way, only the Contributions section changes. */}
+            <div className="segmented" role="tablist" aria-label="Contributions view">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={!showingDateView}
+                className={`segment${!showingDateView ? " segment-active" : ""}`}
+                onClick={() => handleViewChange("street")}
+              >
+                By street
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={showingDateView}
+                className={`segment${showingDateView ? " segment-active" : ""}`}
+                onClick={() => handleViewChange("date")}
+              >
+                By date
+              </button>
+            </div>
+          </div>
+        )}
+
+        {showingDateView ? (
+          <div className="filter-group">
+            <span>Order</span>
+            <select
+              className="filter-input"
+              aria-label="Date order"
+              value={dateOrder}
+              onChange={(event) => handleDateOrderChange(event.target.value === "asc" ? "asc" : "desc")}
+            >
+              <option value="desc">Newest first</option>
+              <option value="asc">Oldest first</option>
+            </select>
+          </div>
+        ) : (
+          /* Only meaningful against the street view: it reveals members with
+             nothing recorded yet, and someone who hasn't contributed has no
+             contribution to date-stamp. */
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={showAllMembers}
+              onChange={(event) => handleShowAllMembersChange(event.target.checked)}
+            />
+            Show all members (including not yet paid)
+          </label>
+        )}
       </ReportToolbar>
 
       {/* Contributions is the figure the report exists to report, so it
@@ -308,9 +484,17 @@ export function SilaiFundReport({
       <SectionGroup
         printId={sectionId("contributions")}
         title="Contributions"
-        description={`${visibleContributionRows.length} contributor${
-          visibleContributionRows.length === 1 ? "" : "s"
-        } across ${contributionGroups.length} street${contributionGroups.length === 1 ? "" : "s"}`}
+        description={
+          showingDateView
+            ? `${contributionEntries.length} contribution${
+                contributionEntries.length === 1 ? "" : "s"
+              } across ${contributionDateGroups.length} day${
+                contributionDateGroups.length === 1 ? "" : "s"
+              }`
+            : `${visibleContributionRows.length} contributor${
+                visibleContributionRows.length === 1 ? "" : "s"
+              } across ${contributionGroups.length} street${contributionGroups.length === 1 ? "" : "s"}`
+        }
         actions={
           <ExportMenu
             label="Export contributions"
@@ -329,41 +513,34 @@ export function SilaiFundReport({
           />
         }
       >
-        {contributionGroups.length > 0 ? (
+        {showingDateView ? (
+          contributionDateGroups.map((group) => (
+            <Section
+              key={group.dateKey ?? "undated"}
+              title={group.label}
+              count={group.rows.length}
+              badge={<span className="pill pill-neutral">{formatCurrency(group.subtotal)}</span>}
+            >
+              {/* Amounts stay plain here: the paid/partial threshold the
+                  street view colours by is a donor's all-time total, and one
+                  day's contribution isn't a partial one. */}
+              <ContributionTable
+                rows={group.rows.map((row) => ({ ...row, key: row.id }))}
+                subtotal={group.subtotal}
+              />
+            </Section>
+          ))
+        ) : contributionGroups.length > 0 ? (
           contributionGroups.map((group) => (
             <Section key={group.groupName} title={group.groupName} count={group.rows.length}>
-              <div className="table-panel-scroll">
-                <table className="data-table data-table-cards">
-                  <thead>
-                    <tr>
-                      <th>Donor</th>
-                      <th>Phone</th>
-                      <th>Address</th>
-                      <th className="num">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {group.rows.map((row, index) => (
-                      <tr key={`${row.donorName ?? "unknown"}-${index}`}>
-                        <td data-label="Donor">{row.donorName ?? "—"}</td>
-                        <td data-label="Phone">{row.phone ?? "—"}</td>
-                        <td data-label="Address">{row.address ?? "—"}</td>
-                        <td data-label="Amount" className={`num ${amountClass(row.total)}`}>
-                          {formatCurrency(row.total)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr>
-                      <td colSpan={3}>Subtotal</td>
-                      <td data-label="Amount" className="num">
-                        {formatCurrency(group.subtotal)}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+              <ContributionTable
+                rows={group.rows.map((row, index) => ({
+                  ...row,
+                  key: `${row.donorName ?? "unknown"}-${index}`
+                }))}
+                subtotal={group.subtotal}
+                colorizeAmounts
+              />
             </Section>
           ))
         ) : (
