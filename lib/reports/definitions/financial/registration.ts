@@ -2,6 +2,8 @@ import { SilaiFundReport } from "@/components/silai-fund-report";
 import type { ReportDefinition, ReportLoaderContext } from "@/lib/reports/types";
 import { fetchAllTimeFundReportData, type AllTimeFundReportData } from "@/lib/reports/all-time-fund";
 import { REGISTRATION_ITEM_NAME, REGISTRATION_EXPENSE_ACCOUNT } from "@/lib/reports/constants";
+import { readContributionViewParams } from "@/lib/reports/contribution-entries";
+import type { ContributionView } from "@/components/silai-fund-report";
 
 type Props = AllTimeFundReportData & {
   title: string;
@@ -9,6 +11,8 @@ type Props = AllTimeFundReportData & {
   fileSlug: string;
   printTarget: string;
   initialShowAllMembers?: boolean;
+  initialContributionView?: ContributionView;
+  initialDateOrder?: "asc" | "desc";
 };
 
 // One-time per-member activity (not annual), so this uses the all-time
@@ -26,7 +30,8 @@ async function loadRegistration({ supabase, searchParams }: ReportLoaderContext)
     fileSlug: "registration",
     printTarget: "registration",
     ...data,
-    initialShowAllMembers: searchParams.all === "1"
+    initialShowAllMembers: searchParams.all === "1",
+    ...readContributionViewParams(searchParams)
   };
 }
 
