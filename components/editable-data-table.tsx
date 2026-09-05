@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { RefreshCw, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
+import { AlertTriangle, RefreshCw, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
 import { useToast } from "@/components/toast";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 
@@ -48,6 +48,13 @@ type EditableDataTableProps = {
   isAdmin?: boolean;
   /** Contextual notice rendered above the table (e.g. an active filter). */
   banner?: ReactNode;
+  /**
+   * Set when the server-side read for this table failed. Without it a failed
+   * query and an empty table look identical — both render as "no records".
+   * Any rows that did arrive before the failure are still shown, under the
+   * notice, since partial data beats none.
+   */
+  loadError?: string | null;
 };
 
 export function EditableDataTable({
@@ -58,7 +65,8 @@ export function EditableDataTable({
   actionColumn,
   presetFilter,
   isAdmin = false,
-  banner
+  banner,
+  loadError
 }: EditableDataTableProps) {
   const [rows, setRows] = useState(initialRows);
   const { showToast } = useToast();
@@ -405,6 +413,25 @@ export function EditableDataTable({
           </div>
         </div>
 
+        {loadError && (
+          <div className="error-box" role="alert" style={{ margin: 12, marginBottom: 0 }}>
+            <AlertTriangle size={16} />
+            <div>
+              <strong>Couldn&apos;t load {title.toLowerCase()}.</strong> {loadError}
+              <div style={{ marginTop: 8 }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => router.refresh()}
+                >
+                  <RefreshCw size={13} />
+                  Try again
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {banner && <div className="filter-banner no-print" style={{ margin: 12, marginBottom: 0 }}>{banner}</div>}
 
         <div className="section-body">
@@ -633,7 +660,7 @@ export function EditableDataTable({
       </table>
           </div>
 
-          {sortedRows.length === 0 && (
+          {sortedRows.length === 0 && !loadError && (
             <div className="empty-state">
               <Search size={22} />
               <p>
