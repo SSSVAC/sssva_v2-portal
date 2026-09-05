@@ -13,11 +13,19 @@ type CustomerFilter = {
   name: string;
 };
 
+/**
+ * Per-table message when the server read failed, keyed by tab. Null means
+ * the table loaded — an empty table is then genuinely empty, rather than a
+ * query that errored and got rendered as "no records".
+ */
+export type RecordsLoadErrors = Partial<Record<RecordTableId, string | null>>;
+
 type RecordsTabsProps = {
   customers: Row[];
   invoices: Row[];
   expenses: Row[];
   bills: Row[];
+  loadErrors?: RecordsLoadErrors;
   initialTab?: RecordTableId;
   initialCustomerFilter?: CustomerFilter | null;
   isAdmin: boolean;
@@ -95,6 +103,7 @@ export function RecordsTabs({
   invoices,
   expenses,
   bills,
+  loadErrors,
   initialTab,
   initialCustomerFilter,
   isAdmin
@@ -143,7 +152,11 @@ export function RecordsTabs({
               onClick={() => selectTab(tab.id)}
             >
               {tab.label}
-              <span className="segment-count">{rowsByTab[tab.id].length}</span>
+              {/* A count of 0 on a table whose read failed would read as
+                  "nothing here"; it isn't known, so it isn't shown. */}
+              <span className="segment-count" title={loadErrors?.[tab.id] ?? undefined}>
+                {loadErrors?.[tab.id] ? "!" : rowsByTab[tab.id].length}
+              </span>
             </button>
           ))}
         </div>
@@ -156,6 +169,7 @@ export function RecordsTabs({
           title="Customers"
           columns={CUSTOMER_COLUMNS}
           rows={customers}
+          loadError={loadErrors?.customers}
           isAdmin={isAdmin}
           actionColumn={{
             label: "Invoices",
@@ -180,6 +194,7 @@ export function RecordsTabs({
           title="Invoices"
           columns={INVOICE_COLUMNS}
           rows={invoices}
+          loadError={loadErrors?.invoices}
           isAdmin={isAdmin}
           presetFilter={customerFilter ? (row) => row.customer_id === customerFilter.id : undefined}
           banner={
@@ -208,6 +223,7 @@ export function RecordsTabs({
           title="Expenses"
           columns={EXPENSE_COLUMNS}
           rows={expenses}
+          loadError={loadErrors?.expenses}
           isAdmin={isAdmin}
         />
       )}
@@ -219,6 +235,7 @@ export function RecordsTabs({
           title="Bills"
           columns={BILL_COLUMNS}
           rows={bills}
+          loadError={loadErrors?.bills}
           isAdmin={isAdmin}
         />
       )}
