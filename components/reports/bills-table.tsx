@@ -9,6 +9,11 @@ export type ReportBillRow = {
   id: string;
   number: string | null;
   vendorName: string | null;
+  /**
+   * What the bill was for — Zoho's line item. A vendor name alone doesn't
+   * say what was bought, which is the question asked of a bills list.
+   */
+  itemName?: string | null;
   accountName?: string | null;
   date: string | null;
   total: number;
@@ -48,7 +53,7 @@ export function BillsTable({
   const paymentCount = rows.reduce((sum, row) => sum + (row.payments?.length ?? 0), 0);
   // Leading columns before the one the payment description sits in, so the
   // sub-row lines up under "Paid".
-  const leading = showAccount ? 4 : 3;
+  const leading = showAccount ? 5 : 4;
 
   return (
     <>
@@ -77,6 +82,7 @@ export function BillsTable({
             <tr>
               <th>Bill #</th>
               <th>Vendor</th>
+              <th>Item</th>
               {showAccount && <th>Account</th>}
               <th>Date</th>
               <th className="num">Total</th>
@@ -93,6 +99,10 @@ export function BillsTable({
                   <tr>
                     <td data-label="Bill #">{row.number ?? "—"}</td>
                     <td data-label="Vendor" data-card-label={row.vendorName ? "hidden" : undefined}>{row.vendorName ?? "—"}</td>
+                    {/* Labelled on a phone card, unlike the vendor above it:
+                        two unlabelled lines of free text under a bill number
+                        give no way to tell which is which. */}
+                    <td data-label="Item" data-card-width="full">{row.itemName ?? "—"}</td>
                     {showAccount && <td data-label="Account">{row.accountName ?? "—"}</td>}
                     <td data-label="Date">{row.date ? formatDateOnly(row.date) : "—"}</td>
                     <td data-label="Total" className="num">

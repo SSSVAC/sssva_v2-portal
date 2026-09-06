@@ -690,7 +690,7 @@ function getFirstRecordFromArray(value: unknown): Record<string, unknown> | unde
 // Zoho's bill list endpoint never includes account_name/item_name (they
 // live on line items and are only returned by the detail endpoint), so
 // every bill needs this enrichment to surface those two fields.
-function enrichBillWithLineItemDetails(bill: Record<string, unknown>) {
+export function enrichBillWithLineItemDetails(bill: Record<string, unknown>) {
   const firstLineItem = getFirstRecordFromArray(bill.line_items);
 
   const accountName =
@@ -700,12 +700,20 @@ function enrichBillWithLineItemDetails(bill: Record<string, unknown>) {
         ? firstLineItem.account_name
         : null;
 
+  // Falls back to the line item's description: plenty of vendor bills carry
+  // the detail there and leave `name` empty, and a bill row reading only
+  // "Sri Murugan Granites — —" says nothing about what was bought. Scoped to
+  // bills on purpose: an invoice's item_name is what the fund reports filter
+  // on (item_name.ilike), so widening that would change which invoices a
+  // report counts, not just what it displays.
   const itemName =
     typeof bill.item_name === "string" && bill.item_name.trim() !== ""
       ? bill.item_name
       : typeof firstLineItem?.name === "string" && firstLineItem.name.trim() !== ""
         ? firstLineItem.name
-        : null;
+        : typeof firstLineItem?.description === "string" && firstLineItem.description.trim() !== ""
+          ? firstLineItem.description
+          : null;
 
   return { ...bill, account_name: accountName, item_name: itemName };
 }

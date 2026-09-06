@@ -26,7 +26,15 @@ type MonthlyIncomeInvoice = Pick<InvoiceRow, "date" | "total" | "item_name" | "c
 type MonthlyExpenseSource = Pick<ExpenseRow, "id" | "description" | "account_name" | "date" | "total">;
 type MonthlyBillSource = Pick<
   BillRow,
-  "id" | "zoho_bill_id" | "bill_number" | "vendor_name" | "account_name" | "date" | "total" | "balance"
+  | "id"
+  | "zoho_bill_id"
+  | "bill_number"
+  | "vendor_name"
+  | "item_name"
+  | "account_name"
+  | "date"
+  | "total"
+  | "balance"
 >;
 
 type Props = {
@@ -75,7 +83,7 @@ async function loadMonthlyReport({ supabase, searchParams }: ReportLoaderContext
       .returns<MonthlyExpenseSource[]>(),
     supabase
       .from("zoho_bills")
-      .select("id, zoho_bill_id, bill_number, vendor_name, account_name, date, total, balance")
+      .select("id, zoho_bill_id, bill_number, vendor_name, account_name, item_name, date, total, balance")
       .is("archived_at", null)
       .gte("date", rangeStart)
       .order("date", { ascending: false })
@@ -112,6 +120,7 @@ async function loadMonthlyReport({ supabase, searchParams }: ReportLoaderContext
     id: bill.id,
     number: bill.bill_number,
     vendorName: bill.vendor_name,
+    itemName: bill.item_name,
     accountName: bill.account_name,
     date: bill.date,
     total: Number(bill.total ?? 0),
