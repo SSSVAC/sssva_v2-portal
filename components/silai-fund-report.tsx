@@ -25,6 +25,7 @@ import {
 import { useUrlParamSetter } from "@/lib/reports/use-url-param";
 import type { NonCashDonationRow } from "@/lib/reports/all-time-fund";
 import { BillsTable } from "@/components/reports/bills-table";
+import { ShareCollectionButton } from "@/components/reports/share-collection-button";
 import { paymentExportRows, type BillPaymentRow } from "@/lib/reports/bill-payments";
 
 export type { SilaiContributionEntry };
@@ -176,7 +177,7 @@ export function SilaiFundReport({
   expenseRows,
   billRows,
   initialShowAllMembers = false,
-  initialContributionView = "street",
+  initialContributionView = "date",
   initialDateOrder = "desc"
 }: SilaiFundReportProps) {
   const [showAllMembers, setShowAllMembers] = useState(initialShowAllMembers);
@@ -192,7 +193,9 @@ export function SilaiFundReport({
 
   const handleViewChange = (view: ContributionView) => {
     setContributionView(view);
-    setUrlParams({ view: view === "street" ? null : view });
+    // The date view is the default, so it's the street cut a link has to
+    // carry — `?view=street`.
+    setUrlParams({ view: view === "date" ? null : view });
   };
 
   const handleDateOrderChange = (order: "asc" | "desc") => {
@@ -264,6 +267,15 @@ export function SilaiFundReport({
   const sectionId = (part: string) => `${printTarget}-${part}`;
   const printPart = (part: string) => () => printReportSection(sectionId(part));
   const imagePart = (part: string) => () => exportSectionToImage(sectionId(part), `${fileSlug}-${part}.png`);
+
+  // What a shared summary leads with: the same figures as the tiles, so a
+  // message pasted into a chat and the report on screen can't disagree.
+  const shareMetrics = [
+    { label: "Total Contributions", value: formatCurrency(totalContributions) },
+    { label: "Total Paid", value: formatCurrency(totalPaid) },
+    { label: "Current Balance", value: formatCurrency(balance) },
+    { label: "Bills Due", value: formatCurrency(totalBillsDue) }
+  ];
 
   const metricsExportHeaders = ["Metric", "Value"];
   // Leads with the same five figures the tiles show, then the breakdown
@@ -376,20 +388,14 @@ export function SilaiFundReport({
         {canShowDateView && (
           <div className="filter-group">
             <span>Contributions</span>
-            {/* Two cuts of the same money — by street (who gave, where) and
-                by date (what came in, when). A segmented control rather than
-                two report pages: the totals, expenses and bills below are
-                identical either way, only the Contributions section changes. */}
+            {/* Two cuts of the same money — by date (what came in, when) and
+                by street (who gave, where). Date leads because that is the
+                question asked daily while a collection is running; the street
+                cut is the audit at the end of it. A segmented control rather
+                than two report pages: the totals, expenses and bills below
+                are identical either way, only the Contributions section
+                changes. */}
             <div className="segmented" role="tablist" aria-label="Contributions view">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={!showingDateView}
-                className={`segment${!showingDateView ? " segment-active" : ""}`}
-                onClick={() => handleViewChange("street")}
-              >
-                By street
-              </button>
               <button
                 type="button"
                 role="tab"
@@ -398,6 +404,15 @@ export function SilaiFundReport({
                 onClick={() => handleViewChange("date")}
               >
                 By date
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={!showingDateView}
+                className={`segment${!showingDateView ? " segment-active" : ""}`}
+                onClick={() => handleViewChange("street")}
+              >
+                By street
               </button>
             </div>
           </div>
@@ -431,10 +446,6 @@ export function SilaiFundReport({
         )}
       </ReportToolbar>
 
-      {/* Contributions is the figure the report exists to report, so it
-          carries the lead emphasis. Bills Due is the only tile whose value
-          can be in a bad state, so it is the only one that ever takes a
-          semantic colour — the rest stay neutral. */}
       {/* Contributions is the figure the report exists to report, so it
           carries the lead emphasis. The three tiles that can be in a bad
           state — a fund in deficit now, bills outstanding, or a shortfall
@@ -501,21 +512,32 @@ export function SilaiFundReport({
               } across ${contributionGroups.length} street${contributionGroups.length === 1 ? "" : "s"}`
         }
         actions={
-          <ExportMenu
-            label="Export contributions"
-            onExportCsv={() =>
-              exportSectionsToCsv(`${fileSlug}-contributions.csv`, contributionExportSections())
-            }
-            onExportHtml={() =>
-              exportSectionsToHtml(
-                `${fileSlug}-contributions.html`,
-                `${title} — Contributions`,
-                contributionExportSections()
-              )
-            }
-            onExportPdf={printPart("contributions")}
-            onExportImage={imagePart("contributions")}
-          />
+          <>
+            {/* The day's collection is what gets asked for in the group chat,
+                so sharing it is a button rather than an export buried behind
+                a menu. */}
+            <ShareCollectionButton
+              title={title}
+              subtitle={subtitle}
+              metrics={shareMetrics}
+              groups={contributionDateGroups}
+            />
+            <ExportMenu
+              label="Export contributions"
+              onExportCsv={() =>
+                exportSectionsToCsv(`${fileSlug}-contributions.csv`, contributionExportSections())
+              }
+              onExportHtml={() =>
+                exportSectionsToHtml(
+                  `${fileSlug}-contributions.html`,
+                  `${title} — Contributions`,
+                  contributionExportSections()
+                )
+              }
+              onExportPdf={printPart("contributions")}
+              onExportImage={imagePart("contributions")}
+            />
+          </>
         }
       >
         {showingDateView ? (

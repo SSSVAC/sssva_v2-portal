@@ -1116,6 +1116,9 @@ input[type="checkbox"] {
 }
 
 .section-group-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-left: auto;
   align-self: center;
 }
