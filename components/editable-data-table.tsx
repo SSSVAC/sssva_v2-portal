@@ -55,6 +55,12 @@ type EditableDataTableProps = {
    * notice, since partial data beats none.
    */
   loadError?: string | null;
+  /**
+   * Shown in the empty state when the table really is empty — e.g. that its
+   * rows exist but are archived. Without it, "no records yet" is the only
+   * story an empty table can tell.
+   */
+  emptyHint?: string | null;
 };
 
 export function EditableDataTable({
@@ -66,7 +72,8 @@ export function EditableDataTable({
   presetFilter,
   isAdmin = false,
   banner,
-  loadError
+  loadError,
+  emptyHint
 }: EditableDataTableProps) {
   const [rows, setRows] = useState(initialRows);
   const { showToast } = useToast();
@@ -668,6 +675,11 @@ export function EditableDataTable({
                   ? "No rows match the current search or filters."
                   : "No records in this table yet."}
               </p>
+              {emptyHint && !search && activeColumnFilters === 0 && (
+                <p className="muted" style={{ maxWidth: 460, textAlign: "center" }}>
+                  {emptyHint}
+                </p>
+              )}
               {(search || activeColumnFilters > 0) && (
                 <button
                   type="button"

@@ -26,7 +26,7 @@ describe("fetchAllRows", () => {
     // 2,300 rows behind a 1,000-row cap: one unpaged select would have
     // returned 1,000 and silently dropped the other 1,300.
     const table = fakeTable(2300, 1000);
-    const { rows, error } = await fetchAllRows<Row>(table.buildPage, 500);
+    const { rows, error } = await fetchAllRows<Row>(table.buildPage, 1000);
 
     expect(error).toBeNull();
     expect(rows).toHaveLength(2300);
@@ -34,7 +34,7 @@ describe("fetchAllRows", () => {
     expect(rows[2299]).toEqual({ n: 2299 });
   });
 
-  it("stops on the first short page rather than requesting one past the end", async () => {
+  it("reads an empty page as the end, not a short one", async () => {
     const table = fakeTable(1000);
     const { rows } = await fetchAllRows<Row>(table.buildPage, 500);
 
@@ -47,12 +47,27 @@ describe("fetchAllRows", () => {
     ]);
   });
 
-  it("makes exactly one request for a table smaller than a page", async () => {
+  // A server that returns fewer rows than asked for is not at the end of the
+  // table — db-max-rows does exactly this. Resuming at from + pageSize would
+  // step over every row it held back.
+  it("resumes after the rows it actually got, not the page size it asked for", async () => {
+    const table = fakeTable(1200, 300);
+    const { rows } = await fetchAllRows<Row>(table.buildPage, 1000);
+
+    expect(rows).toHaveLength(1200);
+    expect(rows.map((row) => row.n)).toEqual(Array.from({ length: 1200 }, (_, n) => n));
+    expect(table.calls.map(([from]) => from)).toEqual([0, 300, 600, 900, 1200]);
+  });
+
+  it("makes one request plus the end-of-table check for a small table", async () => {
     const table = fakeTable(12);
     const { rows } = await fetchAllRows<Row>(table.buildPage, 500);
 
     expect(rows).toHaveLength(12);
-    expect(table.calls).toEqual([[0, 499]]);
+    expect(table.calls).toEqual([
+      [0, 499],
+      [12, 511]
+    ]);
   });
 
   it("returns the error with whatever loaded, instead of an empty table", async () => {

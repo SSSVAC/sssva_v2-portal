@@ -6,6 +6,9 @@ type ExpenseInsert = Database["public"]["Tables"]["zoho_expenses"]["Insert"];
 type BillInsert = Database["public"]["Tables"]["zoho_bills"]["Insert"];
 type BillPaymentInsert = Database["public"]["Tables"]["zoho_bill_payments"]["Insert"];
 
+/** Stand-in for a Zoho contact with no name at all, so display_name (NOT NULL) always has a value. */
+export const UNNAMED_CUSTOMER = "Unnamed customer";
+
 export function mapZohoCustomer(raw: Record<string, unknown>): CustomerInsert {
 
   // console.log("[zoho][mapCustomer]", {
@@ -13,7 +16,7 @@ export function mapZohoCustomer(raw: Record<string, unknown>): CustomerInsert {
   // });
 
   const contactId = requiredString(raw, "contact_id");
-  const contactName = optionalString(raw, "contact_name") ?? "Unnamed customer";
+  const contactName = optionalString(raw, "contact_name") ?? UNNAMED_CUSTOMER;
   const billingAddressResult = getBillingAddress(raw);
   const isActive = getCustomerIsActive(raw);
 

@@ -20,12 +20,19 @@ type CustomerFilter = {
  */
 export type RecordsLoadErrors = Partial<Record<RecordTableId, string | null>>;
 
+/**
+ * Per-table explanation for a table that really is empty — e.g. rows that
+ * exist but are archived and therefore hidden.
+ */
+export type RecordsEmptyHints = Partial<Record<RecordTableId, string | null>>;
+
 type RecordsTabsProps = {
   customers: Row[];
   invoices: Row[];
   expenses: Row[];
   bills: Row[];
   loadErrors?: RecordsLoadErrors;
+  emptyHints?: RecordsEmptyHints;
   initialTab?: RecordTableId;
   initialCustomerFilter?: CustomerFilter | null;
   isAdmin: boolean;
@@ -104,6 +111,7 @@ export function RecordsTabs({
   expenses,
   bills,
   loadErrors,
+  emptyHints,
   initialTab,
   initialCustomerFilter,
   isAdmin
@@ -170,6 +178,7 @@ export function RecordsTabs({
           columns={CUSTOMER_COLUMNS}
           rows={customers}
           loadError={loadErrors?.customers}
+          emptyHint={emptyHints?.customers}
           isAdmin={isAdmin}
           actionColumn={{
             label: "Invoices",
@@ -195,6 +204,7 @@ export function RecordsTabs({
           columns={INVOICE_COLUMNS}
           rows={invoices}
           loadError={loadErrors?.invoices}
+          emptyHint={emptyHints?.invoices}
           isAdmin={isAdmin}
           presetFilter={customerFilter ? (row) => row.customer_id === customerFilter.id : undefined}
           banner={
@@ -224,6 +234,7 @@ export function RecordsTabs({
           columns={EXPENSE_COLUMNS}
           rows={expenses}
           loadError={loadErrors?.expenses}
+          emptyHint={emptyHints?.expenses}
           isAdmin={isAdmin}
         />
       )}
@@ -236,6 +247,7 @@ export function RecordsTabs({
           columns={BILL_COLUMNS}
           rows={bills}
           loadError={loadErrors?.bills}
+          emptyHint={emptyHints?.bills}
           isAdmin={isAdmin}
         />
       )}
