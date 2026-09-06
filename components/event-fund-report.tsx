@@ -338,7 +338,7 @@ export function EventFundReport({
           contributionGroups.map((group) => (
             <Section key={group.groupName} title={group.groupName} count={group.rows.length}>
               <div className="table-panel-scroll">
-                <table className="data-table data-table-cards">
+                <table className="data-table data-table-cards data-table-compact">
                   <thead>
                     <tr>
                       <th>Donor</th>
@@ -351,8 +351,8 @@ export function EventFundReport({
                     {group.rows.map((row, index) => (
                       <tr key={`${row.donorName ?? "unknown"}-${index}`}>
                         <td data-label="Donor">{row.donorName ?? "—"}</td>
-                        <td data-label="Phone">{row.phone ?? "—"}</td>
-                        <td data-label="Address">{row.address ?? "—"}</td>
+                        <td data-label="Phone" data-card-label={row.phone ? "hidden" : undefined}>{row.phone ?? "—"}</td>
+                        <td data-label="Address" data-card-label={row.address ? "hidden" : undefined}>{row.address ?? "—"}</td>
                         <td data-label="Amount" className={`num ${amountClass(row.total)}`}>
                           {formatCurrency(row.total)}
                         </td>
@@ -406,7 +406,7 @@ export function EventFundReport({
       >
         {yearExpenseRows.length > 0 ? (
           <div className="table-panel-scroll">
-            <table className="data-table data-table-cards">
+            <table className="data-table data-table-cards data-table-compact">
               <thead>
                 <tr>
                   <th>Item</th>

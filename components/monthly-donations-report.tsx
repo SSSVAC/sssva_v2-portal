@@ -158,7 +158,7 @@ export function MonthlyDonationsReport({ months, donors }: MonthlyDonationsRepor
 
         {sortedDonors.length > 0 ? (
           <div className="table-panel-scroll">
-            <table className="data-table data-table-cards">
+            <table className="data-table data-table-cards data-table-compact">
             <thead>
               <tr>
                 <SortableTh

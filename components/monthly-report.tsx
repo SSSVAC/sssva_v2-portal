@@ -306,7 +306,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
         }
       >
         <div className="table-panel-scroll">
-          <table className="data-table data-table-cards">
+          <table className="data-table data-table-cards data-table-compact">
             <thead>
               <tr>
                 <th>Category</th>
@@ -379,7 +379,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
       >
         {donationDonorRows.length > 0 ? (
           <div className="table-panel-scroll">
-            <table className="data-table data-table-cards">
+            <table className="data-table data-table-cards data-table-compact">
               <thead>
                 <tr>
                   <th>Donor</th>
@@ -441,7 +441,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
       >
         {othersDonorRows.length > 0 ? (
           <div className="table-panel-scroll">
-            <table className="data-table data-table-cards">
+            <table className="data-table data-table-cards data-table-compact">
               <thead>
                 <tr>
                   <th>Donor</th>
@@ -503,7 +503,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
       >
         {monthExpenseRows.length > 0 ? (
           <div className="table-panel-scroll">
-            <table className="data-table data-table-cards">
+            <table className="data-table data-table-cards data-table-compact">
               <thead>
                 <tr>
                   <th>Item</th>

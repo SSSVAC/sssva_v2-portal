@@ -225,7 +225,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
           {safeRecentInvoices.length > 0 ? (
             <div className="table-wrap">
-              <table className="data-table data-table-cards">
+              <table className="data-table data-table-cards data-table-compact">
                 <thead>
                   <tr>
                     <th>Invoice</th>
@@ -239,9 +239,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                   {safeRecentInvoices.map((invoice) => (
                     <tr key={invoice.id}>
                       <td data-label="Invoice">{invoice.invoice_number ?? invoice.zoho_invoice_id}</td>
-                      <td data-label="Customer">{invoice.customer_name ?? "Unknown"}</td>
-                      <td data-label="Date">{invoice.date ? formatDate(invoice.date) : "—"}</td>
-                      <td data-label="Status">
+                      <td data-label="Customer" data-card-label="hidden">{invoice.customer_name ?? "Unknown"}</td>
+                      <td data-label="Date" data-card-width="full">{invoice.date ? formatDate(invoice.date) : "—"}</td>
+                      <td data-label="Status" data-card-label="hidden">
                         <span className={`status-pill ${statusClass(invoice.status)}`}>
                           {invoice.status}
                         </span>

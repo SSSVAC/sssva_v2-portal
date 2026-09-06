@@ -119,7 +119,7 @@ function ContributionTable({
 }) {
   return (
     <div className="table-panel-scroll">
-      <table className="data-table data-table-cards">
+      <table className="data-table data-table-cards data-table-compact">
         <thead>
           <tr>
             <th>Donor</th>
@@ -132,8 +132,8 @@ function ContributionTable({
           {rows.map((row) => (
             <tr key={row.key}>
               <td data-label="Donor">{row.donorName ?? "—"}</td>
-              <td data-label="Phone">{row.phone ?? "—"}</td>
-              <td data-label="Address">{row.address ?? "—"}</td>
+              <td data-label="Phone" data-card-label={row.phone ? "hidden" : undefined}>{row.phone ?? "—"}</td>
+              <td data-label="Address" data-card-label={row.address ? "hidden" : undefined}>{row.address ?? "—"}</td>
               <td
                 data-label="Amount"
                 className={`num${colorizeAmounts ? ` ${amountClass(row.total)}` : ""}`}
@@ -574,7 +574,7 @@ export function SilaiFundReport({
           }
         >
           <div className="table-panel-scroll">
-            <table className="data-table data-table-cards">
+            <table className="data-table data-table-cards data-table-compact">
               <thead>
                 <tr>
                   <th>Donor</th>
@@ -586,8 +586,8 @@ export function SilaiFundReport({
                 {nonCashDonationRows.map((row, index) => (
                   <tr key={`${row.donorName ?? "unknown"}-${index}`}>
                     <td data-label="Donor">{row.donorName ?? "—"}</td>
-                    <td data-label="Address">{row.address ?? "—"}</td>
-                    <td data-label="Detail">{row.detail}</td>
+                    <td data-label="Address" data-card-label={row.address ? "hidden" : undefined}>{row.address ?? "—"}</td>
+                    <td data-label="Detail" data-card-width="full">{row.detail}</td>
                   </tr>
                 ))}
               </tbody>
@@ -620,7 +620,7 @@ export function SilaiFundReport({
       >
         {expenseRows.length > 0 ? (
           <div className="table-panel-scroll">
-            <table className="data-table data-table-cards">
+            <table className="data-table data-table-cards data-table-compact">
               <thead>
                 <tr>
                   <th>Item</th>
