@@ -23,6 +23,16 @@ export type RecordColumn = {
   // card layout guesses column 1 is the title, which is wrong here since
   // these tables lead with an internal id column.
   cardTitle?: boolean;
+  // Drops this column's caption from the mobile card, for a value that
+  // says what it is on its own — a phone number, an email, an address, a
+  // status pill. The caption above such a value is taller than the value
+  // it introduces, and on a 13-column record that adds up to a card you
+  // scroll rather than read. Labelled columns pair two to a line; these
+  // take the full width, since they're the lines you actually read.
+  hideCardLabel?: boolean;
+  // Gives this column the full width of the mobile card instead of half of
+  // it. For a value that can't share a line: a long id, a free-text note.
+  cardFullWidth?: boolean;
 };
 
 type RowValue = string | number | boolean | null;
@@ -443,7 +453,11 @@ export function EditableDataTable({
 
         <div className="section-body">
           <div className="table-panel-scroll">
-      <table className="data-table data-table-cards">
+      {/* data-table-compact: on a phone a record is one card — the name
+          across the top, everything else paired on a line — instead of a
+          full-width captioned block per column, which made a single
+          customer 758px tall. */}
+      <table className="data-table data-table-cards data-table-compact">
         <thead>
           <tr>
             {isAdmin && (
@@ -533,7 +547,7 @@ export function EditableDataTable({
             return (
               <tr key={rowId}>
                 {isAdmin && (
-                  <td data-label="Select">
+                  <td data-label="Select" data-card-select="">
                     <input
                       type="checkbox"
                       aria-label={`Select row ${rowId}`}
@@ -546,10 +560,18 @@ export function EditableDataTable({
                   const cellKey = `${rowId}:${column.key}`;
                   const value = row[column.key];
                   const titleClass = column.cardTitle ? "data-table-card-title" : "";
+                  // Card-layout attributes, identical on every branch below —
+                  // the label a cell carries can't depend on which editor it
+                  // happens to be rendering.
+                  const cardAttrs = {
+                    "data-label": column.label,
+                    ...(column.hideCardLabel ? { "data-card-label": "hidden" } : {}),
+                    ...(column.cardFullWidth ? { "data-card-width": "full" } : {})
+                  };
 
                   if (!column.editable) {
                     return (
-                      <td key={column.key} data-label={column.label} className={titleClass}>
+                      <td key={column.key} {...cardAttrs} className={titleClass}>
                         {formatValue(value)}
                       </td>
                     );
@@ -557,7 +579,7 @@ export function EditableDataTable({
 
                   if (column.type === "boolean") {
                     return (
-                      <td key={column.key} data-label={column.label}>
+                      <td key={column.key} {...cardAttrs}>
                         <input
                           type="checkbox"
                           checked={Boolean(value)}
@@ -574,7 +596,7 @@ export function EditableDataTable({
 
                     if (addingOptionCell === cellKey) {
                       return (
-                        <td key={column.key} data-label={column.label} className={titleClass}>
+                        <td key={column.key} {...cardAttrs} className={titleClass}>
                           <input
                             autoFocus
                             className="cell-input"
@@ -594,7 +616,7 @@ export function EditableDataTable({
                     }
 
                     return (
-                      <td key={column.key} data-label={column.label} className={titleClass}>
+                      <td key={column.key} {...cardAttrs} className={titleClass}>
                         <select
                           className="filter-input"
                           aria-label={`Edit ${column.label}`}
@@ -625,7 +647,7 @@ export function EditableDataTable({
 
                   if (editingCell === cellKey) {
                     return (
-                      <td key={column.key} data-label={column.label} className={titleClass}>
+                      <td key={column.key} {...cardAttrs} className={titleClass}>
                         <input
                           autoFocus
                           className="cell-input"
@@ -646,7 +668,7 @@ export function EditableDataTable({
                   return (
                     <td
                       key={column.key}
-                      data-label={column.label}
+                      {...cardAttrs}
                       className={`editable-cell ${titleClass} ${errorCell === cellKey ? "editable-cell-error" : ""}`}
                       onClick={() => startEdit(rowId, column.key, value)}
                       title={errorCell === cellKey ? "Save failed — click to retry" : "Click to edit"}
@@ -659,7 +681,11 @@ export function EditableDataTable({
                     </td>
                   );
                 })}
-                {actionColumn && <td data-label={actionColumn.label}>{actionColumn.render(row)}</td>}
+                {actionColumn && (
+                  <td data-label={actionColumn.label} data-card-action="">
+                    {actionColumn.render(row)}
+                  </td>
+                )}
               </tr>
             );
           })}
