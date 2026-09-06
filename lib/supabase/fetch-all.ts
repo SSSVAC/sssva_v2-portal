@@ -16,7 +16,7 @@ import type { PostgrestError } from "@supabase/supabase-js";
  * bounded. The error, if one still comes, is returned rather than swallowed,
  * so the page can say the load failed instead of showing an empty table.
  */
-export const SUPABASE_PAGE_SIZE = 500;
+export const SUPABASE_PAGE_SIZE = 1000;
 
 // Guard against looping forever if a backend keeps returning full pages.
 // Well past any real table here; reaching it means something is wrong.
@@ -38,15 +38,21 @@ export type FetchAllResult<Row> = {
  * Give the query a deterministic order (add `id` as a tiebreaker on any
  * non-unique sort key) or rows can repeat or go missing across slice
  * boundaries.
+ *
+ * The next slice starts after however many rows actually arrived, not after
+ * the page size asked for, and only an empty page ends the read. That matters
+ * because the server is free to return fewer rows than requested — which is
+ * exactly what db-max-rows does — and advancing by the requested size would
+ * step straight over the rows it held back.
  */
 export async function fetchAllRows<Row>(
   buildPage: (from: number, to: number) => PromiseLike<PageResult<Row>>,
   pageSize: number = SUPABASE_PAGE_SIZE
 ): Promise<FetchAllResult<Row>> {
   const rows: Row[] = [];
+  let from = 0;
 
-  for (let pageIndex = 0; pageIndex < MAX_PAGES; pageIndex++) {
-    const from = pageIndex * pageSize;
+  for (let page = 0; page < MAX_PAGES; page++) {
     const { data, error } = await buildPage(from, from + pageSize - 1);
 
     if (error) {
@@ -55,10 +61,11 @@ export async function fetchAllRows<Row>(
       return { rows, error };
     }
 
-    const page = data ?? [];
-    rows.push(...page);
+    const received = data ?? [];
+    if (received.length === 0) break;
 
-    if (page.length < pageSize) break;
+    rows.push(...received);
+    from += received.length;
   }
 
   return { rows, error: null };

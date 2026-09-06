@@ -10,7 +10,7 @@ import {
   fetchZohoExpenseDetail,
   fetchZohoBillDetail,
   type BillDetail,
-  type CustomerFieldOverride
+  type ExistingCustomerSyncState
 } from "@/lib/zoho/client";
 import {
   mapZohoBill,
@@ -20,6 +20,8 @@ import {
   mapZohoInvoice
 } from "@/lib/zoho/mappers";
 import { notifySyncFailure } from "@/lib/alerts";
+import { fetchAllRows } from "@/lib/supabase/fetch-all";
+import { reconcileCustomer, type ExistingCustomerRecord } from "@/lib/zoho/reconcile-customer";
 
 export const ZOHO_SYNC_RESOURCES = ["customers", "invoices", "expenses", "bills"] as const;
 export type ZohoSyncResource = (typeof ZOHO_SYNC_RESOURCES)[number];
@@ -91,8 +93,8 @@ export async function runZohoBooksSync(options: ZohoSyncOptions = DEFAULT_SYNC_O
     // rate limits. Only brand-new customers/invoices/bills pay for a detail
     // lookup; bills still missing account_name or item_name from a prior
     // sync keep getting retried until Zoho's line items backfill them.
-    const [existingCustomerFields, existingItemNames, existingSubjects, existingBillDetails] = await Promise.all([
-      resolvedOptions.customers ? loadExistingCustomerFields(supabase) : Promise.resolve(new Map<string, CustomerFieldOverride>()),
+    const [existingCustomers, existingItemNames, existingSubjects, existingBillDetails] = await Promise.all([
+      resolvedOptions.customers ? loadExistingCustomers(supabase) : Promise.resolve(new Map<string, ExistingCustomerState>()),
       resolvedOptions.invoices ? loadExistingInvoiceItemNames(supabase) : Promise.resolve(new Map<string, string | null>()),
       resolvedOptions.invoices ? loadExistingInvoiceSubjects(supabase) : Promise.resolve(new Map<string, string>()),
       resolvedOptions.bills ? loadExistingBillDetails(supabase) : Promise.resolve(new Map<string, BillDetail>())
@@ -100,7 +102,7 @@ export async function runZohoBooksSync(options: ZohoSyncOptions = DEFAULT_SYNC_O
 
     const [customers, invoices, expenses, bills] = await Promise.all([
       resolvedOptions.customers
-        ? fetchZohoCustomers(accessToken, undefined, existingCustomerFields)
+        ? fetchZohoCustomers(accessToken, undefined, toDetailCallState(existingCustomers))
         : Promise.resolve([]),
       resolvedOptions.invoices ? fetchZohoInvoices(accessToken, existingItemNames, existingSubjects) : Promise.resolve([]),
       resolvedOptions.expenses ? fetchZohoExpenses(accessToken) : Promise.resolve([]),
@@ -113,7 +115,11 @@ export async function runZohoBooksSync(options: ZohoSyncOptions = DEFAULT_SYNC_O
 
     const mappedCustomers = customers.reduce<Array<ReturnType<typeof mapZohoCustomer>>>((acc, customer) => {
       try {
-        acc.push(mapZohoCustomer(customer));
+        const mapped = mapZohoCustomer(customer);
+        // Zoho's copy vs the portal's, decided per field: a value Zoho has
+        // changed lands, a correction made here survives, and a blank from
+        // Zoho never wipes something we hold. See reconcile-customer.ts.
+        acc.push(reconcileCustomer(mapped, existingCustomers.get(mapped.zoho_customer_id)?.record));
       } catch (error) {
         console.warn("Skipping invalid Zoho customer record", error, customer);
       }
@@ -418,30 +424,54 @@ async function upsertResyncedRecords<T extends { [key: string]: unknown }>(
   return { resynced: mapped.length, failed };
 }
 
-// Marks every currently-unarchived row whose Zoho id isn't in
-// freshZohoIds as archived — called once per resource per full sync,
-// after that resource's fresh fetch has been upserted. Never called for
-// a resource excluded from the current sync (see the resolvedOptions
-// gate at each call site), since an empty freshZohoIds set from a
-// resource that simply wasn't fetched would otherwise archive
-// everything.
+// A run may archive at most this share of a table. A fresh Zoho fetch that
+// comes back short — a truncated list (ZOHO_LIST_MAX_PAGES), pages that
+// half-failed, a resource that returned nothing — is indistinguishable from
+// a mass deletion in Zoho, and the two have very different consequences:
+// one is a handful of stale rows, the other is a Records page that goes
+// blank. Real deletions arrive a few records at a time, so a run asking to
+// archive most of a table is reporting a bad fetch and is refused.
+const MAX_ARCHIVE_SHARE = 0.2;
+// Below this many rows the share is meaningless — deleting 1 of 4 records is
+// 25% and perfectly ordinary.
+const ARCHIVE_GUARD_MIN_ROWS = 20;
+
+/** Whether this run's archive set is too large to be a real set of deletions. */
+export function shouldRefuseArchive(existingCount: number, staleCount: number) {
+  if (existingCount < ARCHIVE_GUARD_MIN_ROWS) return false;
+  return staleCount / existingCount > MAX_ARCHIVE_SHARE;
+}
+
+// Marks every currently-unarchived row whose Zoho id isn't in freshZohoIds
+// as archived — called once per resource per full sync, after that
+// resource's fresh fetch has been upserted. Never called for a resource
+// excluded from the current sync (see the resolvedOptions gate at each call
+// site), since an empty freshZohoIds set from a resource that simply wasn't
+// fetched would otherwise archive everything.
 async function archiveMissingRecords(
   supabase: ReturnType<typeof createAdminClient>,
   table: ResyncTableName,
   zohoIdColumn: string,
   freshZohoIds: Set<string>
 ) {
-  const { data: existing, error } = await supabase
-    .from(table)
-    .select(`id, ${zohoIdColumn}`)
-    .is("archived_at", null)
-    .returns<Record<string, unknown>[]>();
+  // Paged: an unpaged read stops at Supabase's 1000-row cap, so on a larger
+  // table this only ever considered the first thousand rows — and, worse,
+  // measured the guard below against that thousand instead of the table.
+  const { rows: existing, error } = await fetchAllRows<Record<string, unknown>>((from, to) =>
+    supabase
+      .from(table)
+      .select(`id, ${zohoIdColumn}`)
+      .is("archived_at", null)
+      .order("id", { ascending: true })
+      .range(from, to)
+      .returns<Record<string, unknown>[]>()
+  );
 
   if (error) {
     throw error;
   }
 
-  const staleIds = (existing ?? [])
+  const staleIds = existing
     .filter((row) => {
       const zohoId = row[zohoIdColumn];
       return typeof zohoId === "string" && !freshZohoIds.has(zohoId);
@@ -449,6 +479,13 @@ async function archiveMissingRecords(
     .map((row) => row.id as string);
 
   if (staleIds.length === 0) {
+    return 0;
+  }
+
+  if (shouldRefuseArchive(existing.length, staleIds.length)) {
+    console.warn(
+      `[zoho][archive] Refusing to archive ${staleIds.length} of ${existing.length} rows in ${table}: Zoho returned only ${freshZohoIds.size} records, which reads as a short fetch rather than a deletion. Nothing was archived.`
+    );
     return 0;
   }
 
@@ -464,17 +501,89 @@ async function archiveMissingRecords(
   return staleIds.length;
 }
 
-async function loadExistingCustomerFields(supabase: ReturnType<typeof createAdminClient>) {
-  const map = new Map<string, CustomerFieldOverride>();
-  const { data, error } = await supabase.from("zoho_customers").select("zoho_customer_id, billing_address, phone");
+type ExistingCustomerRow = {
+  zoho_customer_id: string;
+  display_name: string | null;
+  company_name: string | null;
+  email: string | null;
+  phone: string | null;
+  billing_address: string | null;
+  zoho_display_name: string | null;
+  zoho_company_name: string | null;
+  zoho_email: string | null;
+  zoho_phone: string | null;
+  zoho_last_modified_time: string | null;
+};
 
-  if (error || !data) {
+type ExistingCustomerState = {
+  record: ExistingCustomerRecord;
+  lastModifiedTime: string | null;
+};
+
+/**
+ * Every customer already in Supabase: the columns as they stand, and the
+ * same fields as Zoho reported them last time, read straight out of the
+ * stored `raw` payload so knowing what Zoho used to say costs no API call.
+ *
+ * Paged, because an unpaged read stops at Supabase's 1000-row cap — and a
+ * customer past that cap would look brand new to every sync, losing whatever
+ * had been corrected in the portal.
+ */
+async function loadExistingCustomers(supabase: ReturnType<typeof createAdminClient>) {
+  const map = new Map<string, ExistingCustomerState>();
+
+  const { rows, error } = await fetchAllRows<ExistingCustomerRow>((from, to) =>
+    supabase
+      .from("zoho_customers")
+      .select(
+        "zoho_customer_id, display_name, company_name, email, phone, billing_address, zoho_display_name:raw->>contact_name, zoho_company_name:raw->>company_name, zoho_email:raw->>email, zoho_phone:raw->>phone, zoho_last_modified_time:raw->>last_modified_time"
+      )
+      .order("zoho_customer_id", { ascending: true })
+      .range(from, to)
+      .returns<ExistingCustomerRow[]>()
+  );
+
+  if (error) {
+    // Falling through with what loaded would look like "these customers are
+    // new" and overwrite their portal edits, so a partial read is no read.
+    console.warn("[zoho][loadExistingCustomers] failed; syncing without portal-side reconciliation", error.message);
     return map;
   }
 
-  for (const row of data) {
-    map.set(row.zoho_customer_id, { billingAddress: row.billing_address, phone: row.phone });
+  for (const row of rows) {
+    map.set(row.zoho_customer_id, {
+      lastModifiedTime: row.zoho_last_modified_time,
+      record: {
+        stored: {
+          display_name: row.display_name,
+          company_name: row.company_name,
+          email: row.email,
+          phone: row.phone,
+          billing_address: row.billing_address
+        },
+        lastSynced: {
+          display_name: row.zoho_display_name,
+          company_name: row.zoho_company_name,
+          email: row.zoho_email,
+          phone: row.zoho_phone
+        }
+      }
+    });
   }
+
+  return map;
+}
+
+/** The slice of the above that lib/zoho/client.ts needs to skip detail calls. */
+function toDetailCallState(existing: Map<string, ExistingCustomerState>) {
+  const map = new Map<string, ExistingCustomerSyncState>();
+
+  existing.forEach((state, customerId) => {
+    map.set(customerId, {
+      hasBillingAddress: Boolean(state.record.stored.billing_address),
+      lastModifiedTime: state.lastModifiedTime
+    });
+  });
 
   return map;
 }

@@ -1,13 +1,11 @@
 import { AppShell } from "@/components/shell/app-shell";
 import { PageHeader } from "@/components/shell/page-header";
-import { RecordsTabs, type RecordsLoadErrors } from "@/components/records-tabs";
+import { RecordsTabs, type RecordsLoadErrors, type RecordsEmptyHints } from "@/components/records-tabs";
 import { requireStaffViewer, viewerChrome } from "@/lib/auth/viewer";
-import { fetchAllRows } from "@/lib/supabase/fetch-all";
+import { readRecordTable, type RecordTableRead } from "@/lib/records/read-record-table";
 import { RECORD_TABLES, type RecordTableId } from "@/lib/nav";
 
 export const dynamic = "force-dynamic";
-
-type Row = Record<string, unknown>;
 
 type RecordsPageProps = {
   searchParams: Promise<{ tab?: string; customerId?: string; customerName?: string }>;
@@ -45,61 +43,35 @@ export default async function RecordsPage({ searchParams }: RecordsPageProps) {
       ? { id: params.customerId, name: params.customerName }
       : null;
 
-  // Read in slices: a single unpaged select is capped at Supabase's
-  // db-max-rows (1000), which quietly hid every record past the first
-  // thousand of each table. `id` is a tiebreaker on each sort so a row can't
-  // fall between two slices when many share a date or name.
+  // Read in slices, narrow columns, errors surfaced, and a fallback if the
+  // deployed schema is missing one of these columns — see readRecordTable.
   const [customers, invoices, expenses, bills] = await Promise.all([
-    fetchAllRows<Row>((from, to) =>
-      supabase
-        .from("zoho_customers")
-        .select(CUSTOMER_FIELDS)
-        .is("archived_at", null)
-        .order("display_name", { ascending: true })
-        .order("id", { ascending: true })
-        .range(from, to)
-        .returns<Row[]>()
-    ),
-    fetchAllRows<Row>((from, to) =>
-      supabase
-        .from("zoho_invoices")
-        .select(INVOICE_FIELDS)
-        .is("archived_at", null)
-        .order("date", { ascending: false })
-        .order("id", { ascending: true })
-        .range(from, to)
-        .returns<Row[]>()
-    ),
-    fetchAllRows<Row>((from, to) =>
-      supabase
-        .from("zoho_expenses")
-        .select(EXPENSE_FIELDS)
-        .is("archived_at", null)
-        .order("date", { ascending: false })
-        .order("id", { ascending: true })
-        .range(from, to)
-        .returns<Row[]>()
-    ),
-    fetchAllRows<Row>((from, to) =>
-      supabase
-        .from("zoho_bills")
-        .select(BILL_FIELDS)
-        .is("archived_at", null)
-        .order("date", { ascending: false })
-        .order("id", { ascending: true })
-        .range(from, to)
-        .returns<Row[]>()
-    )
+    readRecordTable(supabase, "zoho_customers", CUSTOMER_FIELDS, {
+      column: "display_name",
+      ascending: true
+    }),
+    readRecordTable(supabase, "zoho_invoices", INVOICE_FIELDS, { column: "date", ascending: false }),
+    readRecordTable(supabase, "zoho_expenses", EXPENSE_FIELDS, { column: "date", ascending: false }),
+    readRecordTable(supabase, "zoho_bills", BILL_FIELDS, { column: "date", ascending: false })
   ]);
 
   // A failed read used to be indistinguishable from an empty table: the
   // error was destructured away and `data ?? []` rendered "No records in
   // this table yet." Carry it to the table instead, so a broken load says so.
   const loadErrors: RecordsLoadErrors = {
-    customers: describeLoadError(customers.error),
-    invoices: describeLoadError(invoices.error),
-    expenses: describeLoadError(expenses.error),
-    bills: describeLoadError(bills.error)
+    customers: customers.error,
+    invoices: invoices.error,
+    expenses: expenses.error,
+    bills: bills.error
+  };
+
+  // And an empty table that has archived rows behind it says that too, rather
+  // than reading as "the sync has never run".
+  const emptyHints: RecordsEmptyHints = {
+    customers: archivedHint(customers),
+    invoices: archivedHint(invoices),
+    expenses: archivedHint(expenses),
+    bills: archivedHint(bills)
   };
 
   return (
@@ -115,6 +87,7 @@ export default async function RecordsPage({ searchParams }: RecordsPageProps) {
         expenses={expenses.rows}
         bills={bills.rows}
         loadErrors={loadErrors}
+        emptyHints={emptyHints}
         initialTab={initialTab}
         initialCustomerFilter={initialCustomerFilter}
         isAdmin={isAdmin}
@@ -123,8 +96,7 @@ export default async function RecordsPage({ searchParams }: RecordsPageProps) {
   );
 }
 
-function describeLoadError(error: { message: string } | null) {
-  if (!error) return null;
-  console.error("Records page query failed", error);
-  return error.message;
+function archivedHint({ archivedCount }: RecordTableRead) {
+  if (!archivedCount) return null;
+  return `${archivedCount} row${archivedCount === 1 ? " is" : "s are"} archived and hidden here. A Zoho sync archives a record when it stops appearing in Zoho — re-run a full sync to bring back anything that still exists there.`;
 }

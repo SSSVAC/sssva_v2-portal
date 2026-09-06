@@ -93,12 +93,55 @@ export async function getZohoAccessToken() {
   return TokenResponse.parse(await response.json()).access_token;
 }
 
-export type CustomerFieldOverride = { billingAddress: string | null; phone: string | null };
+/**
+ * What the sync already knows about a customer, and all it needs to decide
+ * whether this run has to spend a per-contact detail call on it.
+ */
+export type ExistingCustomerSyncState = {
+  /** Supabase already holds an address for this customer. */
+  hasBillingAddress: boolean;
+  /** Zoho's own last_modified_time as of the last sync of this customer. */
+  lastModifiedTime: string | null;
+};
+
+/**
+ * The contacts *list* carries a contact's name, company, email and phone but
+ * no address, so an address costs a call per contact. Paying that for every
+ * customer on every sync burns the daily API limit; never paying it (what
+ * this used to do once a customer existed) leaves the portal stuck on
+ * whatever Zoho said the first time.
+ *
+ * So it is paid exactly when it can tell us something new:
+ *   - a customer we have never synced,
+ *   - one whose address we still don't have, or
+ *   - one Zoho reports as modified since we last looked.
+ *
+ * Everything else the list already answers, and the fields it carries are
+ * reconciled against the portal's own copy in lib/zoho/reconcile-customer.ts.
+ */
+export function needsCustomerDetail(
+  listCustomer: Record<string, unknown> | undefined,
+  existing: ExistingCustomerSyncState | undefined
+) {
+  if (!existing || !listCustomer) return true;
+  if (!existing.hasBillingAddress) return true;
+
+  // Inequality, not "newer than": any difference means Zoho's copy moved,
+  // and comparing the strings avoids parsing Zoho's timezone offsets. A
+  // customer stored before this was tracked has null here and pays for one
+  // detail call, once.
+  return zohoLastModifiedTime(listCustomer) !== existing.lastModifiedTime;
+}
+
+export function zohoLastModifiedTime(record: Record<string, unknown>) {
+  const value = record.last_modified_time;
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
 
 export async function fetchZohoCustomers(
   accessToken: string,
   limit?: number,
-  existingCustomerFields = new Map<string, CustomerFieldOverride>()
+  existingCustomers = new Map<string, ExistingCustomerSyncState>()
 ) {
   const payload = await fetchZohoList(accessToken, "contacts", limit);
   const customers = CustomerResponse.parse(payload).contacts;
@@ -128,21 +171,19 @@ export async function fetchZohoCustomers(
     customerIds,
     getCustomerDetailConcurrency(),
     async (customerId) => {
-      // Already-synced customers skip the detail call entirely: billing
-      // address and phone are corrected directly in the portal, so once a
-      // customer has been synced once, Zoho's copy of those two fields is
-      // never applied again (also conserves Zoho's daily API limit).
-      const existingFields = existingCustomerFields.get(customerId);
-      if (existingFields) {
-        return {
-          ...customersById.get(customerId),
-          billing_address: existingFields.billingAddress,
-          phone: existingFields.phone
-        };
+      const listCustomer = customersById.get(customerId);
+
+      // The payload returned here is Zoho's, untouched — the portal's own
+      // values are folded in later, against what Zoho said last time, so
+      // `raw` stays a faithful record of Zoho's copy. Overwriting it with
+      // merged values (which is what this did) made the next sync unable to
+      // tell a Zoho change from a portal edit.
+      if (!needsCustomerDetail(listCustomer, existingCustomers.get(customerId))) {
+        return listCustomer ?? null;
       }
 
       const detailedCustomer = await fetchZohoCustomerDetail(accessToken, customerId);
-      return detailedCustomer ?? customersById.get(customerId) ?? null;
+      return detailedCustomer ?? listCustomer ?? null;
     }
   );
 
