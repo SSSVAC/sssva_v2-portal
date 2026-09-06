@@ -222,7 +222,7 @@ export function GuestPassManager({ passes, enabled }: Props) {
           </div>
         ) : (
           <div className="table-panel-scroll">
-            <table className="data-table data-table-cards">
+            <table className="data-table data-table-cards data-table-compact">
               <thead>
                 <tr>
                   <th>Label</th>
@@ -244,7 +244,7 @@ export function GuestPassManager({ passes, enabled }: Props) {
                       <td data-label="Label" className="data-table-card-title">
                         {pass.label}
                       </td>
-                      <td data-label="Opens">
+                      <td data-label="Opens" data-card-label="hidden">
                         {pass.scopePath ? (
                           <>
                             <span className="pill pill-info">Link</span>{" "}
@@ -260,7 +260,7 @@ export function GuestPassManager({ passes, enabled }: Props) {
                       <td data-label="Status">
                         <span className={`pill ${STATE_PILL[state]}`}>{STATE_LABEL[state]}</span>
                       </td>
-                      <td data-label="Expires">
+                      <td data-label="Expires" data-card-width="full">
                         <input
                           type="date"
                           className="filter-input"
@@ -276,7 +276,7 @@ export function GuestPassManager({ passes, enabled }: Props) {
                       <td data-label="Uses" className="num">
                         {pass.useCount}
                       </td>
-                      <td data-label="Actions">
+                      <td data-label="Actions" data-card-action="">
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                           <button
                             type="button"

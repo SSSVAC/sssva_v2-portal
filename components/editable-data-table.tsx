@@ -565,7 +565,12 @@ export function EditableDataTable({
                   // happens to be rendering.
                   const cardAttrs = {
                     "data-label": column.label,
-                    ...(column.hideCardLabel ? { "data-card-label": "hidden" } : {}),
+                    // The caption comes back for an empty cell: it's dropped
+                    // because the value identifies itself, and an em-dash
+                    // identifies nothing.
+                    ...(column.hideCardLabel && value !== null && value !== undefined && value !== ""
+                      ? { "data-card-label": "hidden" }
+                      : {}),
                     ...(column.cardFullWidth ? { "data-card-width": "full" } : {})
                   };
 

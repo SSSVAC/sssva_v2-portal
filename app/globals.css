@@ -2391,6 +2391,14 @@ input[type="checkbox"] {
     font-weight: 650;
   }
 
+  /* A totals row is its own card here, bordered as a whole. The rule that
+     draws a line above a <tfoot> cell to separate it from the rows above
+     belongs to the real table; in a card it just strikes a line through
+     the middle of "Subtotal". */
+  .data-table-cards tfoot td {
+    border-top: 0;
+  }
+
   .data-table-cards td {
     display: flex;
     flex-direction: column;

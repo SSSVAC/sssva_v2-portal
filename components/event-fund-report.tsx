@@ -411,7 +411,7 @@ export function EventFundReport({
       >
         {yearExpenseRows.length > 0 ? (
           <div className="table-panel-scroll">
-            <table className="data-table data-table-cards">
+            <table className="data-table data-table-cards data-table-compact">
               <thead>
                 <tr>
                   <th>Item</th>

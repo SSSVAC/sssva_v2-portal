@@ -72,7 +72,7 @@ export function BillsTable({
       </div>
 
       <div className="table-panel-scroll">
-        <table className="data-table data-table-cards">
+        <table className="data-table data-table-cards data-table-compact">
           <thead>
             <tr>
               <th>Bill #</th>
@@ -92,7 +92,7 @@ export function BillsTable({
                 <Fragment key={row.id}>
                   <tr>
                     <td data-label="Bill #">{row.number ?? "—"}</td>
-                    <td data-label="Vendor">{row.vendorName ?? "—"}</td>
+                    <td data-label="Vendor" data-card-label={row.vendorName ? "hidden" : undefined}>{row.vendorName ?? "—"}</td>
                     {showAccount && <td data-label="Account">{row.accountName ?? "—"}</td>}
                     <td data-label="Date">{row.date ? formatDateOnly(row.date) : "—"}</td>
                     <td data-label="Total" className="num">
@@ -112,7 +112,7 @@ export function BillsTable({
                   {showPayments &&
                     payments.map((payment) => (
                       <tr key={payment.id} className="payment-row">
-                        <td data-label="Payment" colSpan={leading}>
+                        <td data-label="Payment" colSpan={leading} data-card-label="hidden">
                           <CornerDownRight size={13} aria-hidden="true" />
                           <span>{describePayment(payment) || "Payment"}</span>
                           {payment.description && (
