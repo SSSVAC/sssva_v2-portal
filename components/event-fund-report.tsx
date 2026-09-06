@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { formatCurrency, formatDateOnly } from "@/lib/format";
 import { ExportMenu } from "@/components/ui/export-menu";
+import { CellValue } from "@/components/ui/cell-value";
 import { Section } from "@/components/ui/section";
 import { SectionGroup } from "@/components/ui/section-group";
 import { FilterField, ReportToolbar } from "@/components/ui/report-toolbar";
@@ -338,7 +339,7 @@ export function EventFundReport({
           contributionGroups.map((group) => (
             <Section key={group.groupName} title={group.groupName} count={group.rows.length}>
               <div className="table-panel-scroll">
-                <table className="data-table data-table-cards">
+                <table className="data-table data-table-cards data-table-donor-cards">
                   <thead>
                     <tr>
                       <th>Donor</th>
@@ -351,8 +352,12 @@ export function EventFundReport({
                     {group.rows.map((row, index) => (
                       <tr key={`${row.donorName ?? "unknown"}-${index}`}>
                         <td data-label="Donor">{row.donorName ?? "—"}</td>
-                        <td data-label="Phone">{row.phone ?? "—"}</td>
-                        <td data-label="Address">{row.address ?? "—"}</td>
+                        <td data-label="Phone">
+                          <CellValue value={row.phone} />
+                        </td>
+                        <td data-label="Address">
+                          <CellValue value={row.address} />
+                        </td>
                         <td data-label="Amount" className={`num ${amountClass(row.total)}`}>
                           {formatCurrency(row.total)}
                         </td>
