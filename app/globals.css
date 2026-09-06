@@ -2449,24 +2449,6 @@ input[type="checkbox"] {
     display: none;
   }
 
-  /* Excluded from the compact layout, where the first cell IS the title
-     cell — this rule exists for the Records tables, whose first column is
-     an ordinary value and whose real title is marked further along the row.
-     Note `:has()` takes the specificity of its argument, so this selector
-     outranks anything the compact block can reasonably write; scoping it
-     here is clearer than escalating there. */
-  .data-table-cards:not(.data-table-compact) tr:has(td.data-table-card-title) td:first-child {
-    padding: 9px 13px;
-    background: var(--surface);
-    color: inherit;
-    font-size: var(--fs-small);
-    font-weight: 400;
-  }
-
-  .data-table-cards:not(.data-table-compact) tr:has(td.data-table-card-title) td:first-child::before {
-    display: block;
-  }
-
   /* The status dot is redundant next to a card's own coloured, bold
      value - reuse the ::before for the label instead of fighting it. */
   .data-table-cards .cell-success::before,
@@ -2544,13 +2526,64 @@ input[type="checkbox"] {
 
   /* Actions sit on their own line at the end rather than sharing a column
      with a value. */
-  .data-table-cards.data-table-compact td[data-label="Remove"] {
+  .data-table-cards.data-table-compact td[data-label="Remove"],
+  .data-table-cards.data-table-compact td[data-card-action] {
     grid-column: 1 / -1;
     justify-content: flex-end;
+    margin-top: 2px;
   }
 
-  .data-table-cards.data-table-compact td[data-label="Remove"]::before {
+  .data-table-cards.data-table-compact td[data-label="Remove"]::before,
+  .data-table-cards.data-table-compact td[data-card-action]::before {
     display: none;
+  }
+
+  /* A value that says what it is on its own (a phone number, an email, an
+     address, a status pill) drops its caption and takes the whole width:
+     these are the lines you read straight down the card, and the uppercase
+     label above each one stood taller than the value it introduced.
+     Columns opt in with hideCardLabel — see components/records-tabs.tsx. */
+  .data-table-cards.data-table-compact td[data-card-label="hidden"],
+  .data-table-cards.data-table-compact td[data-card-width="full"],
+  /* A dropdown sized to half a card clips its own value ("Kalluri Sal…"),
+     and the point of the cell is to show which option is selected. */
+  .data-table-cards.data-table-compact td:has(> select) {
+    grid-column: 1 / -1;
+  }
+
+  .data-table-cards.data-table-compact td[data-card-label="hidden"]::before {
+    display: none;
+  }
+
+  /* The row's checkbox rides in the card's top corner instead of taking a
+     full line of its own captioned "SELECT". Positioned rather than placed
+     in the grid so it costs the other cells no column. */
+  .data-table-cards.data-table-compact tbody tr:has(td[data-card-select]) {
+    position: relative;
+  }
+
+  .data-table-cards.data-table-compact td[data-card-select] {
+    position: absolute;
+    top: 10px;
+    right: 11px;
+    padding: 0;
+  }
+
+  .data-table-cards.data-table-compact td[data-card-select]::before {
+    display: none;
+  }
+
+  .data-table-cards.data-table-compact tr:has(td[data-card-select]) td.data-table-card-title {
+    padding-right: 28px;
+  }
+
+  /* An editor is as wide as the line it sits on, not as wide as its
+     content: a <select> or a text input in a half-width cell would
+     otherwise push its own column past the card. */
+  .data-table-cards.data-table-compact td > .filter-input,
+  .data-table-cards.data-table-compact td > .cell-input {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .data-table-cards.data-table-compact .cell-select,
