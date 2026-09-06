@@ -2232,7 +2232,16 @@ input[type="checkbox"] {
     display: inline-flex;
   }
 
-  .section-body {
+  /* Only a section that HAS a collapsible header collapses. The Records
+     tables render their own .section (components/editable-data-table.tsx)
+     with no <details> — there is one table per tab, so there is nothing to
+     collapse past — and hiding .section-body unconditionally hid those
+     tables outright on every phone and tablet. The section's own header,
+     search box and pagination sit outside the body and stayed on screen, so
+     the page read as "loaded, 275 customers, no rows". Guarding the hide
+     with :has() also fails safe: a browser without :has() support drops
+     both rules and shows every body, rather than hiding all of them. */
+  .section:has(.report-section) .section-body {
     display: none;
   }
 
