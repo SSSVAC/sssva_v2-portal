@@ -85,12 +85,16 @@ export function groupContributionsByDate(
 
 /**
  * Reads the Contributions view out of a report's search params, so a link to
- * `?view=date&order=asc` opens on that view server-side — the initial render
- * matches the URL instead of flashing the street view first.
+ * `?view=street&order=asc` opens on that view server-side — the initial
+ * render matches the URL instead of flashing the default view first.
+ *
+ * The date view is the default: while a collection is running, what came in
+ * today is the question, and the street view is the audit at the end of it.
+ * So `?view=street` is the one a link has to spell out.
  */
 export function readContributionViewParams(searchParams: Record<string, string | undefined>) {
   return {
-    initialContributionView: searchParams.view === "date" ? ("date" as const) : ("street" as const),
+    initialContributionView: searchParams.view === "street" ? ("street" as const) : ("date" as const),
     initialDateOrder: searchParams.order === "asc" ? ("asc" as const) : ("desc" as const)
   };
 }

@@ -29,7 +29,7 @@ export const silaiFund: ReportDefinition<Props> = {
   category: "silai",
   title: "Silai Fund Report",
   description: "All-time contributions, expenses & bills for the statue installation fund",
-  summary: "All-time contributions, by street or by date",
+  summary: "All-time contributions, by date or by street",
   loader: loadSilaiFund,
   Component: SilaiFundReport
 };
