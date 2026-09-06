@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchZohoCustomers, fetchZohoInvoices } from "./client";
+import { enrichBillWithLineItemDetails, fetchZohoCustomers, fetchZohoInvoices } from "./client";
 
 describe("fetchZohoCustomers", () => {
   const originalEnv = { ...process.env };
@@ -254,5 +254,48 @@ describe("fetchZohoInvoices", () => {
     // 2 list pages + 1 detail fetch per invoice, since none of the listed
     // invoices carry an item_name and the detail backfill fetches it.
     expect(fetchMock).toHaveBeenCalledTimes(5);
+  });
+});
+
+describe("enrichBillWithLineItemDetails", () => {
+  it("takes the bill's own item name when Zoho sends one", () => {
+    const bill = enrichBillWithLineItemDetails({ bill_id: "b1", item_name: "Granite pedestal" });
+
+    expect(bill.item_name).toBe("Granite pedestal");
+  });
+
+  it("falls back to the first line item's name", () => {
+    const bill = enrichBillWithLineItemDetails({
+      bill_id: "b1",
+      line_items: [{ name: "Granite pedestal", description: "3ft, polished" }]
+    });
+
+    expect(bill.item_name).toBe("Granite pedestal");
+  });
+
+  // Plenty of vendor bills put the detail in the description and leave the
+  // name empty; without this the bills list shows the vendor and nothing else.
+  it("falls back to the line item's description when it has no name", () => {
+    const bill = enrichBillWithLineItemDetails({
+      bill_id: "b1",
+      line_items: [{ description: "Granite pedestal 3ft with polishing" }]
+    });
+
+    expect(bill.item_name).toBe("Granite pedestal 3ft with polishing");
+  });
+
+  it("leaves the item null when the bill carries neither", () => {
+    const bill = enrichBillWithLineItemDetails({ bill_id: "b1", line_items: [{ rate: 100 }] });
+
+    expect(bill.item_name).toBeNull();
+  });
+
+  it("ignores a blank name or description rather than storing whitespace", () => {
+    const bill = enrichBillWithLineItemDetails({
+      bill_id: "b1",
+      line_items: [{ name: "   ", description: "  " }]
+    });
+
+    expect(bill.item_name).toBeNull();
   });
 });

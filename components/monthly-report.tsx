@@ -41,6 +41,8 @@ export type MonthlyBillRow = {
   id: string;
   number: string | null;
   vendorName: string | null;
+  /** What the bill was for — Zoho's line item, shown beside the vendor. */
+  itemName?: string | null;
   accountName: string | null;
   date: string | null;
   total: number;
@@ -171,7 +173,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
       formatCurrency(row.total)
     ]);
 
-  const billExportHeaders = ["Bill #", "Vendor", "Account", "Date", "Total", "Paid", "Due"];
+  const billExportHeaders = ["Bill #", "Vendor", "Item", "Account", "Date", "Total", "Paid", "Due"];
   // The export mirrors what's on screen: with the breakdown showing, each
   // bill's payments follow it as indented rows.
   const billExportRows = (): ExportCell[][] =>
@@ -179,13 +181,14 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
       [
         row.number ?? "",
         row.vendorName ?? "",
+        row.itemName ?? "",
         row.accountName ?? "",
         row.date ? formatDateOnly(row.date) : "",
         formatCurrency(row.total),
         formatCurrency(row.total - row.balance),
         { value: formatCurrency(row.balance), highlight: row.balance > 0 ? "danger" : "success" } as ExportCell
       ],
-      ...(showBillPayments ? paymentExportRows(row.payments ?? [], 7, 5) : [])
+      ...(showBillPayments ? paymentExportRows(row.payments ?? [], 8, 6) : [])
     ]);
 
   const exportPdf = () => printReportSection("monthly-report");

@@ -72,6 +72,8 @@ export type SilaiBillRow = {
   id: string;
   number: string | null;
   vendorName: string | null;
+  /** What the bill was for — Zoho's line item, shown beside the vendor. */
+  itemName?: string | null;
   date: string | null;
   total: number;
   balance: number;
@@ -344,7 +346,7 @@ export function SilaiFundReport({
     ["Total", "", formatCurrency(totalExpenses)]
   ];
 
-  const billExportHeaders = ["Bill #", "Vendor", "Date", "Total", "Paid", "Due"];
+  const billExportHeaders = ["Bill #", "Vendor", "Item", "Date", "Total", "Paid", "Due"];
   // The export mirrors what's on screen: with the breakdown showing, each
   // bill's payments follow it as indented rows.
   const billExportRows = (): ExportCell[][] => [
@@ -352,14 +354,15 @@ export function SilaiFundReport({
       [
         row.number ?? "",
         row.vendorName ?? "",
+        row.itemName ?? "",
         row.date ? formatDateOnly(row.date) : "",
         formatCurrency(row.total),
         formatCurrency(row.total - row.balance),
         { value: formatCurrency(row.balance), highlight: row.balance > 0 ? "danger" : "success" } as ExportCell
       ],
-      ...(showBillPayments ? paymentExportRows(row.payments ?? [], 6, 4) : [])
+      ...(showBillPayments ? paymentExportRows(row.payments ?? [], 7, 5) : [])
     ]),
-    ["Total", "", "", formatCurrency(totalBills), formatCurrency(totalBillsPaid), formatCurrency(totalBillsDue)]
+    ["Total", "", "", "", formatCurrency(totalBills), formatCurrency(totalBillsPaid), formatCurrency(totalBillsDue)]
   ];
 
   const fullReportSections = (): ExportSection[] => [
