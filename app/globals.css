@@ -1359,6 +1359,12 @@ input[type="checkbox"] {
   background: var(--danger);
 }
 
+/* A value the record simply doesn't have. Marked rather than written as a
+   bare dash so the card layouts can leave the line out entirely. */
+.cell-empty {
+  color: var(--text-muted);
+}
+
 /* The dot is a table affordance only. On a 26px stat figure it reads as
    a stray mark, so it is scoped to cells above and suppressed here. */
 .metric-value.cell-success,
@@ -2538,6 +2544,105 @@ input[type="checkbox"] {
   .data-table-cards.data-table-compact .cell-select,
   .data-table-cards.data-table-compact .editable-cell {
     min-width: 0;
+  }
+
+  /* --- Donor cards ---------------------------------------------------
+     A contribution is a name and an amount; the phone and address are
+     just enough to place the person. The default card layout gave each
+     of those four columns its own labelled block, so one ₹500 donation
+     filled a phone screen and a day of donations needed a scroll.
+
+     `data-table-donor-cards` drops the labels entirely — a name, an
+     address and a rupee figure need no telling apart — and puts the two
+     that matter on one line:
+
+         Mr. Suresh                                        ₹500
+         Ponmuthu Nagar
+         98765 43210
+
+     A cell with no value (marked `cell-empty` by the report, which still
+     renders a dash in the real table) leaves no empty line behind.
+     Expects the four-column Donor / Phone / Address / Amount shape the
+     contribution tables share.
+     --------------------------------------------------------------------- */
+
+  .data-table-cards.data-table-donor-cards tbody tr,
+  .data-table-cards.data-table-donor-cards tfoot tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 2px 12px;
+    padding: 10px 13px;
+  }
+
+  /* `border: 0` rather than just the bottom edge: the plain table's
+     `tfoot td` rule draws a top border per cell, which in a grid row shows
+     up as two rules with the column gap between them. */
+  .data-table-cards.data-table-donor-cards td {
+    display: block;
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+
+  /* No labels anywhere in this layout — including the ones the shared
+     card rules re-add over a coloured amount. */
+  .data-table-cards.data-table-donor-cards td::before {
+    content: none;
+  }
+
+  /* A missing phone or address is a line that shouldn't be there at all,
+     rather than a dash under a heading. */
+  .data-table-cards.data-table-donor-cards td:has(> .cell-empty) {
+    display: none;
+  }
+
+  .data-table-cards.data-table-donor-cards tbody td:first-child {
+    grid-area: 1 / 1;
+    color: var(--text-strong);
+    font-size: var(--fs-body);
+    font-weight: 650;
+  }
+
+  .data-table-cards.data-table-donor-cards tbody td:nth-child(4) {
+    grid-area: 1 / 2;
+    font-size: var(--fs-body);
+    font-weight: 650;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Address above phone: where someone lives identifies them on a street
+     round; the number is what you use once you're there. The markup keeps
+     the table's column order, so the rows are assigned explicitly. */
+  .data-table-cards.data-table-donor-cards tbody td:nth-child(2),
+  .data-table-cards.data-table-donor-cards tbody td:nth-child(3) {
+    grid-column: 1 / -1;
+    color: var(--text-muted);
+    font-size: var(--fs-small);
+  }
+
+  .data-table-cards.data-table-donor-cards tbody td:nth-child(3) {
+    grid-row: 2;
+  }
+
+  .data-table-cards.data-table-donor-cards tbody td:nth-child(2) {
+    grid-row: 3;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The subtotal is a footing line, not a card of its own. */
+  .data-table-cards.data-table-donor-cards tfoot tr {
+    margin-top: 6px;
+    border: 0;
+    border-top: 1px solid var(--border-strong);
+    border-radius: 0;
+    background: none;
+  }
+
+  .data-table-cards.data-table-donor-cards tfoot td:last-child {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
   }
 
   /* editable-data-table's second header row holds live filter inputs
