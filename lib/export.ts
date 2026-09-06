@@ -507,6 +507,36 @@ async function copyTextToClipboard(text: string) {
   }
 }
 
+/**
+ * Hands `text` to the device's share sheet, falling back to the clipboard.
+ *
+ * On a phone this is the whole point: navigator.share opens WhatsApp (and
+ * everything else) directly, so a summary reaches the group without a
+ * copy-paste detour. Desktop browsers mostly don't implement it, and neither
+ * does an insecure context, so the clipboard stays the fallback rather than
+ * the failure. A share sheet the reader dismisses is not an error - the
+ * caller is told so it can stay quiet about it.
+ */
+export async function shareOrCopyText(
+  title: string,
+  text: string
+): Promise<"shared" | "copied" | "dismissed"> {
+  if (typeof navigator !== "undefined" && navigator.share) {
+    try {
+      await navigator.share({ title, text });
+      return "shared";
+    } catch (error) {
+      // AbortError is the reader closing the sheet. Anything else (a browser
+      // that lists share() but refuses this payload) falls through to the
+      // clipboard rather than surfacing as a failed export.
+      if (error instanceof DOMException && error.name === "AbortError") return "dismissed";
+    }
+  }
+
+  await copyTextToClipboard(text);
+  return "copied";
+}
+
 // WhatsApp-ready text (*bold*/_italic_ are WhatsApp's own markdown) with the
 // same per-contributor detail as the other exports — name, phone, address,
 // amount — grouped and subtotaled, so a group leader can paste the whole
