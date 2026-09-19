@@ -4,7 +4,11 @@ import {
   buildAllTimeContributionRows,
   type AllTimeFundInvoice
 } from "./all-time-fund";
-import { groupContributionsByDate, sortContributionEntries } from "./contribution-entries";
+import {
+  groupContributionsByDate,
+  sortContributionEntries,
+  sortDonorRowsByTotal
+} from "./contribution-entries";
 import type { ReportCustomer } from "./shared-queries";
 
 function customer(overrides: Partial<ReportCustomer> & { zoho_customer_id: string; display_name: string }): ReportCustomer {
@@ -175,5 +179,49 @@ describe("groupContributionsByDate", () => {
 
   it("returns nothing for a fund with no contributions", () => {
     expect(groupContributionsByDate([], "desc")).toEqual([]);
+  });
+});
+
+describe("sortDonorRowsByTotal", () => {
+  // The donor cut is the street view's rows again, so it inherits their
+  // one-row-per-customer aggregation — a donor who gave twice is one row.
+  const rows = buildAllTimeContributionRows(INVOICES, CUSTOMERS);
+
+  it("puts the biggest contributor first, whatever street they are on", () => {
+    expect(sortDonorRowsByTotal(rows).map((row) => [row.donorName, row.total])).toEqual([
+      ["Anand", 3500],
+      ["Bhuvana", 500],
+      // Lower-cased because no customer record matched the bare invoice
+      // name — the street view shows it the same way.
+      ["walk-in donor", 250],
+      ["Chandra", 0]
+    ]);
+  });
+
+  it("breaks ties by name, so equal donors do not shuffle between renders", () => {
+    const tied = [
+      { donorName: "Zahir", total: 1000 },
+      { donorName: "Anand", total: 1000 },
+      { donorName: "Mohan", total: 1000 }
+    ];
+
+    expect(sortDonorRowsByTotal(tied).map((row) => row.donorName)).toEqual([
+      "Anand",
+      "Mohan",
+      "Zahir"
+    ]);
+  });
+
+  it("leaves the caller's array alone", () => {
+    const original = rows.map((row) => row.donorName);
+    sortDonorRowsByTotal(rows);
+
+    expect(rows.map((row) => row.donorName)).toEqual(original);
+  });
+
+  it("totals the same as the street view it re-cuts", () => {
+    const donorTotal = sortDonorRowsByTotal(rows).reduce((sum, row) => sum + row.total, 0);
+
+    expect(donorTotal).toBe(4250);
   });
 });
