@@ -84,17 +84,44 @@ export function groupContributionsByDate(
 }
 
 /**
+ * A donor cut of the same money: every contributor in one list, biggest
+ * first, with no street or date headings in the way.
+ *
+ * Structurally typed rather than taking SilaiContributionRow, which lives
+ * with the report component — this file is imported by the loaders, and the
+ * only thing the ordering needs is a name and a total. The rows are already
+ * one-per-customer by the time they get here (see
+ * buildAllTimeContributionRows), so this orders them, it doesn't aggregate.
+ *
+ * Name breaks ties so two donors on the same amount keep a stable order
+ * instead of shuffling between renders.
+ */
+export function sortDonorRowsByTotal<T extends { donorName: string | null; total: number }>(
+  rows: T[]
+): T[] {
+  return [...rows].sort((a, b) => {
+    if (a.total !== b.total) return b.total - a.total;
+    return (a.donorName ?? "").localeCompare(b.donorName ?? "");
+  });
+}
+
+/**
  * Reads the Contributions view out of a report's search params, so a link to
  * `?view=street&order=asc` opens on that view server-side — the initial
  * render matches the URL instead of flashing the default view first.
  *
  * The date view is the default: while a collection is running, what came in
  * today is the question, and the street view is the audit at the end of it.
- * So `?view=street` is the one a link has to spell out.
+ * So `?view=street` and `?view=donor` are the ones a link has to spell out.
  */
 export function readContributionViewParams(searchParams: Record<string, string | undefined>) {
   return {
-    initialContributionView: searchParams.view === "street" ? ("street" as const) : ("date" as const),
+    initialContributionView:
+      searchParams.view === "street"
+        ? ("street" as const)
+        : searchParams.view === "donor"
+          ? ("donor" as const)
+          : ("date" as const),
     initialDateOrder: searchParams.order === "asc" ? ("asc" as const) : ("desc" as const)
   };
 }

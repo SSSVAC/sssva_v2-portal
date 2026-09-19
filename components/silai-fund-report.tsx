@@ -20,6 +20,7 @@ import {
 import { groupKeyFor, sortGroupNames } from "@/lib/silai-groups";
 import {
   groupContributionsByDate,
+  sortDonorRowsByTotal,
   type SilaiContributionEntry
 } from "@/lib/reports/contribution-entries";
 import { useUrlParamSetter } from "@/lib/reports/use-url-param";
@@ -31,7 +32,7 @@ import { paymentExportRows, type BillPaymentRow } from "@/lib/reports/bill-payme
 export type { SilaiContributionEntry };
 
 /** Which way the Contributions section is cut. */
-export type ContributionView = "street" | "date";
+export type ContributionView = "street" | "date" | "donor";
 
 export type SilaiContributionRow = {
   donorName: string | null;
@@ -46,6 +47,10 @@ export type SilaiContributionRow = {
 // Contributions' fully-paid threshold): full (green) at/above it, partial
 // (yellow) below it, none (red) at zero.
 const FULL_AMOUNT_THRESHOLD = 3000;
+
+// The donor cut is a single list, so its one section is named for what the
+// list is rather than for a street or a day.
+const DONOR_SECTION_TITLE = "All contributors";
 
 function amountClass(total: number) {
   if (total >= FULL_AMOUNT_THRESHOLD) return "cell-success";
@@ -109,16 +114,20 @@ type ContributionTableRow = {
   total: number;
 };
 
-// One table shape for both cuts of the Contributions section — a street's
-// donors and a day's contributions differ only in what a row means and
-// whether the amount carries the paid/partial colouring.
+// One table shape for every cut of the Contributions section — a street's
+// donors, a day's contributions and the whole donor list differ only in what
+// a row means, what the footing line is called, and whether the amount
+// carries the paid/partial colouring.
 function ContributionTable({
   rows,
   subtotal,
+  totalLabel = "Subtotal",
   colorizeAmounts = false
 }: {
   rows: ContributionTableRow[];
   subtotal: number;
+  /** "Subtotal" under one group of many; "Total" when the table is the lot. */
+  totalLabel?: string;
   colorizeAmounts?: boolean;
 }) {
   return (
@@ -153,7 +162,7 @@ function ContributionTable({
         </tbody>
         <tfoot>
           <tr>
-            <td colSpan={3}>Subtotal</td>
+            <td colSpan={3}>{totalLabel}</td>
             <td data-label="Amount" className="num">
               {formatCurrency(subtotal)}
             </td>
@@ -255,10 +264,27 @@ export function SilaiFundReport({
     [contributionEntries, dateOrder]
   );
 
+  // The same donors again, this time as one list biggest first — no street
+  // headings, no dates, one row per customer. It answers "who has given what"
+  // directly, which the street cut only answers a street at a time.
+  const contributionDonorRows = useMemo(
+    () => sortDonorRowsByTotal(visibleContributionRows),
+    [visibleContributionRows]
+  );
+  const donorRowsSubtotal = sumTotals(contributionDonorRows);
+
   // A caller that doesn't supply the per-contribution rows (or a fund with
-  // nothing in it yet) gets no toggle rather than a toggle onto an empty view.
+  // nothing in it yet) gets no date segment rather than a toggle onto an
+  // empty view; the street and donor cuts need only the per-donor rows.
   const canShowDateView = contributionEntries.length > 0;
   const showingDateView = canShowDateView && contributionView === "date";
+  const showingDonorView = contributionView === "donor";
+
+  const contributionViews: { id: ContributionView; label: string }[] = [
+    ...(canShowDateView ? [{ id: "date" as const, label: "By date" }] : []),
+    { id: "street" as const, label: "By street" },
+    { id: "donor" as const, label: "By donor" }
+  ];
 
   const exportPdf = () => printReportSection(printTarget);
   const exportImage = () => exportSectionToImage(printTarget, `${fileSlug}-report.png`);
@@ -297,10 +323,11 @@ export function SilaiFundReport({
   const contributionExportHeaders = ["Donor", "Phone", "Address", "Amount"];
   const contributionGroupExportRows = (
     rows: SilaiContributionRow[],
-    subtotal: number
+    subtotal: number,
+    totalLabel = "Subtotal"
   ): ExportCell[][] => [
     ...rows.map((row) => [row.donorName ?? "", row.phone ?? "", row.address ?? "", amountCell(row.total)]),
-    ["Subtotal", "", "", amountCell(subtotal)]
+    [totalLabel, "", "", amountCell(subtotal)]
   ];
   // No paid/partial/unpaid colouring here: that threshold is about a donor's
   // all-time total, and a single ₹500 contribution on a given day isn't a
@@ -319,18 +346,33 @@ export function SilaiFundReport({
   ];
   // Exports follow the view on screen, so an exported sheet is the report the
   // person was looking at when they pressed the button.
-  const contributionExportSections = (): ExportSection[] =>
-    showingDateView
-      ? contributionDateGroups.map((group) => ({
-          title: `${group.label} (${group.rows.length})`,
+  const contributionExportSections = (): ExportSection[] => {
+    if (showingDateView) {
+      return contributionDateGroups.map((group) => ({
+        title: `${group.label} (${group.rows.length})`,
+        headers: contributionExportHeaders,
+        rows: contributionDateExportRows(group.rows, group.subtotal)
+      }));
+    }
+
+    // One section rather than a run of them: the donor cut IS the whole list,
+    // so its footing line is the report's total, not a subtotal.
+    if (showingDonorView) {
+      return [
+        {
+          title: `${DONOR_SECTION_TITLE} (${contributionDonorRows.length})`,
           headers: contributionExportHeaders,
-          rows: contributionDateExportRows(group.rows, group.subtotal)
-        }))
-      : contributionGroups.map((group) => ({
-          title: `${group.groupName} (${group.rows.length})`,
-          headers: contributionExportHeaders,
-          rows: contributionGroupExportRows(group.rows, group.subtotal)
-        }));
+          rows: contributionGroupExportRows(contributionDonorRows, donorRowsSubtotal, "Total")
+        }
+      ];
+    }
+
+    return contributionGroups.map((group) => ({
+      title: `${group.groupName} (${group.rows.length})`,
+      headers: contributionExportHeaders,
+      rows: contributionGroupExportRows(group.rows, group.subtotal)
+    }));
+  };
 
   const nonCashExportHeaders = ["Donor", "Address", "Detail"];
   const nonCashExportRows = () =>
@@ -388,7 +430,7 @@ export function SilaiFundReport({
           />
         }
       >
-        {canShowDateView && (
+        {contributionRows.length > 0 && (
           <div className="filter-group">
             <span>Contributions</span>
             {/* Two cuts of the same money — by date (what came in, when) and
@@ -399,24 +441,27 @@ export function SilaiFundReport({
                 are identical either way, only the Contributions section
                 changes. */}
             <div className="segmented" role="tablist" aria-label="Contributions view">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={showingDateView}
-                className={`segment${showingDateView ? " segment-active" : ""}`}
-                onClick={() => handleViewChange("date")}
-              >
-                By date
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={!showingDateView}
-                className={`segment${!showingDateView ? " segment-active" : ""}`}
-                onClick={() => handleViewChange("street")}
-              >
-                By street
-              </button>
+              {contributionViews.map((view) => {
+                const active =
+                  view.id === "date"
+                    ? showingDateView
+                    : view.id === "donor"
+                      ? showingDonorView
+                      : !showingDateView && !showingDonorView;
+
+                return (
+                  <button
+                    key={view.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    className={`segment${active ? " segment-active" : ""}`}
+                    onClick={() => handleViewChange(view.id)}
+                  >
+                    {view.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -435,9 +480,10 @@ export function SilaiFundReport({
             </select>
           </div>
         ) : (
-          /* Only meaningful against the street view: it reveals members with
-             nothing recorded yet, and someone who hasn't contributed has no
-             contribution to date-stamp. */
+          /* Meaningful against the street and donor cuts, which are both a
+             list of people: it reveals members with nothing recorded yet.
+             Someone who hasn't contributed has no contribution to
+             date-stamp, so the date view doesn't offer it. */
           <label className="checkbox-row">
             <input
               type="checkbox"
@@ -510,9 +556,15 @@ export function SilaiFundReport({
               } across ${contributionDateGroups.length} day${
                 contributionDateGroups.length === 1 ? "" : "s"
               }`
-            : `${visibleContributionRows.length} contributor${
-                visibleContributionRows.length === 1 ? "" : "s"
-              } across ${contributionGroups.length} street${contributionGroups.length === 1 ? "" : "s"}`
+            : showingDonorView
+              ? `${contributionDonorRows.length} contributor${
+                  contributionDonorRows.length === 1 ? "" : "s"
+                }, highest first`
+              : `${visibleContributionRows.length} contributor${
+                  visibleContributionRows.length === 1 ? "" : "s"
+                } across ${contributionGroups.length} street${
+                  contributionGroups.length === 1 ? "" : "s"
+                }`
         }
         actions={
           <>
@@ -543,7 +595,28 @@ export function SilaiFundReport({
           </>
         }
       >
-        {showingDateView ? (
+        {showingDonorView ? (
+          contributionDonorRows.length > 0 ? (
+            /* One section, not a run of them: this cut has no groups to
+               head, so the table carries the whole list and its footing
+               line is the report's total rather than a subtotal. */
+            <Section title={DONOR_SECTION_TITLE} count={contributionDonorRows.length}>
+              <ContributionTable
+                rows={contributionDonorRows.map((row, index) => ({
+                  ...row,
+                  key: `${row.donorName ?? "unknown"}-${index}`
+                }))}
+                subtotal={donorRowsSubtotal}
+                totalLabel="Total"
+                colorizeAmounts
+              />
+            </Section>
+          ) : (
+            <div className="empty-state">
+              <p>{showAllMembers ? "No members found." : "No contributions recorded."}</p>
+            </div>
+          )
+        ) : showingDateView ? (
           contributionDateGroups.map((group) => (
             <Section
               key={group.dateKey ?? "undated"}

@@ -954,6 +954,10 @@ input[type="checkbox"] {
   border: 0;
   border-radius: 4px;
   padding: 6px 12px;
+  /* The control scrolls sideways when it runs out of room (see the <=960px
+     rule); without this a third segment instead wraps "By date" onto two
+     lines and the strip grows a row taller. */
+  white-space: nowrap;
   color: var(--text-secondary);
   background: none;
   font-size: var(--fs-small);
@@ -2300,8 +2304,30 @@ input[type="checkbox"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  /* The segmented control scrolls sideways rather than wrapping its labels,
+     so everything between it and the page has to be allowed to shrink below
+     its content. A flex or grid item's default min-width is auto, which
+     means "no narrower than my content" — with three segments that made the
+     filter bar wider than the screen, and because the report body is a grid,
+     the widened track took every section and table with it: the whole page
+     scrolled sideways over one toolbar. */
+  .filter-bar,
+  .filter-banner,
+  .filter-group {
+    min-width: 0;
+  }
+
+  /* With three segments the control no longer fits beside its label on a
+     phone, so the label sits above it and the control takes the row — which
+     is what `width: 100%` below was always for. Wrapping rather than
+     scrolling means no segment starts life off-screen. */
+  .filter-group {
+    flex-wrap: wrap;
+  }
+
   .segmented {
     width: 100%;
+    min-width: 0;
     overflow-x: auto;
   }
 
