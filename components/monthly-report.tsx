@@ -225,8 +225,8 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
                 fullReportSections()
               )
             }
-            onExportPdf={printPart("income")}
-            onExportImage={imagePart("income")}
+            onExportPdf={exportPdf}
+            onExportImage={exportImage}
           />
         }
       >
@@ -303,8 +303,8 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
                 incomeExportRows()
               )
             }
-            onExportPdf={printPart("donations")}
-            onExportImage={imagePart("donations")}
+            onExportPdf={printPart("income")}
+            onExportImage={imagePart("income")}
           />
         }
       >
@@ -375,8 +375,8 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
                 donationDonorExportRows()
               )
             }
-            onExportPdf={printPart("others")}
-            onExportImage={imagePart("others")}
+            onExportPdf={printPart("donations")}
+            onExportImage={imagePart("donations")}
           />
         }
       >
@@ -437,8 +437,8 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
                 othersDonorExportRows()
               )
             }
-            onExportPdf={printPart("expenses")}
-            onExportImage={imagePart("expenses")}
+            onExportPdf={printPart("others")}
+            onExportImage={imagePart("others")}
           />
         }
       >
@@ -499,8 +499,8 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
                 expenseExportRows()
               )
             }
-            onExportPdf={printPart("bills")}
-            onExportImage={imagePart("bills")}
+            onExportPdf={printPart("expenses")}
+            onExportImage={imagePart("expenses")}
           />
         }
       >
@@ -561,8 +561,8 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
                 billExportRows()
               )
             }
-            onExportPdf={exportPdf}
-            onExportImage={exportImage}
+            onExportPdf={printPart("bills")}
+            onExportImage={imagePart("bills")}
           />
         }
       >
