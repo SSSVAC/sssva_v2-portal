@@ -2262,6 +2262,14 @@ input[type="checkbox"] {
     display: block;
   }
 
+  /* Not every section is collapsible: the records tables build their own
+     head, with no <details> in it. They have nothing to collapse, and the
+     rule above left them hidden — on a phone the Records page showed a
+     title and a pagination bar with no rows in between. */
+  .section:not(:has(.report-section)) .section-body {
+    display: block;
+  }
+
   /* On a phone the title, its count, the "N open" badge and the section's
      buttons cannot share one line: a long Tamil heading wraps to several
      lines and squeezes the rest, which clipped the badge mid-word. The
