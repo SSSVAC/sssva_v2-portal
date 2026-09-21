@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, RefreshCw, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
 import { useToast } from "@/components/toast";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { EMPTY_FILTER_VALUE, matchesColumnFilter } from "@/lib/records/column-filter";
 
 export type RecordColumn = {
   key: string;
@@ -29,7 +30,6 @@ type RowValue = string | number | boolean | null;
 type Row = Record<string, unknown>;
 
 const ADD_NEW_OPTION_VALUE = "__add_new__";
-const EMPTY_FILTER_VALUE = "__empty__";
 const PAGE_SIZE = 50;
 
 type ActionColumn = {
@@ -141,23 +141,9 @@ export function EditableDataTable({
         return false;
       }
 
-      return columns.every((column) => {
-        const filterValue = filters[column.key];
-        if (!filterValue) return true;
-
-        if (column.type === "boolean") {
-          return String(Boolean(row[column.key])) === filterValue;
-        }
-
-        if (column.type === "select" && filterValue === EMPTY_FILTER_VALUE) {
-          const raw = row[column.key];
-          return raw === null || raw === undefined || raw === "";
-        }
-
-        return String(row[column.key] ?? "")
-          .toLowerCase()
-          .includes(filterValue.toLowerCase());
-      });
+      return columns.every((column) =>
+        matchesColumnFilter(column.type, row[column.key], filters[column.key] ?? "")
+      );
     });
   }, [rows, filters, columns, presetFilter, search]);
 
@@ -502,10 +488,15 @@ export function EditableDataTable({
                     ))}
                   </select>
                 ) : (
+                  /* A number column filters on the exact value, so it takes
+                     a number — and says so, since "Filter…" on a Total reads
+                     as the substring match it used to be. */
                   <input
                     className="filter-input"
-                    type="text"
-                    placeholder="Filter…"
+                    type={column.type === "number" ? "number" : "text"}
+                    step={column.type === "number" ? "any" : undefined}
+                    inputMode={column.type === "number" ? "decimal" : undefined}
+                    placeholder={column.type === "number" ? "Exact value…" : "Filter…"}
                     aria-label={`Filter ${column.label}`}
                     value={filters[column.key] ?? ""}
                     onChange={(event) =>
