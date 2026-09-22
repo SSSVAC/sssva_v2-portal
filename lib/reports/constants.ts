@@ -15,6 +15,14 @@ export const FUND_MINIMUM_AMOUNT = 3000;
 export const DONATION_ITEM_NAME = "Donations and/or Sponsorships";
 export const DONATION_MONTHS_SHOWN = 5;
 
+// What a member is expected to give each month. A month at or above this is
+// settled (green), anything above zero is short (yellow), nothing is unpaid
+// (red) — see lib/reports/monthly-contributions.ts.
+export const MONTHLY_CONTRIBUTION_MINIMUM = 200;
+// The day of the month the follow-up goes out: late enough that most people
+// have paid, early enough to still do something about it.
+export const CONTRIBUTION_FOLLOW_UP_DAY = 25;
+
 // Archanai and Abhishegam income are recorded under both an English and a
 // Tamil item name in Zoho. Note: "Abishegam" (regular abhishegam) and
 // "வருஷாபிஷேகம்" (Varusha Abhishegam, the annual one) are distinct services

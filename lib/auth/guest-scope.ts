@@ -15,6 +15,29 @@ export function guestCanSeeReportCategory(category: string) {
   return (GUEST_REPORT_CATEGORIES as string[]).includes(category);
 }
 
+/**
+ * Reports inside a closed category that a share link may still open, as
+ * "category/slug".
+ *
+ * A report belongs here only when what a guest receives carries no personal
+ * data. Monthly Fixed Contributions is financial, but a guest's copy has no
+ * phone numbers and no areas in it — its loader drops them before the props
+ * are built (see lib/reports/definitions/financial/monthly-contributions.ts),
+ * so the reason the category is closed doesn't apply to it.
+ *
+ * Deliberately a list here rather than a flag on the report: this file is
+ * the only thing standing between a guest and a service-role read, and a
+ * report should not be able to open itself up from its own definition.
+ */
+export const GUEST_SHAREABLE_REPORTS = ["financial/monthly-contributions"];
+
+/** Whether a guest may open one report. */
+export function guestCanSeeReport(category: string, slug: string) {
+  if (guestCanSeeReportCategory(category)) return true;
+
+  return GUEST_SHAREABLE_REPORTS.includes(`${category}/${slug}`);
+}
+
 /** Where an unscoped guest lands, and where a blocked one is sent back to. */
 export const GUEST_HOME = "/functions";
 
@@ -43,7 +66,12 @@ export function guestLandingPath(scopePath: string | null) {
 // would be an open redirect into any path an admin could be tricked into
 // posting.
 const SHAREABLE_PATH = /^\/(functions(\/[a-z0-9-]+)?|reports\/(silai|events)(\/[a-z0-9-]+)?)$/;
+const REPORT_PATH = /^\/reports\/([a-z0-9-]+)\/([a-z0-9-]+)$/;
 
 export function isShareablePath(path: string) {
-  return SHAREABLE_PATH.test(path);
+  if (SHAREABLE_PATH.test(path)) return true;
+
+  // A report outside those categories that has opted into sharing.
+  const report = REPORT_PATH.exec(path);
+  return report ? guestCanSeeReport(report[1], report[2]) : false;
 }

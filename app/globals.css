@@ -1372,6 +1372,30 @@ input[type="checkbox"] {
   color: var(--text-muted);
 }
 
+/* ---------------------------------------------------------------------
+   Month grid — twelve columns of one member's year (Monthly Fixed
+   Contributions). The cells are read as a row of states, not as figures to
+   add up, so they stay narrow and carry their colour on the text.
+   --------------------------------------------------------------------- */
+
+.month-cell {
+  white-space: nowrap;
+}
+
+/* The status dot doubles the width of a cell holding "₹200". Twelve of them
+   across is a row of freckles; the colour of the value already says it. */
+.month-cell.cell-success::before,
+.month-cell.cell-warning::before,
+.month-cell.cell-danger::before {
+  display: none;
+}
+
+/* A month that hasn't come round yet is not unpaid — it is nothing at all,
+   and must not read as a gap in someone's record. */
+.month-cell-future {
+  color: var(--text-muted);
+}
+
 /* The dot is a table affordance only. On a 26px stat figure it reads as
    a stray mark, so it is scoped to cells above and suppressed here. */
 .metric-value.cell-success,
@@ -2581,6 +2605,144 @@ input[type="checkbox"] {
   .data-table-cards.data-table-compact .cell-select,
   .data-table-cards.data-table-compact .editable-cell {
     min-width: 0;
+  }
+
+  /* --- Year cards ----------------------------------------------------
+     Twelve month columns cannot be twelve stacked label/value blocks on a
+     phone — one member would be a screen and a half. The card keeps the
+     name and contact line, then lays the year out as a grid of twelve
+     chips, four to a row, each carrying its month, its amount and its
+     colour. A year of one member reads in one glance, the way the desktop
+     row does.
+     --------------------------------------------------------------------- */
+
+  .data-table-cards.data-table-year-cards tbody tr,
+  .data-table-cards.data-table-year-cards tfoot tr {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    padding: 11px 13px;
+  }
+
+  .data-table-cards.data-table-year-cards td {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+
+  .data-table-cards.data-table-year-cards td::before {
+    content: none;
+  }
+
+  .data-table-cards.data-table-year-cards td[data-label="Member"] {
+    grid-column: 1 / -1;
+    color: var(--text-strong);
+    font-size: var(--fs-body);
+    font-weight: 650;
+  }
+
+  .data-table-cards.data-table-year-cards td[data-label="Area"],
+  .data-table-cards.data-table-year-cards td[data-label="Phone"] {
+    grid-column: span 2;
+    color: var(--text-muted);
+    font-size: var(--fs-small);
+  }
+
+  .data-table-cards.data-table-year-cards td.month-cell {
+    align-items: center;
+    gap: 0;
+    padding: 4px 2px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    font-size: var(--fs-small);
+    font-weight: 650;
+    text-align: center;
+  }
+
+  /* The month's own name, which the desktop table gets from its column
+     header — the chip has to carry it itself. `display` is set back because
+     the rule that drops the status dot from a table cell would otherwise
+     take this label with it. */
+  .data-table-cards.data-table-year-cards td.month-cell::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 650;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  /* On a chip the state is the whole point, so it takes the background
+     rather than just the text — twelve of these read as a bar chart of the
+     year at arm's length. */
+  .data-table-cards.data-table-year-cards td.month-cell.cell-success {
+    border-color: var(--success);
+    background: var(--success-soft);
+  }
+
+  .data-table-cards.data-table-year-cards td.month-cell.cell-warning {
+    border-color: var(--warning);
+    background: var(--warning-soft);
+  }
+
+  .data-table-cards.data-table-year-cards td.month-cell.cell-danger {
+    border-color: var(--danger);
+    background: var(--danger-soft);
+  }
+
+  .data-table-cards.data-table-year-cards td[data-label="Total"] {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-top: 2px;
+    color: var(--text-strong);
+    font-weight: 650;
+  }
+
+  .data-table-cards.data-table-year-cards td[data-label="Total"]::before {
+    content: "Total";
+    color: var(--text-muted);
+    font-size: var(--fs-label);
+    font-weight: 650;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .data-table-cards.data-table-year-cards td[data-label="Remind"] {
+    grid-column: 1 / -1;
+  }
+
+  /* A row whose reminder cell is just a dash would otherwise add an empty
+     line to every settled member's card. */
+  .data-table-cards.data-table-year-cards td[data-label="Remind"]:has(> .cell-empty) {
+    display: none;
+  }
+
+  /* A ghost button reads as a link in a table row, which is right on
+     desktop and too quiet on a card that is mostly chips. */
+  .data-table-cards.data-table-year-cards td[data-label="Remind"] .btn {
+    width: 100%;
+    justify-content: center;
+    border: 1px solid var(--border-strong);
+  }
+
+  /* The footing row's label spans the card; its month chips then line up
+     under the ones above. */
+  .data-table-cards.data-table-year-cards tfoot td:first-child {
+    grid-column: 1 / -1;
+    color: var(--text-strong);
+    font-weight: 650;
+  }
+
+  .data-table-cards.data-table-year-cards tfoot td:empty {
+    display: none;
   }
 
   /* --- Donor cards ---------------------------------------------------
