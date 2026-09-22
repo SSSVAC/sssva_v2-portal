@@ -4,7 +4,7 @@ import { ReportShell } from "@/components/reports/report-shell";
 import { CATEGORY_META, getReport, REPORT_REGISTRY } from "@/lib/reports/registry";
 import { requireViewerForPath, viewerChrome } from "@/lib/auth/viewer";
 import { ShareLinkButton } from "@/components/share/share-link-button";
-import { guestCanSeeReportCategory } from "@/lib/auth/guest-scope";
+import { guestCanSeeReport } from "@/lib/auth/guest-scope";
 import type { ReportCategory } from "@/lib/reports/types";
 
 export const dynamic = "force-dynamic";
@@ -21,11 +21,12 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
   const viewer = await requireViewerForPath(`/reports/${category}/${slug}`);
   const definition = getReport(category, slug);
   if (!definition) notFound();
-  if (viewer.kind === "guest" && !guestCanSeeReportCategory(category)) notFound();
+  if (viewer.kind === "guest" && !guestCanSeeReport(category, slug)) notFound();
 
   const data = await definition.loader({
     supabase: viewer.supabase,
-    searchParams: await searchParams
+    searchParams: await searchParams,
+    isGuest: viewer.kind === "guest"
   });
   const Component = definition.Component;
 
@@ -44,7 +45,7 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
         title={definition.title}
         description={definition.description}
         actions={
-          viewer.isAdmin && guestCanSeeReportCategory(category) ? (
+          viewer.isAdmin && guestCanSeeReport(category, slug) ? (
             <ShareLinkButton path={`/reports/${category}/${slug}`} title={definition.title} />
           ) : undefined
         }

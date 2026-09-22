@@ -1,6 +1,7 @@
 import type { ReportCategory, ReportDefinition } from "./types";
 import { monthlyReport } from "./definitions/financial/monthly-report";
 import { memberMonthlyDonation } from "./definitions/financial/member-monthly-donation";
+import { monthlyContributions } from "./definitions/financial/monthly-contributions";
 import { monthlyDonors } from "./definitions/financial/monthly-donors";
 import { registration } from "./definitions/financial/registration";
 import { silaiContributions } from "./definitions/silai/silai-contributions";
@@ -14,6 +15,7 @@ import { ugadi, varushabishegam, marghazhiPoojai } from "./definitions/events";
 // app/reports/[category]/[slug]/page.tsx.
 export const REPORT_REGISTRY: ReportDefinition[] = [
   monthlyReport,
+  monthlyContributions,
   memberMonthlyDonation,
   monthlyDonors,
   registration,

@@ -6,6 +6,13 @@ export type ReportCategory = "financial" | "silai" | "events";
 export type ReportLoaderContext = {
   supabase: Awaited<ReturnType<typeof createClient>>;
   searchParams: Record<string, string | undefined>;
+  /**
+   * True when the reader came in on a share link rather than a sign-in. A
+   * report that is shareable but carries contact details uses this to leave
+   * them out of the props — withheld before the data reaches the page, not
+   * hidden by the component afterwards.
+   */
+  isGuest: boolean;
 };
 
 // TProps mirrors whatever prop shape the report's own display component
