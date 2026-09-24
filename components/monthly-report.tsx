@@ -12,6 +12,7 @@ import {
   exportSectionsToHtml,
   exportSectionToImage,
   printReportSection,
+  shareOrCopyText,
   type ExportCell,
   type ExportSection
 } from "@/lib/export";
@@ -19,8 +20,11 @@ import { useUrlParamSetter } from "@/lib/reports/use-url-param";
 import type { DonationMonth } from "@/components/monthly-donations-report";
 import { BillsTable } from "@/components/reports/bills-table";
 import { paymentExportRows, type BillPaymentRow } from "@/lib/reports/bill-payments";
+import { INCOME_CATEGORY_LABELS, type MonthlyIncomeCategory } from "@/lib/reports/monthly-income";
+import { buildMonthlyReportMessage } from "@/lib/reports/monthly-report-message";
+import { useToast } from "@/components/toast";
 
-export type MonthlyIncomeCategory = "donations" | "archanai" | "abhishegam" | "others";
+export type { MonthlyIncomeCategory };
 
 export type MonthlyIncomeRow = {
   date: string;
@@ -57,13 +61,6 @@ type MonthlyReportProps = {
   initialMonth?: string;
 };
 
-const INCOME_CATEGORY_LABELS: Record<MonthlyIncomeCategory, string> = {
-  donations: "Monthly Donations",
-  archanai: "Archanai",
-  abhishegam: "Abhishegam",
-  others: "Others"
-};
-
 function sumTotals<T extends { total: number }>(rows: T[]) {
   return rows.reduce((sum, row) => sum + row.total, 0);
 }
@@ -88,6 +85,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
   const [selectedMonth, setSelectedMonth] = useState(initialMonth ?? defaultMonth);
   const [showBillPayments, setShowBillPayments] = useState(false);
   const setUrlParams = useUrlParamSetter();
+  const { showToast } = useToast();
 
   const selectedMonthLabel = months.find((month) => month.key === selectedMonth)?.label ?? selectedMonth;
 
@@ -188,6 +186,23 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
       ...(showBillPayments ? paymentExportRows(row.payments ?? [], 7, 5) : [])
     ]);
 
+  // The month's accounts as a message for the temple group: the same rows
+  // the page is showing, summed in one place so the two can't disagree.
+  const whatsAppMessage = () =>
+    buildMonthlyReportMessage({
+      monthLabel: selectedMonthLabel,
+      incomeRows: monthIncomeRows,
+      expenseRows: monthExpenseRows,
+      billRows: monthBillRows
+    });
+
+  const shareWhatsApp = async () => {
+    const result = await shareOrCopyText(`Monthly Report — ${selectedMonthLabel}`, whatsAppMessage());
+    if (result === "copied") {
+      showToast("Message copied — paste it into WhatsApp.", "success");
+    }
+  };
+
   const exportPdf = () => printReportSection("monthly-report");
   const exportImage = () => exportSectionToImage("monthly-report", `monthly-report-${selectedMonth}.png`);
 
@@ -224,6 +239,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
             }
             onExportPdf={exportPdf}
             onExportImage={exportImage}
+            onShareWhatsAppText={shareWhatsApp}
           />
         }
       >

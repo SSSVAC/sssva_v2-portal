@@ -8,7 +8,8 @@ import {
   FileCode,
   FileSpreadsheet,
   Image as ImageIcon,
-  Printer
+  Printer,
+  Share2
 } from "lucide-react";
 
 export type ExportMenuProps = {
@@ -18,6 +19,12 @@ export type ExportMenuProps = {
   onExportImage: () => Promise<void>;
   onExportExcel?: () => Promise<void>;
   onCopyWhatsAppText?: () => Promise<void>;
+  /**
+   * Hands the message to the device's share sheet instead of the clipboard —
+   * on a phone that is WhatsApp itself, one tap from the group, and it falls
+   * back to a copy where no share sheet exists.
+   */
+  onShareWhatsAppText?: () => Promise<void>;
   /** Button label. Defaults to "Export". */
   label?: string;
   /** Opens flush-left instead of flush-right — for menus near the left edge. */
@@ -33,11 +40,12 @@ export function ExportMenu({
   onExportImage,
   onExportExcel,
   onCopyWhatsAppText,
+  onShareWhatsAppText,
   label = "Export",
   alignLeft = false
 }: ExportMenuProps) {
   const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState<null | "image" | "excel" | "copy">(null);
+  const [busy, setBusy] = useState<null | "image" | "excel" | "copy" | "share">(null);
   const [copied, setCopied] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -64,7 +72,7 @@ export function ExportMenu({
     action();
   }
 
-  async function runAsync(kind: "image" | "excel" | "copy", action: () => Promise<void>) {
+  async function runAsync(kind: "image" | "excel" | "copy" | "share", action: () => Promise<void>) {
     setBusy(kind);
     try {
       await action();
@@ -134,6 +142,18 @@ export function ExportMenu({
             <Printer size={14} />
             Print / Save as PDF
           </button>
+          {onShareWhatsAppText && (
+            <button
+              type="button"
+              role="menuitem"
+              className="menu-item"
+              disabled={busy === "share"}
+              onClick={() => void runAsync("share", onShareWhatsAppText)}
+            >
+              <Share2 size={14} />
+              {busy === "share" ? "Preparing…" : "Send to WhatsApp"}
+            </button>
+          )}
           {onCopyWhatsAppText && (
             <button
               type="button"
