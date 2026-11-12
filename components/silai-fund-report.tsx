@@ -7,6 +7,7 @@ import { CellValue } from "@/components/ui/cell-value";
 import { Section } from "@/components/ui/section";
 import { SectionGroup } from "@/components/ui/section-group";
 import { ReportToolbar } from "@/components/ui/report-toolbar";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import {
   exportToCsv,
   exportToHtml,
@@ -280,6 +281,14 @@ export function SilaiFundReport({
   const showingDateView = canShowDateView && contributionView === "date";
   const showingDonorView = contributionView === "donor";
 
+  // The view actually on screen: a requested date view falls back to the
+  // street view when there is nothing to show by date.
+  const activeContributionView: ContributionView = showingDateView
+    ? "date"
+    : showingDonorView
+      ? "donor"
+      : "street";
+
   const contributionViews: { id: ContributionView; label: string }[] = [
     ...(canShowDateView ? [{ id: "date" as const, label: "By date" }] : []),
     { id: "street" as const, label: "By street" },
@@ -440,29 +449,12 @@ export function SilaiFundReport({
                 than two report pages: the totals, expenses and bills below
                 are identical either way, only the Contributions section
                 changes. */}
-            <div className="segmented" role="tablist" aria-label="Contributions view">
-              {contributionViews.map((view) => {
-                const active =
-                  view.id === "date"
-                    ? showingDateView
-                    : view.id === "donor"
-                      ? showingDonorView
-                      : !showingDateView && !showingDonorView;
-
-                return (
-                  <button
-                    key={view.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    className={`segment${active ? " segment-active" : ""}`}
-                    onClick={() => handleViewChange(view.id)}
-                  >
-                    {view.label}
-                  </button>
-                );
-              })}
-            </div>
+            <SegmentedTabs
+              label="Contributions view"
+              tabs={contributionViews}
+              value={activeContributionView}
+              onChange={handleViewChange}
+            />
           </div>
         )}
 

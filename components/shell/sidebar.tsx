@@ -1,9 +1,19 @@
 "use client";
 
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import { usePathname, useSearchParams } from "next/navigation";
-import { CalendarDays, Database, Eye, KeyRound, LayoutDashboard, LogOut, PieChart } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronRight,
+  Database,
+  Eye,
+  KeyRound,
+  LayoutDashboard,
+  LogOut,
+  PieChart
+} from "lucide-react";
 import { CATEGORY_META, CATEGORY_ORDER, getReportsByCategory } from "@/lib/reports/registry";
 import { CATEGORY_ACCENT, RECORD_TABLES } from "@/lib/nav";
 import { guestCanSeeReportCategory } from "@/lib/auth/guest-scope";
@@ -15,11 +25,13 @@ type SidebarProps = {
   onNavigate: () => void;
 };
 
-// The whole navigation tree is visible at once: Functions, Overview, the four
-// record tables, and every report grouped under its family. Two consequences
-// that the old topbar got wrong — the current page is always highlighted
-// rather than removed from the list, and every report is one click away
-// instead of three.
+// Every page is reachable from here, but not every page is listed at once.
+// The record tables and each report family are branches: the branch holding
+// the current page is open, the rest are folded to a single row with a
+// caret. Fully expanded, the tree was ~26 rows and pushed the Silai and
+// Events reports below the fold on a laptop, while the Records page already
+// repeats its four tables as tabs. The current page is still always visible
+// and highlighted — that was the reason for the sidebar over the old topbar.
 //
 // A guest sees only what lib/auth/guest-scope.ts allows. The nav is trimmed
 // to match, so a guest is never shown a link that would bounce them; the
@@ -28,6 +40,14 @@ export function Sidebar({ viewer, onNavigate }: SidebarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeRecordTab = searchParams.get("tab") ?? "customers";
+
+  // Only the user's explicit choices are stored; anything they haven't
+  // touched follows the current route, so moving to another family's
+  // report opens that family without any effect hook.
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const isOpen = (key: string, containsCurrent: boolean) => expanded[key] ?? containsCurrent;
+  const toggle = (key: string, containsCurrent: boolean) =>
+    setExpanded((prev) => ({ ...prev, [key]: !(prev[key] ?? containsCurrent) }));
 
   const isStaff = viewer.kind === "staff";
   // A share link opens exactly one page, so there is nothing to navigate to.
@@ -61,134 +81,118 @@ export function Sidebar({ viewer, onNavigate }: SidebarProps) {
           </div>
         )}
 
-        {!scoped && isStaff && (
-          <div className="nav-group">
-            <Link
-              href="/dashboard"
-              onClick={onNavigate}
-              className={navClass(pathname === "/dashboard")}
-              aria-current={pathname === "/dashboard" ? "page" : undefined}
-            >
-              <LayoutDashboard size={16} />
-              Overview
-            </Link>
-          </div>
-        )}
-
         {!scoped && (
-        <div className="nav-group">
-          <Link
-            href="/functions"
-            onClick={onNavigate}
-            className={navClass(onFunctions)}
-            aria-current={onFunctions ? "page" : undefined}
-          >
-            <CalendarDays size={16} />
-            Functions
-          </Link>
-        </div>
+          <div className="nav-group">
+            {isStaff && (
+              <NavLink href="/dashboard" active={pathname === "/dashboard"} onNavigate={onNavigate}>
+                <LayoutDashboard size={16} />
+                Overview
+              </NavLink>
+            )}
+            <NavLink href="/functions" active={onFunctions} onNavigate={onNavigate}>
+              <CalendarDays size={16} />
+              Functions
+            </NavLink>
+          </div>
         )}
 
         {!scoped && isStaff && (
           <div className="nav-group">
             <div className="nav-group-label">Records</div>
-            <Link
-              href="/records"
-              onClick={onNavigate}
-              className={navClass(onRecords)}
-              aria-current={onRecords ? "page" : undefined}
+            <NavBranch
+              id="nav-records"
+              open={isOpen("records", onRecords)}
+              onToggle={() => toggle("records", onRecords)}
+              label="record tables"
+              row={
+                <NavLink href="/records" active={onRecords} onNavigate={onNavigate}>
+                  <Database size={16} />
+                  All records
+                </NavLink>
+              }
             >
-              <Database size={16} />
-              All records
-            </Link>
-            <div className="nav-sub">
-              {RECORD_TABLES.map((table) => {
-                const active = onRecords && activeRecordTab === table.id;
-                return (
-                  <Link
-                    key={table.id}
-                    href={`/records?tab=${table.id}`}
-                    onClick={onNavigate}
-                    className={`${navClass(active)} nav-item-sub`}
-                    aria-current={active ? "page" : undefined}
-                  >
-                    {table.label}
-                  </Link>
-                );
-              })}
-            </div>
+              {RECORD_TABLES.map((table) => (
+                <NavLink
+                  key={table.id}
+                  href={`/records?tab=${table.id}`}
+                  active={onRecords && activeRecordTab === table.id}
+                  onNavigate={onNavigate}
+                  sub
+                >
+                  {table.label}
+                </NavLink>
+              ))}
+            </NavBranch>
           </div>
         )}
 
         {!scoped && (
-        <div className="nav-group">
-          <div className="nav-group-label">Reports</div>
-          <Link
-            href="/reports"
-            onClick={onNavigate}
-            className={navClass(pathname === "/reports")}
-            aria-current={pathname === "/reports" ? "page" : undefined}
-          >
-            <PieChart size={16} />
-            All reports
-          </Link>
+          <div className="nav-group">
+            <div className="nav-group-label">Reports</div>
+            <NavLink href="/reports" active={pathname === "/reports"} onNavigate={onNavigate}>
+              <PieChart size={16} />
+              All reports
+            </NavLink>
 
-          {categories.map((category) => {
-            const reports = getReportsByCategory(category);
-            const categoryHref = `/reports/${category}`;
-            const categoryActive = pathname === categoryHref;
+            {categories.map((category) => {
+              const reports = getReportsByCategory(category);
+              const categoryHref = `/reports/${category}`;
+              const inCategory = pathname === categoryHref || pathname.startsWith(`${categoryHref}/`);
 
-            return (
-              <div key={category} style={{ marginTop: 6 }}>
-                <Link
-                  href={categoryHref as Route}
-                  onClick={onNavigate}
-                  className={navClass(categoryActive)}
-                  aria-current={categoryActive ? "page" : undefined}
+              return (
+                <NavBranch
+                  key={category}
+                  id={`nav-${category}`}
+                  open={isOpen(category, inCategory)}
+                  onToggle={() => toggle(category, inCategory)}
+                  label={`${CATEGORY_META[category].short} reports`}
+                  row={
+                    <NavLink
+                      href={categoryHref}
+                      active={pathname === categoryHref}
+                      onNavigate={onNavigate}
+                    >
+                      <span
+                        className="nav-dot"
+                        style={{ ["--dot" as string]: CATEGORY_ACCENT[category] }}
+                        aria-hidden="true"
+                      />
+                      {CATEGORY_META[category].short}
+                      <span className="nav-count">{reports.length}</span>
+                    </NavLink>
+                  }
                 >
-                  <span
-                    className="nav-dot"
-                    style={{ ["--dot" as string]: CATEGORY_ACCENT[category] }}
-                    aria-hidden="true"
-                  />
-                  {CATEGORY_META[category].short}
-                  <span className="nav-count">{reports.length}</span>
-                </Link>
-                <div className="nav-sub">
                   {reports.map((report) => {
                     const href = `/reports/${report.category}/${report.slug}`;
-                    const active = pathname === href;
                     return (
-                      <Link
+                      <NavLink
                         key={report.slug}
-                        href={href as Route}
-                        onClick={onNavigate}
-                        className={`${navClass(active)} nav-item-sub`}
-                        aria-current={active ? "page" : undefined}
+                        href={href}
+                        active={pathname === href}
+                        onNavigate={onNavigate}
+                        sub
                       >
                         {report.title.replace(/ Report$/, "")}
-                      </Link>
+                      </NavLink>
                     );
                   })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                </NavBranch>
+              );
+            })}
+          </div>
         )}
 
         {viewer.isAdmin && (
           <div className="nav-group">
             <div className="nav-group-label">Admin</div>
-            <Link
+            <NavLink
               href="/settings/access"
-              onClick={onNavigate}
-              className={navClass(pathname === "/settings/access")}
-              aria-current={pathname === "/settings/access" ? "page" : undefined}
+              active={pathname === "/settings/access"}
+              onNavigate={onNavigate}
             >
               <KeyRound size={16} />
               Guest access
-            </Link>
+            </NavLink>
           </div>
         )}
       </nav>
@@ -217,6 +221,67 @@ export function Sidebar({ viewer, onNavigate }: SidebarProps) {
   );
 }
 
-function navClass(active: boolean) {
-  return `nav-item${active ? " nav-item-active" : ""}`;
+function NavLink({
+  href,
+  active,
+  onNavigate,
+  sub = false,
+  children
+}: {
+  href: string;
+  active: boolean;
+  onNavigate: () => void;
+  sub?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Link
+      href={href as Route}
+      onClick={onNavigate}
+      className={`nav-item${sub ? " nav-item-sub" : ""}${active ? " nav-item-active" : ""}`}
+      aria-current={active ? "page" : undefined}
+    >
+      {children}
+    </Link>
+  );
+}
+
+// A parent row that is itself a link, plus a separate caret that folds its
+// children. Two controls rather than one, so clicking "Silai" still opens
+// the Silai gallery and folding a branch never navigates.
+function NavBranch({
+  id,
+  open,
+  onToggle,
+  label,
+  row,
+  children
+}: {
+  id: string;
+  open: boolean;
+  onToggle: () => void;
+  label: string;
+  row: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="nav-branch">
+      <div className="nav-branch-row">
+        {row}
+        <button
+          type="button"
+          className="nav-caret"
+          aria-expanded={open}
+          aria-controls={id}
+          aria-label={`${open ? "Hide" : "Show"} ${label}`}
+          onClick={onToggle}
+        >
+          <ChevronRight size={14} aria-hidden="true" />
+        </button>
+      </div>
+      <div id={id} className="nav-sub" hidden={!open}>
+        {children}
+      </div>
+    </div>
+  );
 }
