@@ -9,7 +9,7 @@ import {
 } from "@/components/dashboard-charts";
 import { SyncForm } from "@/components/sync-form";
 import { requireStaffViewer, viewerChrome } from "@/lib/auth/viewer";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, formatDateOnly } from "@/lib/format";
 import { CATEGORY_META, CATEGORY_ORDER, getReportsByCategory } from "@/lib/reports/registry";
 import { CATEGORY_ACCENT } from "@/lib/nav";
 import { getAllCustomers } from "@/lib/reports/shared-queries";
@@ -240,7 +240,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                     <tr key={invoice.id}>
                       <td data-label="Invoice">{invoice.invoice_number ?? invoice.zoho_invoice_id}</td>
                       <td data-label="Customer">{invoice.customer_name ?? "Unknown"}</td>
-                      <td data-label="Date">{invoice.date ? formatDate(invoice.date) : "—"}</td>
+                      <td data-label="Date">{invoice.date ? formatDateOnly(invoice.date) : "—"}</td>
                       <td data-label="Status">
                         <span className={`status-pill ${statusClass(invoice.status)}`}>
                           {invoice.status}

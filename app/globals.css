@@ -1429,8 +1429,9 @@ input[type="checkbox"] {
   transition: box-shadow 0.1s ease;
 }
 
+/* A role token, not a ramp step, so the hint is visible in dark mode too. */
 .editable-cell:hover {
-  box-shadow: inset 0 0 0 1px var(--brand-200);
+  box-shadow: inset 0 0 0 1px var(--brand);
 }
 
 .editable-cell-error {
@@ -1781,15 +1782,28 @@ input[type="checkbox"] {
   line-height: 1.45;
 }
 
+/* Wraps between segments, never inside one: a date range squeezed into
+   its own narrow column read as three stacked fragments. */
 .gallery-card-meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 2px 6px;
   margin-top: 3px;
   color: var(--text-muted);
   font-size: var(--fs-label);
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.gallery-card-meta > span {
+  white-space: nowrap;
+}
+
+/* Function cards carry a progress bar and two meta lines, so they need
+   more room than a report card's single summary. */
+.card-grid-wide {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
 }
 
 .gallery-card-arrow {
@@ -2138,6 +2152,27 @@ input[type="checkbox"] {
    without that the mobile rules would fight the @media print block below
    and break printed and exported reports.
    --------------------------------------------------------------------- */
+
+/* Four tiles at this width auto-fit to three plus an orphan on its own
+   row; a 2x2 block reads as one set. */
+@media screen and (min-width: 961px) and (max-width: 1199px) {
+  .metric-grid:has(> :nth-child(4):last-child) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Records: a name or company squeezed to a word per line makes the row
+   three times taller than it needs to be. Desktop only — the card layout
+   below 960px stacks cells anyway. */
+@media screen and (min-width: 961px) {
+  .data-table-cards td.editable-cell {
+    min-width: 8.5rem;
+  }
+
+  .data-table-cards td.data-table-card-title {
+    min-width: 12rem;
+  }
+}
 
 @media screen and (max-width: 1100px) {
   .dashboard-grid {
