@@ -35,7 +35,7 @@ export default async function FunctionsPage() {
           </div>
         </div>
       ) : (
-        <div className="card-grid">
+        <div className="card-grid card-grid-wide">
           {functions.map((fn) => {
             const covered =
               fn.itemCount > 0 ? Math.round((fn.sponsoredCount / fn.itemCount) * 100) : 0;
@@ -55,11 +55,11 @@ export default async function FunctionsPage() {
                 {fn.subtitle && <div className="gallery-card-summary">{fn.subtitle}</div>}
 
                 <div className="gallery-card-meta">
-                  {dates.length > 0 ? dates.join(" – ") : fn.status}
+                  <span>{dates.length > 0 ? dates.join(" – ") : fn.status}</span>
                   <span aria-hidden="true">·</span>
-                  {fn.sectionCount} sections
+                  <span>{fn.sectionCount} sections</span>
                   <span aria-hidden="true">·</span>
-                  {fn.itemCount} items
+                  <span>{fn.itemCount} items</span>
                 </div>
 
                 <div style={{ marginTop: 10 }}>
@@ -67,11 +67,15 @@ export default async function FunctionsPage() {
                     <div className="progress-fill" style={{ width: `${covered}%` }} />
                   </div>
                   <div className="gallery-card-meta" style={{ marginTop: 6 }}>
-                    {fn.sponsoredCount} of {fn.itemCount} covered
+                    <span>
+                      {fn.sponsoredCount} of {fn.itemCount} covered
+                    </span>
                     {fn.expected > 0 && (
                       <>
                         <span aria-hidden="true">·</span>
-                        {formatCurrency(fn.actual)} of {formatCurrency(fn.expected)}
+                        <span>
+                          {formatCurrency(fn.actual)} of {formatCurrency(fn.expected)}
+                        </span>
                       </>
                     )}
                   </div>

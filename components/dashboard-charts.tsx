@@ -45,6 +45,25 @@ const SILAI_STATUS_COLORS: Record<string, string> = {
   fully_paid: "var(--success)"
 };
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// "2025-12" → "Dec 25" (axis) / "Dec 2025" (tooltip). Parsed by hand rather
+// than through Date so no timezone can shift it into the previous month.
+// Anything not in that shape is shown unchanged.
+function monthLabel(value: string, long = false) {
+  const match = /^(\d{4})-(\d{2})$/.exec(value);
+  const name = match ? MONTHS[Number(match[2]) - 1] : undefined;
+  if (!match || !name) return value;
+  return `${name} ${long ? match[1] : match[1].slice(2)}`;
+}
+
+const COMPACT_CURRENCY = new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: "INR",
+  notation: "compact",
+  maximumFractionDigits: 1
+});
+
 function titleCase(value: string) {
   return value.replace(/_/g, " ").replace(/\b\w/g, (character) => character.toUpperCase());
 }
@@ -67,20 +86,34 @@ export function RevenueTrendChart({
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="var(--border)" />
-          <XAxis dataKey="month" tick={AXIS_TICK} axisLine={false} tickLine={false} />
+          <XAxis
+            dataKey="month"
+            tick={AXIS_TICK}
+            tickFormatter={(value: string) => monthLabel(value)}
+            axisLine={false}
+            tickLine={false}
+          />
           <YAxis
-            tickFormatter={(value: number) => formatCurrency(value)}
+            tickFormatter={(value: number) => COMPACT_CURRENCY.format(value)}
             tick={AXIS_TICK}
             axisLine={false}
             tickLine={false}
-            width={78}
+            width={56}
           />
           <Tooltip
             cursor={{ fill: "var(--row-hover)" }}
+            labelFormatter={(label: string) => monthLabel(String(label), true)}
             formatter={(value: number) => [formatCurrency(value), "Revenue"]}
             contentStyle={TOOLTIP_STYLE}
           />
-          <Bar dataKey="revenue" fill="var(--brand)" radius={[5, 5, 0, 0]} maxBarSize={46} />
+          <Bar
+            dataKey="revenue"
+            fill="var(--brand)"
+            fillOpacity={0.72}
+            activeBar={{ fillOpacity: 1 }}
+            radius={[4, 4, 0, 0]}
+            maxBarSize={40}
+          />
         </BarChart>
       </ResponsiveContainer>
     </div>
