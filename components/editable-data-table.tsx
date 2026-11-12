@@ -409,11 +409,11 @@ export function EditableDataTable({
 
         <div className="section-body">
           <div className="table-panel-scroll">
-      <table className="data-table data-table-cards">
+      <table className={`data-table data-table-cards data-table-pinned${isAdmin ? " has-select" : ""}`}>
         <thead>
           <tr>
             {isAdmin && (
-              <th>
+              <th className="col-select">
                 <input
                   type="checkbox"
                   aria-label="Select all visible rows"
@@ -425,7 +425,7 @@ export function EditableDataTable({
             {columns.map((column) => (
               <th
                 key={column.key}
-                className="sortable-header"
+                className={`sortable-header${column.cardTitle ? " col-title" : ""}`}
                 onClick={() => toggleSort(column.key)}
                 aria-sort={
                   sort?.key === column.key ? (sort.direction === "asc" ? "ascending" : "descending") : "none"
@@ -441,9 +441,13 @@ export function EditableDataTable({
           </tr>
           {showColumnFilters && (
           <tr>
-            {isAdmin && <th className="filter-cell" />}
+            {isAdmin && <th className="filter-cell col-select" />}
             {columns.map((column) => (
-              <th key={column.key} className="filter-cell" data-label={column.label}>
+              <th
+                key={column.key}
+                className={`filter-cell${column.cardTitle ? " col-title" : ""}`}
+                data-label={column.label}
+              >
                 {column.type === "boolean" ? (
                   <select
                     className="filter-input"
@@ -499,7 +503,7 @@ export function EditableDataTable({
             return (
               <tr key={rowId}>
                 {isAdmin && (
-                  <td data-label="Select">
+                  <td data-label="Select" className="col-select">
                     <input
                       type="checkbox"
                       aria-label={`Select row ${rowId}`}

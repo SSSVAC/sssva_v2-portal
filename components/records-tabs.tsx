@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ExternalLink } from "lucide-react";
 import { EditableDataTable, type RecordColumn } from "@/components/editable-data-table";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { useUrlParamSetter } from "@/lib/reports/use-url-param";
 import { RECORD_TABLES, type RecordTableId } from "@/lib/nav";
 
@@ -132,21 +133,12 @@ export function RecordsTabs({
           tab strip gave no such signal and read like the report category
           tabs elsewhere in the app, which navigate rather than switch. */}
       <div className="records-toolbar">
-        <div className="segmented" role="tablist" aria-label="Record tables">
-          {RECORD_TABLES.map((tab) => (
-            <button
-              key={tab.id}
-              role="tab"
-              type="button"
-              aria-selected={activeTab === tab.id}
-              className={`segment${activeTab === tab.id ? " segment-active" : ""}`}
-              onClick={() => selectTab(tab.id)}
-            >
-              {tab.label}
-              <span className="segment-count">{rowsByTab[tab.id].length}</span>
-            </button>
-          ))}
-        </div>
+        <SegmentedTabs
+          label="Record tables"
+          tabs={RECORD_TABLES.map((tab) => ({ ...tab, count: rowsByTab[tab.id].length }))}
+          value={activeTab}
+          onChange={selectTab}
+        />
       </div>
 
       {activeTab === "customers" && (

@@ -5,6 +5,7 @@ import { formatCurrency } from "@/lib/format";
 import { Search } from "lucide-react";
 import { ExportMenu } from "@/components/ui/export-menu";
 import { Section } from "@/components/ui/section";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { SortableTh, type SortDirection } from "@/components/sortable-th";
 import {
   exportSectionsToCsv,
@@ -159,21 +160,12 @@ export function FundStatusTable({ members, minimumAmount }: FundStatusTableProps
           rather than stacked as an underlined tab strip (which read like
           the app's navigation tabs) plus a loose input below it. */}
       <div className="records-toolbar no-print" style={{ padding: "12px 16px 0", marginBottom: 12 }}>
-        <div className="segmented" role="tablist" aria-label="Member fund status">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              role="tab"
-              type="button"
-              aria-selected={activeTab === tab.id}
-              className={`segment${activeTab === tab.id ? " segment-active" : ""}`}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              {tab.label}
-              <span className="segment-count">{counts[tab.id]}</span>
-            </button>
-          ))}
-        </div>
+        <SegmentedTabs
+          label="Member fund status"
+          tabs={TABS.map((tab) => ({ ...tab, count: counts[tab.id] }))}
+          value={activeTab}
+          onChange={setActiveTab}
+        />
 
         <div className="searchbox">
           <Search size={14} />

@@ -97,6 +97,7 @@
   --bg-glow: rgba(226, 103, 10, 0.12);
   --bg-glow-2: rgba(67, 56, 202, 0.075);
   --bg-dot: rgba(17, 22, 32, 0.12);
+  --scroll-shadow: rgba(17, 22, 32, 0.14);
 
   --shadow-xs: 0 1px 2px rgba(17, 22, 32, 0.05);
   --shadow-sm: 0 1px 3px rgba(17, 22, 32, 0.07), 0 1px 2px rgba(17, 22, 32, 0.04);
@@ -151,6 +152,7 @@
     --bg-glow: rgba(240, 140, 69, 0.11);
     --bg-glow-2: rgba(142, 160, 245, 0.08);
     --bg-dot: rgba(255, 255, 255, 0.075);
+    --scroll-shadow: rgba(0, 0, 0, 0.55);
 
     --success: #3fbf76;
     --success-soft: rgba(63, 191, 118, 0.13);
@@ -204,6 +206,7 @@
   --bg-glow: rgba(240, 140, 69, 0.11);
   --bg-glow-2: rgba(142, 160, 245, 0.08);
   --bg-dot: rgba(255, 255, 255, 0.075);
+  --scroll-shadow: rgba(0, 0, 0, 0.55);
 
   --success: #3fbf76;
   --success-soft: rgba(63, 191, 118, 0.13);
@@ -516,9 +519,74 @@ p {
   border-left: 1px solid var(--border);
 }
 
+/* `display: grid` above would otherwise beat the hidden attribute. */
+.nav-sub[hidden] {
+  display: none;
+}
+
 .nav-item-sub {
   padding: 6px 10px;
   font-size: var(--fs-small);
+}
+
+/* --- Collapsible branch: a link row plus its own fold caret --- */
+
+.nav-branch + .nav-branch,
+.nav-item + .nav-branch {
+  margin-top: 2px;
+}
+
+.nav-branch-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.nav-branch-row > .nav-item {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-right: 34px;
+}
+
+.nav-caret {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 0;
+  color: var(--text-muted);
+  background: none;
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.nav-caret:hover {
+  color: var(--text-strong);
+  background: var(--surface-3);
+}
+
+.nav-caret:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+}
+
+.nav-caret svg {
+  transition: transform 0.15s ease;
+}
+
+.nav-caret[aria-expanded="true"] svg {
+  transform: rotate(90deg);
+}
+
+/* The family count sits left of the caret rather than under it. */
+.nav-branch-row .nav-count {
+  margin-right: 2px;
 }
 
 .nav-item-sub.nav-item-active::before {
@@ -2218,6 +2286,61 @@ input[type="checkbox"] {
   .data-table-cards td.data-table-card-title {
     min-width: 12rem;
   }
+
+  /* Records run to 10-12 columns, so scrolling right to reach Balance or
+     Zoho ID used to scroll the row's name off screen with it. The select
+     box and the identifying column stay pinned; a hairline on the pinned
+     edge separates them from what slides underneath. */
+  .data-table-pinned .col-select,
+  .data-table-pinned .col-title,
+  .data-table-pinned td.data-table-card-title {
+    position: sticky;
+    z-index: 2;
+  }
+
+  .data-table-pinned .col-select {
+    left: 0;
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+  }
+
+  .data-table-pinned .col-title,
+  .data-table-pinned td.data-table-card-title {
+    left: 0;
+    box-shadow: inset -1px 0 0 var(--border);
+  }
+
+  .data-table-pinned.has-select .col-title,
+  .data-table-pinned.has-select td.data-table-card-title {
+    left: 44px;
+  }
+
+  /* Pinned body cells need an opaque fill or scrolled cells show through;
+     the hover tint is layered over it so the row still highlights as one. */
+  .data-table-pinned td.col-select,
+  .data-table-pinned td.data-table-card-title {
+    background: var(--surface);
+  }
+
+  .data-table-pinned tbody tr:hover td.col-select,
+  .data-table-pinned tbody tr:hover td.data-table-card-title {
+    background: linear-gradient(var(--row-hover), var(--row-hover)), var(--surface);
+  }
+
+  /* Scroll hint for any wide table: a soft shadow on whichever edge has
+     more columns beyond it. The two `local` covers travel with the content
+     and mask the `scroll` shadows once you reach that edge, so this needs
+     no JavaScript to know the scroll position. */
+  .table-panel-scroll,
+  .table-wrap {
+    background:
+      linear-gradient(to right, var(--surface) 40%, transparent) left / 32px 100% no-repeat local,
+      linear-gradient(to left, var(--surface) 40%, transparent) right / 32px 100% no-repeat local,
+      radial-gradient(farthest-side at 0 50%, var(--scroll-shadow), transparent) left / 12px 100% no-repeat scroll,
+      radial-gradient(farthest-side at 100% 50%, var(--scroll-shadow), transparent) right / 12px 100% no-repeat scroll;
+    background-color: var(--surface);
+  }
 }
 
 @media screen and (max-width: 1100px) {
@@ -2313,7 +2436,11 @@ input[type="checkbox"] {
     display: inline-flex;
   }
 
-  .section-body {
+  /* Only sections that HAVE a <details> header can be folded. Records
+     builds a plain .section with no header to open it from, so an
+     unscoped `.section-body { display: none }` hid the whole table on a
+     phone with no way to show it. */
+  .section:has(.report-section) .section-body {
     display: none;
   }
 

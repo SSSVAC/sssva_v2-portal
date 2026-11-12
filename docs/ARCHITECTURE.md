@@ -104,7 +104,11 @@ The uppercase-micro label treatment (`.eyebrow`, `.metric-head`, `.data-table th
 
 ### Page composition
 
-Every signed-in page is `<AppShell>` (persistent sidebar + appbar + width-capped content) wrapping one `<PageHeader>` and a `.stack` of blocks. The sidebar lists the whole tree — Overview, four record tables, all 11 reports under their families — and highlights the current route via `usePathname()`. It must never hide the current page's own link, which is what the previous topbar did.
+Every signed-in page is `<AppShell>` (persistent sidebar + appbar + width-capped content) wrapping one `<PageHeader>` and a `.stack` of blocks. The sidebar holds the whole tree — Overview, four record tables, all 11 reports under their families — and highlights the current route via `usePathname()`. The record tables and each report family are folding branches (`NavBranch` in `components/shell/sidebar.tsx`): the branch containing the current page is open, the others fold to one row with a caret, and only the user's explicit toggles are kept in state, so the route decides everything else. It must never hide the current page's own link, which is what the previous topbar did.
+
+Segmented tab strips (Records tables, fund status, Silai contributions view) all go through `components/ui/segmented-tabs.tsx`, which implements the ARIA tabs keyboard pattern (one Tab stop, arrow keys move and select). Don't hand-roll `role="tab"` buttons again. The login form's Staff/Guest switch is deliberately not tabs — it uses `aria-pressed` toggle buttons.
+
+On desktop the Records table pins its select box and identifying column (`.data-table-pinned`, `.col-select`, `.col-title`) so a row stays identifiable while scrolling right, and every `.table-panel-scroll` / `.table-wrap` shows an edge shadow while more columns lie beyond it (pure CSS `background-attachment: local` covers).
 
 **Exactly one `<h1>` per page, and it belongs to `PageHeader`.** `ReportShell` renders it for report pages; it used to emit an `<h2>` inside a card with no `<h1>` anywhere on the page.
 

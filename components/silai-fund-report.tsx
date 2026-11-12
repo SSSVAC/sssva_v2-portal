@@ -5,6 +5,7 @@ import { formatCurrency, formatDateOnly } from "@/lib/format";
 import { ExportMenu } from "@/components/ui/export-menu";
 import { Section } from "@/components/ui/section";
 import { SectionGroup } from "@/components/ui/section-group";
+import { SegmentedTabs, type SegmentedTab } from "@/components/ui/segmented-tabs";
 import { ReportToolbar } from "@/components/ui/report-toolbar";
 import {
   exportToCsv,
@@ -70,6 +71,11 @@ export type SilaiBillRow = {
 
 /** Contributions summed per donor, or listed receipt by receipt. */
 export type ContributionView = "members" | "entries";
+
+const CONTRIBUTION_VIEW_TABS = [
+  { id: "members", label: "By member" },
+  { id: "entries", label: "All contributions" }
+] as const satisfies readonly SegmentedTab<ContributionView>[];
 
 type SilaiFundReportProps = {
   title?: string;
@@ -276,26 +282,12 @@ export function SilaiFundReport({
         {/* Two ways to read the same money: who has paid, or what came in
             and when. The choice rides in the URL so a shared link opens on
             the view its sender was looking at. */}
-        <div className="segmented" role="tablist" aria-label="Contributions view">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={contributionView === "members"}
-            className={`segment${contributionView === "members" ? " segment-active" : ""}`}
-            onClick={() => handleContributionViewChange("members")}
-          >
-            By member
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={contributionView === "entries"}
-            className={`segment${contributionView === "entries" ? " segment-active" : ""}`}
-            onClick={() => handleContributionViewChange("entries")}
-          >
-            All contributions
-          </button>
-        </div>
+        <SegmentedTabs
+          label="Contributions view"
+          tabs={CONTRIBUTION_VIEW_TABS}
+          value={contributionView}
+          onChange={handleContributionViewChange}
+        />
 
         {/* Nothing to reveal in the entries view: it lists receipts, and a
             member who hasn't paid has none. */}
