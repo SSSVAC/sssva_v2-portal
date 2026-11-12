@@ -106,7 +106,14 @@ export function RevenueTrendChart({
             formatter={(value: number) => [formatCurrency(value), "Revenue"]}
             contentStyle={TOOLTIP_STYLE}
           />
-          <Bar dataKey="revenue" fill="var(--brand)" radius={[5, 5, 0, 0]} maxBarSize={46} />
+          <Bar
+            dataKey="revenue"
+            fill="var(--brand)"
+            fillOpacity={0.72}
+            activeBar={{ fillOpacity: 1 }}
+            radius={[4, 4, 0, 0]}
+            maxBarSize={40}
+          />
         </BarChart>
       </ResponsiveContainer>
     </div>

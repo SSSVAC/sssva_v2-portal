@@ -25,20 +25,21 @@
    --------------------------------------------------------------------- */
 
 :root {
-  /* Warm neutral ramp. The app is mostly greys, so they carry a slight
-     warm cast to sit under the saffron brand instead of reading cold. */
+  /* Cool slate neutral ramp. The app is mostly greys; a quiet, slightly
+     cool grey lets the saffron accent carry identity on its own instead of
+     tinting every surface brown. */
   --n-0: #ffffff;
-  --n-25: #fbfaf8;
-  --n-50: #f6f4f1;
-  --n-100: #efece7;
-  --n-200: #e3ded7;
-  --n-300: #cfc8bf;
-  --n-400: #a49b92;
-  --n-500: #7b736b;
-  --n-600: #5c554e;
-  --n-700: #443e38;
-  --n-800: #2c2823;
-  --n-900: #1b1815;
+  --n-25: #f8f9fb;
+  --n-50: #f2f4f7;
+  --n-100: #eaedf1;
+  --n-200: #dfe3e9;
+  --n-300: #c9cfd8;
+  --n-400: #98a0ad;
+  --n-500: #69717f;
+  --n-600: #4a5260;
+  --n-700: #353c48;
+  --n-800: #1e2430;
+  --n-900: #111620;
 
   /* Brand - saffron. Identity, primary action, "you are here". */
   --brand-50: #fef6ec;
@@ -87,16 +88,20 @@
   --brand: var(--brand-600);
   --brand-hover: var(--brand-700);
   --brand-soft: var(--brand-50);
-  --brand-tint: rgba(194, 65, 12, 0.09);
+  --brand-tint: rgba(194, 65, 12, 0.08);
+  --brand-border: var(--brand-200);
   --on-brand: #ffffff;
-  --focus-ring: rgba(194, 65, 12, 0.26);
-  --row-hover: rgba(194, 65, 12, 0.05);
-  --overlay: rgba(27, 24, 21, 0.5);
+  --focus-ring: rgba(194, 65, 12, 0.24);
+  --row-hover: rgba(30, 36, 48, 0.035);
+  --overlay: rgba(17, 22, 32, 0.5);
+  --bg-glow: rgba(226, 103, 10, 0.12);
+  --bg-glow-2: rgba(67, 56, 202, 0.075);
+  --bg-dot: rgba(17, 22, 32, 0.12);
 
-  --shadow-xs: 0 1px 2px rgba(27, 24, 21, 0.06);
-  --shadow-sm: 0 1px 3px rgba(27, 24, 21, 0.08), 0 1px 2px rgba(27, 24, 21, 0.04);
-  --shadow-md: 0 4px 12px rgba(27, 24, 21, 0.08), 0 2px 4px rgba(27, 24, 21, 0.04);
-  --shadow-lg: 0 16px 40px rgba(27, 24, 21, 0.18);
+  --shadow-xs: 0 1px 2px rgba(17, 22, 32, 0.05);
+  --shadow-sm: 0 1px 3px rgba(17, 22, 32, 0.07), 0 1px 2px rgba(17, 22, 32, 0.04);
+  --shadow-md: 0 4px 12px rgba(17, 22, 32, 0.07), 0 2px 4px rgba(17, 22, 32, 0.04);
+  --shadow-lg: 0 16px 40px rgba(17, 22, 32, 0.16);
 
   /* Type scale - five steps, one job each. Nothing in the app should
      invent a size outside this list. */
@@ -124,47 +129,51 @@
   :root:not([data-theme="light"]) {
     color-scheme: dark;
 
-    --bg: #141210;
-    --surface: #1d1a16;
-    --surface-2: #24201b;
-    --surface-3: #2c2721;
-    --border: #362f28;
-    --border-strong: #4a423a;
-    --text: #ece7df;
-    --text-strong: #fbf9f6;
-    --text-secondary: #b3aa9f;
-    --text-muted: #8d857b;
-    --brand: #f6ac68;
-    --brand-hover: #fbcfa4;
-    --brand-soft: rgba(246, 172, 104, 0.14);
-    --brand-tint: rgba(246, 172, 104, 0.1);
-    --on-brand: #2c1608;
-    --focus-ring: rgba(246, 172, 104, 0.32);
-    --row-hover: rgba(246, 172, 104, 0.07);
-    --overlay: rgba(0, 0, 0, 0.62);
+    --bg: #0e1116;
+    --surface: #151a21;
+    --surface-2: #1b2029;
+    --surface-3: #222833;
+    --border: #29303b;
+    --border-strong: #3a4250;
+    --text: #e4e8ee;
+    --text-strong: #f7f9fc;
+    --text-secondary: #a4adba;
+    --text-muted: #7d8696;
+    --brand: #f08c45;
+    --brand-hover: #f6a468;
+    --brand-soft: rgba(240, 140, 69, 0.13);
+    --brand-tint: rgba(240, 140, 69, 0.1);
+    --brand-border: rgba(240, 140, 69, 0.38);
+    --on-brand: #1a0e05;
+    --focus-ring: rgba(240, 140, 69, 0.34);
+    --row-hover: rgba(255, 255, 255, 0.035);
+    --overlay: rgba(4, 6, 10, 0.66);
+    --bg-glow: rgba(240, 140, 69, 0.11);
+    --bg-glow-2: rgba(142, 160, 245, 0.08);
+    --bg-dot: rgba(255, 255, 255, 0.075);
 
-    --success: #4ade80;
-    --success-soft: rgba(74, 222, 128, 0.14);
-    --success-border: rgba(74, 222, 128, 0.3);
-    --warning: #fbbf24;
-    --warning-soft: rgba(251, 191, 36, 0.14);
-    --warning-border: rgba(251, 191, 36, 0.3);
-    --danger: #f87171;
-    --danger-soft: rgba(248, 113, 113, 0.14);
-    --danger-border: rgba(248, 113, 113, 0.3);
-    --info: #a5b4fc;
-    --info-soft: rgba(165, 180, 252, 0.14);
-    --info-border: rgba(165, 180, 252, 0.3);
+    --success: #3fbf76;
+    --success-soft: rgba(63, 191, 118, 0.13);
+    --success-border: rgba(63, 191, 118, 0.3);
+    --warning: #e2a93b;
+    --warning-soft: rgba(226, 169, 59, 0.13);
+    --warning-border: rgba(226, 169, 59, 0.3);
+    --danger: #ec6f69;
+    --danger-soft: rgba(236, 111, 105, 0.13);
+    --danger-border: rgba(236, 111, 105, 0.3);
+    --info: #8ea0f5;
+    --info-soft: rgba(142, 160, 245, 0.13);
+    --info-border: rgba(142, 160, 245, 0.3);
 
-    --cat-financial: #a5b4fc;
-    --cat-financial-soft: rgba(165, 180, 252, 0.14);
-    --cat-silai: #f6ac68;
-    --cat-silai-soft: rgba(246, 172, 104, 0.14);
-    --cat-events: #5eead4;
-    --cat-events-soft: rgba(94, 234, 212, 0.14);
+    --cat-financial: #8ea0f5;
+    --cat-financial-soft: rgba(142, 160, 245, 0.13);
+    --cat-silai: #f08c45;
+    --cat-silai-soft: rgba(240, 140, 69, 0.13);
+    --cat-events: #4cc9b6;
+    --cat-events-soft: rgba(76, 201, 182, 0.13);
 
-    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45);
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
     --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
   }
@@ -173,47 +182,51 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --bg: #141210;
-  --surface: #1d1a16;
-  --surface-2: #24201b;
-  --surface-3: #2c2721;
-  --border: #362f28;
-  --border-strong: #4a423a;
-  --text: #ece7df;
-  --text-strong: #fbf9f6;
-  --text-secondary: #b3aa9f;
-  --text-muted: #8d857b;
-  --brand: #f6ac68;
-  --brand-hover: #fbcfa4;
-  --brand-soft: rgba(246, 172, 104, 0.14);
-  --brand-tint: rgba(246, 172, 104, 0.1);
-  --on-brand: #2c1608;
-  --focus-ring: rgba(246, 172, 104, 0.32);
-  --row-hover: rgba(246, 172, 104, 0.07);
-  --overlay: rgba(0, 0, 0, 0.62);
+  --bg: #0e1116;
+  --surface: #151a21;
+  --surface-2: #1b2029;
+  --surface-3: #222833;
+  --border: #29303b;
+  --border-strong: #3a4250;
+  --text: #e4e8ee;
+  --text-strong: #f7f9fc;
+  --text-secondary: #a4adba;
+  --text-muted: #7d8696;
+  --brand: #f08c45;
+  --brand-hover: #f6a468;
+  --brand-soft: rgba(240, 140, 69, 0.13);
+  --brand-tint: rgba(240, 140, 69, 0.1);
+  --brand-border: rgba(240, 140, 69, 0.38);
+  --on-brand: #1a0e05;
+  --focus-ring: rgba(240, 140, 69, 0.34);
+  --row-hover: rgba(255, 255, 255, 0.035);
+  --overlay: rgba(4, 6, 10, 0.66);
+  --bg-glow: rgba(240, 140, 69, 0.11);
+  --bg-glow-2: rgba(142, 160, 245, 0.08);
+  --bg-dot: rgba(255, 255, 255, 0.075);
 
-  --success: #4ade80;
-  --success-soft: rgba(74, 222, 128, 0.14);
-  --success-border: rgba(74, 222, 128, 0.3);
-  --warning: #fbbf24;
-  --warning-soft: rgba(251, 191, 36, 0.14);
-  --warning-border: rgba(251, 191, 36, 0.3);
-  --danger: #f87171;
-  --danger-soft: rgba(248, 113, 113, 0.14);
-  --danger-border: rgba(248, 113, 113, 0.3);
-  --info: #a5b4fc;
-  --info-soft: rgba(165, 180, 252, 0.14);
-  --info-border: rgba(165, 180, 252, 0.3);
+  --success: #3fbf76;
+  --success-soft: rgba(63, 191, 118, 0.13);
+  --success-border: rgba(63, 191, 118, 0.3);
+  --warning: #e2a93b;
+  --warning-soft: rgba(226, 169, 59, 0.13);
+  --warning-border: rgba(226, 169, 59, 0.3);
+  --danger: #ec6f69;
+  --danger-soft: rgba(236, 111, 105, 0.13);
+  --danger-border: rgba(236, 111, 105, 0.3);
+  --info: #8ea0f5;
+  --info-soft: rgba(142, 160, 245, 0.13);
+  --info-border: rgba(142, 160, 245, 0.3);
 
-  --cat-financial: #a5b4fc;
-  --cat-financial-soft: rgba(165, 180, 252, 0.14);
-  --cat-silai: #f6ac68;
-  --cat-silai-soft: rgba(246, 172, 104, 0.14);
-  --cat-events: #5eead4;
-  --cat-events-soft: rgba(94, 234, 212, 0.14);
+  --cat-financial: #8ea0f5;
+  --cat-financial-soft: rgba(142, 160, 245, 0.13);
+  --cat-silai: #f08c45;
+  --cat-silai-soft: rgba(240, 140, 69, 0.13);
+  --cat-events: #4cc9b6;
+  --cat-events-soft: rgba(76, 201, 182, 0.13);
 
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
 }
@@ -338,6 +351,33 @@ p {
   min-height: 100vh;
 }
 
+/* Background atmosphere: a faint dot grid that fades out down the page,
+   under two soft glows (saffron right, indigo left) along the top edge.
+   Fixed to the viewport and behind everything, so it gives the canvas
+   some depth without touching any card, table or exported image. Colours
+   come from role tokens so each theme tunes its own strength. */
+.app::before,
+.app::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.app::before {
+  background-image: radial-gradient(circle at 1px 1px, var(--bg-dot) 1px, transparent 0);
+  background-size: 22px 22px;
+  -webkit-mask-image: linear-gradient(180deg, #000 0, transparent 560px);
+  mask-image: linear-gradient(180deg, #000 0, transparent 560px);
+}
+
+.app::after {
+  background:
+    radial-gradient(1000px 520px at 88% -80px, var(--bg-glow), transparent 70%),
+    radial-gradient(820px 460px at 18% -120px, var(--bg-glow-2), transparent 70%);
+}
+
 /* --- Sidebar --- */
 
 .sidebar {
@@ -375,9 +415,11 @@ p {
   letter-spacing: -0.02em;
 }
 
-:root[data-theme="dark"] .brand-mark,
-:root:not([data-theme="light"]) .brand-mark {
-  color: #2c1608;
+/* The mark sits on a fixed gradient, not on --brand, so its letters stay
+   white in both themes. (The old dark override also matched light mode
+   whenever no data-theme was set, which browned the letters.) */
+.brand-mark {
+  color: #ffffff;
 }
 
 .brand-name {
@@ -1002,7 +1044,7 @@ input[type="checkbox"] {
 .metric-grid,
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 12px;
 }
 
@@ -1052,9 +1094,13 @@ input[type="checkbox"] {
   color: var(--warning);
 }
 
+/* A red value plus a thin red top rule says "needs attention" without
+   flooding the tile. Three fully tinted tiles in one row read as an
+   alarm panel rather than a report. */
 .metric-card[data-state="critical"] {
   border-color: var(--danger-border);
-  background: var(--danger-soft);
+  background: linear-gradient(180deg, var(--danger-soft), var(--surface) 55%);
+  box-shadow: inset 0 3px 0 var(--danger), var(--shadow-xs);
 }
 
 .metric-card[data-state="critical"] .metric-value {
@@ -1064,7 +1110,7 @@ input[type="checkbox"] {
 /* The single lead figure of a report - one per KPI row, so the eye has
    somewhere to land first instead of four equal-weight tiles. */
 .metric-card[data-emphasis="lead"] {
-  border-color: var(--brand-200);
+  border-color: var(--brand-border);
   background: linear-gradient(180deg, var(--brand-soft), var(--surface) 70%);
 }
 
@@ -1655,9 +1701,9 @@ input[type="checkbox"] {
   padding: 44px;
   color: #fff;
   background:
-    radial-gradient(120% 90% at 8% 100%, rgba(226, 103, 10, 0.55), transparent 60%),
-    radial-gradient(90% 80% at 95% 5%, rgba(67, 56, 202, 0.45), transparent 62%),
-    linear-gradient(150deg, #3b1d08, #1b1815 55%, #10221f);
+    radial-gradient(110% 85% at 8% 100%, rgba(226, 103, 10, 0.38), transparent 60%),
+    radial-gradient(90% 80% at 95% 5%, rgba(67, 56, 202, 0.22), transparent 62%),
+    linear-gradient(155deg, #1a1f2a, #111620 55%, #0c1016);
 }
 
 /* Faint concentric rings - a quiet architectural motif rather than a
@@ -2674,6 +2720,11 @@ input[type="checkbox"] {
     --shadow-sm: none;
     --shadow-md: none;
     --shadow-lg: none;
+  }
+
+  .app::before,
+  .app::after {
+    display: none;
   }
 
   html,
