@@ -8,7 +8,7 @@ import { silaiContributions } from "./definitions/silai/silai-contributions";
 import { silaiFund } from "./definitions/silai/silai-fund";
 import { silaiByGroup } from "./definitions/silai/silai-by-group";
 import { silaiFollowup } from "./definitions/silai/silai-followup";
-import { ugadi, varushabishegam, marghazhiPoojai } from "./definitions/events";
+import { ugadi, varushabishegam, marghazhiPoojai, mandalaPoojai, kandaSastiKavasam } from "./definitions/events";
 
 // Adding a report: write a ReportDefinition (loader + Component), push it
 // here. Nothing else in the routing layer needs to change — see
@@ -25,7 +25,9 @@ export const REPORT_REGISTRY: ReportDefinition[] = [
   silaiFollowup,
   ugadi,
   varushabishegam,
-  marghazhiPoojai
+  marghazhiPoojai,
+  mandalaPoojai,
+  kandaSastiKavasam
 ];
 
 export function getReport(category: string, slug: string) {
