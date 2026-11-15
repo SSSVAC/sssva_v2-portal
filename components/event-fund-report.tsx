@@ -58,15 +58,16 @@ export type EventBillRow = {
 // "reached a meaningful amount" full/partial/none indicator.
 const FULL_AMOUNT_THRESHOLD = 3000;
 
-function amountClass(total: number) {
-  if (total >= FULL_AMOUNT_THRESHOLD) return "cell-success";
+// A minimum of 0 means the event has no target: any contribution is "full".
+function amountClass(total: number, minimum: number) {
+  if (total > 0 && total >= minimum) return "cell-success";
   if (total > 0) return "cell-warning";
   return "cell-danger";
 }
 
-function amountCell(total: number): ExportCell {
+function amountCell(total: number, minimum: number): ExportCell {
   const value = formatCurrency(total);
-  if (total >= FULL_AMOUNT_THRESHOLD) return { value, highlight: "success" };
+  if (total > 0 && total >= minimum) return { value, highlight: "success" };
   if (total > 0) return { value, highlight: "warning" };
   return { value, highlight: "danger" };
 }
@@ -85,6 +86,8 @@ type EventFundReportProps = {
   billRows: EventBillRow[];
   initialYear?: string;
   initialShowAllMembers?: boolean;
+  /** Per-member amount that counts as fully contributed; 0 = no minimum. */
+  minimumAmount?: number;
 };
 
 export function EventFundReport({
@@ -96,7 +99,8 @@ export function EventFundReport({
   expenseRows,
   billRows,
   initialYear,
-  initialShowAllMembers = false
+  initialShowAllMembers = false,
+  minimumAmount = FULL_AMOUNT_THRESHOLD
 }: EventFundReportProps) {
   const years = useMemo(() => {
     const set = new Set<string>();
@@ -179,8 +183,8 @@ export function EventFundReport({
 
   const contributionExportHeaders = ["Donor", "Phone", "Address", "Amount"];
   const contributionGroupExportRows = (rows: EventContributionRow[], subtotal: number): ExportCell[][] => [
-    ...rows.map((row) => [row.donorName ?? "", row.phone ?? "", row.address ?? "", amountCell(row.total)]),
-    ["Subtotal", "", "", amountCell(subtotal)]
+    ...rows.map((row) => [row.donorName ?? "", row.phone ?? "", row.address ?? "", amountCell(row.total, minimumAmount)]),
+    ["Subtotal", "", "", amountCell(subtotal, minimumAmount)]
   ];
   const contributionExportSections = (): ExportSection[] =>
     contributionGroups.map((group) => ({
@@ -361,7 +365,7 @@ export function EventFundReport({
                         <td data-label="Address">
                           <CellValue value={row.address} />
                         </td>
-                        <td data-label="Amount" className={`num ${amountClass(row.total)}`}>
+                        <td data-label="Amount" className={`num ${amountClass(row.total, minimumAmount)}`}>
                           {formatCurrency(row.total)}
                         </td>
                       </tr>

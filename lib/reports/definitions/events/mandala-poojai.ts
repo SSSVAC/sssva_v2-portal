@@ -13,6 +13,7 @@ type Props = {
   billRows: EventBillRow[];
   initialYear?: string;
   initialShowAllMembers?: boolean;
+  minimumAmount: number;
 };
 
 async function loadMandalaPoojai({ supabase, searchParams }: ReportLoaderContext): Promise<Props> {
@@ -27,6 +28,7 @@ async function loadMandalaPoojai({ supabase, searchParams }: ReportLoaderContext
     fileSlug: "mandala-poojai-report",
     printTarget: "mandala-poojai",
     ...data,
+    minimumAmount: 0,
     initialYear: pickInitialEventYear(data, searchParams.year),
     initialShowAllMembers: searchParams.all === "1"
   };
