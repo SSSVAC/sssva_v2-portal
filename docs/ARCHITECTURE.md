@@ -34,7 +34,7 @@ Definitions live in `lib/reports/definitions/<category>/<slug>.ts` and are colle
 ### Two report shapes
 
 - **All-time** (`lib/reports/all-time-fund.ts` + `components/silai-fund-report.tsx`): one running total per member, no year concept. Used by Silai Fund and Registration. `SilaiFundReport` takes optional `title`/`subtitle`/`fileSlug`/`printTarget` props (defaulting to the original Silai values) so it can be reused as-is rather than forked.
-- **Year-based** (`lib/event-fund.ts` + `components/event-fund-report.tsx`): one row per (member, year), with a year `<select>`. Used by Ugadi, Varushabishegam, Marghazhi Poojai, Mandala Poojai (+ Poorthi), Kanda Sasti Kavasam.
+- **Year-based** (`lib/event-fund.ts` + `components/event-fund-report.tsx`): one row per (member, year), with a year `<select>`. Used by Ugadi, Varushabishegam, Marghazhi Poojai, Mandala Poojai (+ Poorthi), Kanda Sashti Vizha.
 
 Picking the wrong one for a new report is an easy mistake — Registration was originally built year-based, then corrected, because registration is a one-time fee, not an annual contribution. **If the underlying activity happens once per member, use all-time. If it recurs every year, use year-based.**
 
