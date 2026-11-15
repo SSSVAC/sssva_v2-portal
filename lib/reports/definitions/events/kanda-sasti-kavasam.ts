@@ -13,6 +13,7 @@ type Props = {
   billRows: EventBillRow[];
   initialYear?: string;
   initialShowAllMembers?: boolean;
+  minimumAmount: number;
 };
 
 async function loadKandaSastiKavasam({ supabase, searchParams }: ReportLoaderContext): Promise<Props> {
@@ -27,6 +28,7 @@ async function loadKandaSastiKavasam({ supabase, searchParams }: ReportLoaderCon
     fileSlug: "kanda-sasti-kavasam-report",
     printTarget: "kanda-sasti-kavasam",
     ...data,
+    minimumAmount: 0,
     initialYear: pickInitialEventYear(data, searchParams.year),
     initialShowAllMembers: searchParams.all === "1"
   };
