@@ -13,11 +13,12 @@ type Props = {
   billRows: EventBillRow[];
   initialYear?: string;
   initialShowAllMembers?: boolean;
+  minimumAmount: number;
 };
 
 async function loadMandalaPoojai({ supabase, searchParams }: ReportLoaderContext): Promise<Props> {
   const data = await fetchEventFundReportData(supabase, {
-    incomeItemNames: ["Mandala Poojai", "Mandala Poorthi", "மண்டல பூஜை", "மண்டல பூர்த்தி"],
+    incomeItemNames: ["Mandala Pooja", "Mandala Poorthi", "மண்டல பூஜை", "மண்டல பூர்த்தி"],
     expenseAccountNames: MANDALA_POOJAI_EXPENSE_ACCOUNTS
   });
 
@@ -27,6 +28,7 @@ async function loadMandalaPoojai({ supabase, searchParams }: ReportLoaderContext
     fileSlug: "mandala-poojai-report",
     printTarget: "mandala-poojai",
     ...data,
+    minimumAmount: 0,
     initialYear: pickInitialEventYear(data, searchParams.year),
     initialShowAllMembers: searchParams.all === "1"
   };

@@ -1,7 +1,7 @@
 import { EventFundReport, type EventBillRow, type EventContributionRow, type EventExpenseRow } from "@/components/event-fund-report";
 import type { ReportDefinition, ReportLoaderContext } from "@/lib/reports/types";
 import { fetchEventFundReportData, pickInitialEventYear } from "@/lib/event-fund";
-import { KANDA_SASTI_KAVASAM_EXPENSE_ACCOUNT } from "@/lib/reports/constants";
+import { KANDA_SASHTI_VIZHA_EXPENSE_ACCOUNT } from "@/lib/reports/constants";
 
 type Props = {
   title: string;
@@ -13,31 +13,33 @@ type Props = {
   billRows: EventBillRow[];
   initialYear?: string;
   initialShowAllMembers?: boolean;
+  minimumAmount: number;
 };
 
-async function loadKandaSastiKavasam({ supabase, searchParams }: ReportLoaderContext): Promise<Props> {
+async function loadKandaSashtiVizha({ supabase, searchParams }: ReportLoaderContext): Promise<Props> {
   const data = await fetchEventFundReportData(supabase, {
-    incomeItemNames: ["Kanda Sasti Kavasam", "கந்த சஷ்டி கவசம்"],
-    expenseAccountNames: [KANDA_SASTI_KAVASAM_EXPENSE_ACCOUNT]
+    incomeItemNames: ["Kanda Sashti Vizha", "கந்த சஷ்டி விழா"],
+    expenseAccountNames: [KANDA_SASHTI_VIZHA_EXPENSE_ACCOUNT]
   });
 
   return {
-    title: "Kanda Sasti Kavasam Report",
+    title: "Kanda Sashti Vizha Report",
     subtitle: "கந்த சஷ்டி கவசம்",
-    fileSlug: "kanda-sasti-kavasam-report",
-    printTarget: "kanda-sasti-kavasam",
+    fileSlug: "kanda-sashti-vizha-report",
+    printTarget: "kanda-sashti-vizha",
     ...data,
+    minimumAmount: 0,
     initialYear: pickInitialEventYear(data, searchParams.year),
     initialShowAllMembers: searchParams.all === "1"
   };
 }
 
-export const kandaSastiKavasam: ReportDefinition<Props> = {
-  slug: "kanda-sasti-kavasam",
+export const kandaSashtiVizha: ReportDefinition<Props> = {
+  slug: "kanda-sashti-vizha",
   category: "events",
-  title: "Kanda Sasti Kavasam Report",
+  title: "Kanda Sashti Vizha Report",
   description: "கந்த சஷ்டி கவசம் — Contributions, expenses & bills, by year",
-  summary: "Kanda Sasti Kavasam fund, by year",
-  loader: loadKandaSastiKavasam,
+  summary: "Kanda Sashti Vizha fund, by year",
+  loader: loadKandaSashtiVizha,
   Component: EventFundReport
 };

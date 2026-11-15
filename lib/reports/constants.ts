@@ -49,8 +49,8 @@ export const VARUSHABISHEGAM_EXPENSE_ACCOUNT = "Varushabishekam Expenses";
 export const MARGHAZHI_POOJAI_EXPENSE_ACCOUNT = "Marghazhi Poojai";
 // Mandala Poorthi Expenses and Kanda Sashti Vizha Expenses are the real Zoho
 // account names; "Mandala Poojai" is still a guess. Expense accounts match exactly; income item names match contains (see event-fund.ts).
-export const MANDALA_POOJAI_EXPENSE_ACCOUNTS = ["Mandala Poojai", "Mandala Poorthi Expenses"];
-export const KANDA_SASTI_KAVASAM_EXPENSE_ACCOUNT = "Kanda Sashti Vizha Expenses";
+export const MANDALA_POOJAI_EXPENSE_ACCOUNTS = ["Mandala Poojai", "Mandala Pooja", "Mandala Poorthi Expenses"];
+export const KANDA_SASHTI_VIZHA_EXPENSE_ACCOUNT = "Kanda Sashti Vizha Expenses";
 
 // Income item name for one-time association registration fees, and the
 // matching expense/bill account for registration-related costs.
@@ -63,6 +63,6 @@ export const MONTHLY_REPORT_EXCLUDED_ACCOUNTS = [
   VARUSHABISHEGAM_EXPENSE_ACCOUNT,
   MARGHAZHI_POOJAI_EXPENSE_ACCOUNT,
   ...MANDALA_POOJAI_EXPENSE_ACCOUNTS,
-  KANDA_SASTI_KAVASAM_EXPENSE_ACCOUNT,
+  KANDA_SASHTI_VIZHA_EXPENSE_ACCOUNT,
   REGISTRATION_EXPENSE_ACCOUNT
 ];
