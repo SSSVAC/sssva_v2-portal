@@ -17,7 +17,7 @@ type Props = {
 
 async function loadKandaSastiKavasam({ supabase, searchParams }: ReportLoaderContext): Promise<Props> {
   const data = await fetchEventFundReportData(supabase, {
-    incomeItemNames: ["Kanda Sasti Kavasam", "கந்த சஷ்டி கவசம்"],
+    incomeItemNames: ["Kanda Sashti Vizha", "கந்த சஷ்டி விழா"],
     expenseAccountNames: [KANDA_SASTI_KAVASAM_EXPENSE_ACCOUNT]
   });
 
