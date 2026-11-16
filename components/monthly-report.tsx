@@ -68,17 +68,28 @@ function sumTotals<T extends { total: number }>(rows: T[]) {
 }
 
 function buildDonorRowsForCategory(rows: MonthlyIncomeRow[], category: MonthlyIncomeCategory) {
-  const totalsByName = new Map<string, number>();
+  const byName = new Map<string, { total: number; dates: Set<string> }>();
 
   rows
     .filter((row) => row.category === category)
     .forEach((row) => {
       const name = row.customerName?.trim() || "Unknown";
-      totalsByName.set(name, (totalsByName.get(name) ?? 0) + row.total);
+      const entry = byName.get(name) ?? { total: 0, dates: new Set<string>() };
+      entry.total += row.total;
+      entry.dates.add(row.date);
+      byName.set(name, entry);
     });
 
-  return Array.from(totalsByName.entries())
-    .map(([donorName, total]) => ({ donorName, total }))
+  return Array.from(byName.entries())
+    .map(([donorName, { total, dates }]) => ({
+      donorName,
+      total,
+      // A donor can give more than once in a month; list every date received.
+      dateReceived: Array.from(dates)
+        .sort()
+        .map((date) => formatDateOnly(date))
+        .join(", ")
+    }))
     .sort((a, b) => a.donorName.localeCompare(b.donorName));
 }
 
@@ -150,16 +161,16 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
     ["Total Received", formatCurrency(totalReceived)]
   ];
 
-  const donationDonorExportHeaders = ["Donor", "Amount"];
+  const donationDonorExportHeaders = ["Donor", "Date Received", "Amount"];
   const donationDonorExportRows = () => [
-    ...donationDonorRows.map((row) => [row.donorName, formatCurrency(row.total)]),
-    ["Total", formatCurrency(totalDonations)]
+    ...donationDonorRows.map((row) => [row.donorName, row.dateReceived, formatCurrency(row.total)]),
+    ["Total", "", formatCurrency(totalDonations)]
   ];
 
-  const othersDonorExportHeaders = ["Donor", "Amount"];
+  const othersDonorExportHeaders = ["Donor", "Date Received", "Amount"];
   const othersDonorExportRows = () => [
-    ...othersDonorRows.map((row) => [row.donorName, formatCurrency(row.total)]),
-    ["Total", formatCurrency(totalOthers)]
+    ...othersDonorRows.map((row) => [row.donorName, row.dateReceived, formatCurrency(row.total)]),
+    ["Total", "", formatCurrency(totalOthers)]
   ];
 
   const expenseExportHeaders = ["Item", "Account", "Date", "Amount"];
@@ -402,6 +413,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
               <thead>
                 <tr>
                   <th>Donor</th>
+                  <th>Date Received</th>
                   <th className="num">Amount</th>
                 </tr>
               </thead>
@@ -409,6 +421,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
                 {donationDonorRows.map((row) => (
                   <tr key={row.donorName}>
                     <td>{row.donorName}</td>
+                    <td data-label="Date Received">{row.dateReceived}</td>
                     <td data-label="Amount" className="num">
                       {formatCurrency(row.total)}
                     </td>
@@ -417,7 +430,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
               </tbody>
               <tfoot>
                 <tr>
-                  <td>Total</td>
+                  <td colSpan={2}>Total</td>
                   <td data-label="Amount" className="num">
                     {formatCurrency(totalDonations)}
                   </td>
@@ -464,6 +477,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
               <thead>
                 <tr>
                   <th>Donor</th>
+                  <th>Date Received</th>
                   <th className="num">Amount</th>
                 </tr>
               </thead>
@@ -471,6 +485,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
                 {othersDonorRows.map((row) => (
                   <tr key={row.donorName}>
                     <td>{row.donorName}</td>
+                    <td data-label="Date Received">{row.dateReceived}</td>
                     <td data-label="Amount" className="num">
                       {formatCurrency(row.total)}
                     </td>
@@ -479,7 +494,7 @@ export function MonthlyReport({ months, incomeRows, expenseRows, billRows, initi
               </tbody>
               <tfoot>
                 <tr>
-                  <td>Total</td>
+                  <td colSpan={2}>Total</td>
                   <td data-label="Amount" className="num">
                     {formatCurrency(totalOthers)}
                   </td>
