@@ -1,27 +1,28 @@
 import Link from "next/link";
-import { ArrowRight, CircleDollarSign, FileText, Wallet } from "lucide-react";
+import { ArrowRight, HandCoins, Landmark, PiggyBank, Users } from "lucide-react";
 import { AppShell } from "@/components/shell/app-shell";
 import { PageHeader } from "@/components/shell/page-header";
-import {
-  InvoiceStatusChart,
-  RevenueTrendChart,
-  SilaiStatusChart
-} from "@/components/dashboard-charts";
+import { IncomeSpendingChart, SilaiStatusChart } from "@/components/dashboard-charts";
 import { SyncForm } from "@/components/sync-form";
 import { requireStaffViewer, viewerChrome } from "@/lib/auth/viewer";
 import { formatCurrency, formatDate, formatDateOnly } from "@/lib/format";
 import { CATEGORY_META, CATEGORY_ORDER, getReportsByCategory } from "@/lib/reports/registry";
 import { CATEGORY_ACCENT } from "@/lib/nav";
-import { getAllCustomers } from "@/lib/reports/shared-queries";
+import { getAllCustomers, getLastNMonths } from "@/lib/reports/shared-queries";
 import { buildMemberRows, fetchContributions } from "@/lib/reports/definitions/silai/member-rows";
+import { buildMonthlyContributionRows, summariseMonth } from "@/lib/reports/monthly-contributions";
+import { FUND_MINIMUM_AMOUNT, MONTHLY_CONTRIBUTION_MINIMUM } from "@/lib/reports/constants";
+import { buildIncomeMix, buildMonthlyFlow, categorizeIncome } from "@/lib/dashboard";
 import type { Database } from "@/types/database";
 
 export const dynamic = "force-dynamic";
 
 type InvoiceRow = Database["public"]["Tables"]["zoho_invoices"]["Row"];
-type InvoiceStats = Pick<InvoiceRow, "total" | "balance" | "status">;
-type MonthlyRevenueRow = Database["public"]["Views"]["dashboard_monthly_revenue"]["Row"];
+type IncomeInvoice = Pick<InvoiceRow, "customer_id" | "customer_name" | "date" | "total" | "item_name">;
+type AmountRow = { date: string | null; total: number | null };
 type SyncRunRow = Database["public"]["Tables"]["sync_runs"]["Row"];
+
+const TREND_MONTHS = 12;
 
 type DashboardPageProps = {
   searchParams: Promise<{ sync_error?: string }>;
@@ -32,10 +33,19 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const viewer = await requireStaffViewer();
   const supabase = viewer.supabase;
 
+  const months = getLastNMonths(TREND_MONTHS).map((month) => ({
+    ...month,
+    short: month.label.split(" ")[0]
+  }));
+  const monthKeys = months.map((month) => month.key);
+  const thisMonth = monthKeys[monthKeys.length - 1];
+  const rangeStart = `${monthKeys[0]}-01`;
+
   const [
     { data: recentInvoices },
-    { data: allInvoiceStats },
-    { data: monthlyRevenue },
+    { data: incomeInvoices },
+    { data: expenses },
+    { data: bills },
     { data: syncRuns },
     customers,
     contributions
@@ -47,19 +57,26 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       .order("date", { ascending: false })
       .limit(8)
       .returns<InvoiceRow[]>(),
-    // Unlimited, narrow select — drives the stat tiles and status chart off
-    // every invoice instead of just the handful shown below.
+    // A year of money in: drives the trend, the source breakdown and the
+    // member dues for this month, so one narrow query serves all three.
     supabase
       .from("zoho_invoices")
-      .select("total, balance, status")
+      .select("customer_id, customer_name, date, total, item_name")
       .is("archived_at", null)
-      .returns<InvoiceStats[]>(),
+      .gte("date", rangeStart)
+      .returns<IncomeInvoice[]>(),
     supabase
-      .from("dashboard_monthly_revenue")
-      .select("*")
-      .order("month", { ascending: true })
-      .limit(12)
-      .returns<MonthlyRevenueRow[]>(),
+      .from("zoho_expenses")
+      .select("date, total")
+      .is("archived_at", null)
+      .gte("date", rangeStart)
+      .returns<AmountRow[]>(),
+    supabase
+      .from("zoho_bills")
+      .select("date, total")
+      .is("archived_at", null)
+      .gte("date", rangeStart)
+      .returns<AmountRow[]>(),
     supabase
       .from("sync_runs")
       .select("*")
@@ -72,33 +89,46 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   ]);
 
   const safeRecentInvoices = recentInvoices ?? [];
-  const safeInvoiceStats = allInvoiceStats ?? [];
-  const totalRevenue = safeInvoiceStats.reduce((sum, invoice) => sum + Number(invoice.total), 0);
-  const outstanding = safeInvoiceStats.reduce((sum, invoice) => sum + Number(invoice.balance), 0);
-  const overdue = safeInvoiceStats.filter((invoice) => invoice.status === "overdue").length;
-  const collected = totalRevenue - outstanding;
-  const collectedPct = totalRevenue > 0 ? Math.round((collected / totalRevenue) * 100) : 0;
+  const safeIncome = incomeInvoices ?? [];
   const latestSync = syncRuns?.[0];
 
-  const memberRows = buildMemberRows(customers, contributions);
-  const silaiFundStatus = [
-    {
-      status: "not_paid",
-      label: "Not Paid",
-      count: memberRows.filter((member) => member.status === "not_paid").length
-    },
-    {
-      status: "partially_paid",
-      label: "Partially Paid",
-      count: memberRows.filter((member) => member.status === "partially_paid").length
-    },
-    {
-      status: "fully_paid",
-      label: "Fully Paid",
-      count: memberRows.filter((member) => member.status === "fully_paid").length
-    }
-  ];
+  const flow = buildMonthlyFlow(monthKeys, safeIncome, [...(expenses ?? []), ...(bills ?? [])]);
+  const current = flow[flow.length - 1];
+  const previous = flow[flow.length - 2];
+  const net = current.income - current.spending;
+  const incomeChange = current.income - previous.income;
+  const incomeMix = buildIncomeMix(safeIncome, new Set(monthKeys));
+  const mixTotal = incomeMix.reduce((sum, entry) => sum + entry.total, 0);
 
+  // Monthly dues: who has settled this month's minimum, who is short, who
+  // hasn't paid — the same figures the Monthly Fixed Contributions report uses.
+  const dues = summariseMonth(
+    buildMonthlyContributionRows({
+      customers,
+      invoices: safeIncome.filter((invoice) => categorizeIncome(invoice.item_name) === "donations"),
+      months,
+      minimum: MONTHLY_CONTRIBUTION_MINIMUM
+    }),
+    thisMonth,
+    MONTHLY_CONTRIBUTION_MINIMUM
+  );
+  const memberCount = dues.full.length + dues.partial.length + dues.none.length;
+
+  const memberRows = buildMemberRows(customers, contributions);
+  const silaiRaised = memberRows.reduce((sum, member) => sum + Math.min(member.paid, FUND_MINIMUM_AMOUNT), 0);
+  const silaiTarget = memberRows.length * FUND_MINIMUM_AMOUNT;
+  const silaiPct = silaiTarget > 0 ? Math.round((silaiRaised / silaiTarget) * 100) : 0;
+  const silaiFundStatus = [
+    { status: "not_paid", label: "Not Paid" },
+    { status: "partially_paid", label: "Partially Paid" },
+    { status: "fully_paid", label: "Fully Paid" }
+  ].map((entry) => ({
+    ...entry,
+    count: memberRows.filter((member) => member.status === entry.status).length
+  }));
+
+  const monthName = months[months.length - 1].label;
+  const lastMonthName = months[months.length - 2].short;
   const syncState =
     latestSync?.status === "succeeded" ? "ok" : latestSync?.status === "failed" ? "failed" : "running";
 
@@ -106,7 +136,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     <AppShell viewer={viewerChrome(viewer)} crumbs={[{ label: "Overview" }]}>
       <PageHeader
         title="Overview"
-        description="Invoices, revenue and collection health across every record synced from Zoho Books."
+        description={`Money in and out for ${monthName}, member dues and the Silai fund, from Zoho Books.`}
         actions={<SyncForm />}
       />
 
@@ -120,8 +150,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         )}
 
         {/* Sync health leads the page: everything below is only as fresh as
-            the last successful run, so it belongs above the numbers rather
-            than tucked into the fourth stat tile as it was before. */}
+            the last successful run. */}
         <div className="status-strip" data-state={syncState}>
           <span className="status-strip-dot" aria-hidden="true" />
           <span>
@@ -139,75 +168,102 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </Link>
         </div>
 
-        <section className="metric-grid" aria-label="Key figures">
+        <section className="metric-grid" aria-label={`Key figures for ${monthName}`}>
           <article className="metric-card" data-emphasis="lead">
             <div className="metric-head">
-              <span>Total Invoiced</span>
-              <CircleDollarSign size={16} />
+              <span>Income · {monthName}</span>
+              <HandCoins size={16} />
             </div>
-            <div className="metric-value">{formatCurrency(totalRevenue)}</div>
-            <div className="metric-sub">All invoices, all time</div>
-          </article>
-
-          <article className="metric-card" data-state="positive">
-            <div className="metric-head">
-              <span>Collected</span>
-              <Wallet size={16} />
-            </div>
-            <div className="metric-value">{formatCurrency(collected)}</div>
-            <div className="metric-sub">{collectedPct}% of invoiced</div>
-          </article>
-
-          <article className="metric-card" data-state={outstanding > 0 ? "critical" : "positive"}>
-            <div className="metric-head">
-              <span>Outstanding</span>
-            </div>
-            <div className="metric-value">{formatCurrency(outstanding)}</div>
+            <div className="metric-value">{formatCurrency(current.income)}</div>
             <div className="metric-sub">
-              {overdue > 0 ? `${overdue} overdue invoice${overdue === 1 ? "" : "s"}` : "Nothing overdue"}
+              {incomeChange === 0
+                ? `Same as ${lastMonthName}`
+                : `${incomeChange > 0 ? "Up" : "Down"} ${formatCurrency(Math.abs(incomeChange))} on ${lastMonthName}`}
             </div>
           </article>
 
           <article className="metric-card">
             <div className="metric-head">
-              <span>Invoices</span>
-              <FileText size={16} />
+              <span>Spending · {monthName}</span>
+              <Landmark size={16} />
             </div>
-            <div className="metric-value">{safeInvoiceStats.length}</div>
-            <div className="metric-sub">Total invoice records</div>
+            <div className="metric-value">{formatCurrency(current.spending)}</div>
+            <div className="metric-sub">
+              Expenses and bills · {lastMonthName} {formatCurrency(previous.spending)}
+            </div>
+          </article>
+
+          <article className="metric-card" data-state={net >= 0 ? "positive" : "critical"}>
+            <div className="metric-head">
+              <span>Net this month</span>
+              <PiggyBank size={16} />
+            </div>
+            <div className="metric-value">{formatCurrency(net)}</div>
+            <div className="metric-sub">{net >= 0 ? "Income covers spending" : "Spending is ahead of income"}</div>
+          </article>
+
+          <article
+            className="metric-card"
+            data-state={memberCount > 0 && dues.none.length === 0 && dues.partial.length === 0 ? "positive" : undefined}
+          >
+            <div className="metric-head">
+              <span>Monthly dues</span>
+              <Users size={16} />
+            </div>
+            <div className="metric-value">
+              {dues.full.length}
+              <span className="muted"> / {memberCount}</span>
+            </div>
+            <div className="metric-sub">
+              {dues.partial.length} short · {dues.none.length} unpaid
+            </div>
           </article>
         </section>
 
-        {/* Revenue is the hero; the two status donuts are supporting detail
-            and stack beside it, rather than three equal-width charts that
-            gave a twelve-month trend the same weight as a five-slice pie. */}
         <div className="dashboard-grid">
           <section className="panel">
             <div className="panel-head">
-              <h2>Revenue trend</h2>
-              <span className="muted">Last 12 months</span>
+              <h2>Income vs spending</h2>
+              <span className="muted">Last {TREND_MONTHS} months</span>
             </div>
-            <RevenueTrendChart
-              data={(monthlyRevenue ?? []).map((item) => ({
-                month: item.month ?? "",
-                revenue: Number(item.revenue ?? 0)
-              }))}
-            />
+            <IncomeSpendingChart data={flow} />
           </section>
 
           <div className="dashboard-side">
             <section className="panel">
               <div className="panel-head">
-                <h2>Invoice status</h2>
-                <span className="muted">{safeInvoiceStats.length}</span>
+                <h2>Income by source</h2>
+                <span className="muted">Last {TREND_MONTHS} months</span>
               </div>
-              <InvoiceStatusChart data={buildStatusCounts(safeInvoiceStats)} />
+              {incomeMix.length > 0 ? (
+                <ul className="stack" style={{ listStyle: "none", margin: 0, padding: "4px 16px 16px", gap: 12 }}>
+                  {incomeMix.map((entry) => (
+                    <li key={entry.category}>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 13 }}>
+                        <span>{entry.label}</span>
+                        <span className="muted">
+                          {formatCurrency(entry.total)} · {Math.round((entry.total / mixTotal) * 100)}%
+                        </span>
+                      </div>
+                      <div className="progress-track" style={{ marginTop: 6 }}>
+                        <div className="progress-fill" style={{ width: `${(entry.total / mixTotal) * 100}%` }} />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="empty-state">
+                  <p>No income recorded in this period.</p>
+                </div>
+              )}
             </section>
 
             <section className="panel">
               <div className="panel-head">
-                <h2>Silai fund status</h2>
-                <span className="muted">{memberRows.length} members</span>
+                <h2>Silai fund</h2>
+                <span className="muted">
+                  {formatCurrency(silaiRaised)} of {formatCurrency(silaiTarget)} · {silaiPct}%
+                </span>
               </div>
               <SilaiStatusChart data={silaiFundStatus} />
             </section>
@@ -216,7 +272,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
         <section className="panel">
           <div className="panel-head">
-            <h2>Recent invoices</h2>
+            <h2>Recent receipts</h2>
             <Link href="/records?tab=invoices" className="btn btn-ghost btn-sm">
               View all
               <ArrowRight size={14} />
@@ -228,25 +284,21 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               <table className="data-table data-table-cards data-table-compact">
                 <thead>
                   <tr>
-                    <th>Invoice</th>
-                    <th>Customer</th>
                     <th>Date</th>
-                    <th>Status</th>
-                    <th className="num">Total</th>
+                    <th>Received from</th>
+                    <th>For</th>
+                    <th className="num">Amount</th>
                   </tr>
                 </thead>
                 <tbody>
                   {safeRecentInvoices.map((invoice) => (
                     <tr key={invoice.id}>
-                      <td data-label="Invoice">{invoice.invoice_number ?? invoice.zoho_invoice_id}</td>
-                      <td data-label="Customer" data-card-label="hidden">{invoice.customer_name ?? "Unknown"}</td>
-                      <td data-label="Date" data-card-width="full">{invoice.date ? formatDateOnly(invoice.date) : "—"}</td>
-                      <td data-label="Status" data-card-label="hidden">
-                        <span className={`status-pill ${statusClass(invoice.status)}`}>
-                          {invoice.status}
-                        </span>
+                      <td data-label="Date">{invoice.date ? formatDateOnly(invoice.date) : "—"}</td>
+                      <td data-label="Received from" data-card-label="hidden">
+                        {invoice.customer_name ?? "Unknown"}
                       </td>
-                      <td data-label="Total" className="num">
+                      <td data-label="For">{invoice.item_name ?? "—"}</td>
+                      <td data-label="Amount" className="num">
                         {formatCurrency(Number(invoice.total))}
                       </td>
                     </tr>
@@ -256,7 +308,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             </div>
           ) : (
             <div className="empty-state">
-              <p>No invoices yet. Run the Zoho sync after adding your environment variables.</p>
+              <p>No receipts yet. Run the Zoho sync after adding your environment variables.</p>
             </div>
           )}
         </section>
@@ -300,19 +352,4 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       </div>
     </AppShell>
   );
-}
-
-function buildStatusCounts(invoices: { status: string }[]) {
-  const counts = invoices.reduce<Record<string, number>>((acc, invoice) => {
-    acc[invoice.status] = (acc[invoice.status] ?? 0) + 1;
-    return acc;
-  }, {});
-
-  return Object.entries(counts).map(([status, count]) => ({ status, count }));
-}
-
-function statusClass(status: string) {
-  if (status === "paid") return "status-paid";
-  if (status === "overdue") return "status-overdue";
-  return "status-sent";
 }

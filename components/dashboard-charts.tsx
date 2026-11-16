@@ -26,19 +26,6 @@ const TOOLTIP_STYLE = {
 
 const AXIS_TICK = { fontSize: 11, fill: "var(--text-muted)" };
 
-// Status colour is derived from what the status MEANS, not from where the
-// slice happens to fall in the array. The old chart cycled a five-colour
-// array by index, so "paid" could come out purple on one deployment and
-// teal on the next depending only on which statuses existed in the data.
-function invoiceStatusColor(status: string) {
-  const normalized = status.toLowerCase();
-  if (normalized.includes("overdue") || normalized === "void") return "var(--danger)";
-  if (normalized.includes("paid") && !normalized.includes("partially")) return "var(--success)";
-  if (normalized.includes("partially")) return "var(--warning)";
-  if (normalized === "sent") return "var(--info)";
-  return "var(--border-strong)";
-}
-
 const SILAI_STATUS_COLORS: Record<string, string> = {
   not_paid: "var(--danger)",
   partially_paid: "var(--warning)",
@@ -64,19 +51,15 @@ const COMPACT_CURRENCY = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 1
 });
 
-function titleCase(value: string) {
-  return value.replace(/_/g, " ").replace(/\b\w/g, (character) => character.toUpperCase());
-}
-
-export function RevenueTrendChart({
+export function IncomeSpendingChart({
   data
 }: {
-  data: { month: string; revenue: number }[];
+  data: { month: string; income: number; spending: number }[];
 }) {
-  if (data.length === 0) {
+  if (data.every((point) => point.income === 0 && point.spending === 0)) {
     return (
       <div className="empty-state">
-        <p>No revenue data yet. Run a Zoho sync to populate it.</p>
+        <p>No income or spending recorded yet. Run a Zoho sync to populate it.</p>
       </div>
     );
   }
@@ -84,7 +67,7 @@ export function RevenueTrendChart({
   return (
     <div className="chart-box">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+        <BarChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barGap={2}>
           <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="var(--border)" />
           <XAxis
             dataKey="month"
@@ -103,17 +86,18 @@ export function RevenueTrendChart({
           <Tooltip
             cursor={{ fill: "var(--row-hover)" }}
             labelFormatter={(label: string) => monthLabel(String(label), true)}
-            formatter={(value: number) => [formatCurrency(value), "Revenue"]}
+            formatter={(value: number, name: string) => [formatCurrency(value), name]}
             contentStyle={TOOLTIP_STYLE}
           />
-          <Bar
-            dataKey="revenue"
-            fill="var(--brand)"
-            fillOpacity={0.72}
-            activeBar={{ fillOpacity: 1 }}
-            radius={[4, 4, 0, 0]}
-            maxBarSize={40}
+          <Legend
+            iconType="circle"
+            iconSize={8}
+            wrapperStyle={{ fontSize: 12, color: "var(--text-secondary)" }}
           />
+          {/* Money in is a positive state, money out a caution — the semantic
+              hues, not brand, since brand is reserved for things you click. */}
+          <Bar dataKey="income" name="Income" fill="var(--success)" fillOpacity={0.8} activeBar={{ fillOpacity: 1 }} radius={[4, 4, 0, 0]} maxBarSize={22} />
+          <Bar dataKey="spending" name="Spending" fill="var(--warning)" fillOpacity={0.8} activeBar={{ fillOpacity: 1 }} radius={[4, 4, 0, 0]} maxBarSize={22} />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -162,20 +146,6 @@ function DonutChart({
         </PieChart>
       </ResponsiveContainer>
     </div>
-  );
-}
-
-export function InvoiceStatusChart({ data }: { data: { status: string; count: number }[] }) {
-  return (
-    <DonutChart
-      emptyMessage="No invoice status data yet."
-      data={data.map((entry) => ({
-        key: entry.status,
-        label: titleCase(entry.status),
-        count: entry.count,
-        color: invoiceStatusColor(entry.status)
-      }))}
-    />
   );
 }
 
