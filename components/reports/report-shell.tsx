@@ -51,6 +51,13 @@ export function ReportShell({
         }
       />
       <div className="stack">{children}</div>
+      <div className="print-footer" aria-hidden="true">
+        <strong>Notes</strong>
+        <ul>
+          <li>Figures come from Zoho Books, the system of record, as of the last sync.</li>
+          <li>Amounts are in Indian rupees (INR).</li>
+        </ul>
+      </div>
     </div>
   );
 }

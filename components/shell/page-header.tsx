@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { TEMPLE_NAME } from "@/lib/branding";
 
 type PageHeaderProps = {
   title: string;
@@ -15,12 +16,18 @@ type PageHeaderProps = {
 export function PageHeader({ title, description, eyebrow, actions }: PageHeaderProps) {
   return (
     <div className="page-header">
+      {/* Letterhead: screen shows the app chrome instead, so this exists
+          only on paper and in a PDF. */}
+      <div className="print-letterhead" aria-hidden="true">
+        <div className="print-letterhead-name">{TEMPLE_NAME}</div>
+      </div>
       <div className="page-header-text">
         {eyebrow && <div style={{ marginBottom: 8 }}>{eyebrow}</div>}
         <div className="page-title-row">
           <h1>{title}</h1>
         </div>
         {description && <p className="page-desc">{description}</p>}
+        <p className="print-meta" aria-hidden="true" />
       </div>
       {actions && <div className="page-actions no-print">{actions}</div>}
     </div>

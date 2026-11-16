@@ -3161,10 +3161,30 @@ input[type="checkbox"] {
       the page-level menu prints the whole report.
    --------------------------------------------------------------------- */
 
+/* Paper-only furniture: the letterhead, the "generated" line and the notes
+   footer are shown by the print block below and hidden everywhere else. */
+.print-letterhead,
+.print-meta,
+.print-footer {
+  display: none;
+}
+
 @media print {
   @page {
     size: A4;
-    margin: 15mm 14mm;
+    margin: 15mm 14mm 18mm;
+
+    @bottom-left {
+      content: "Sri Sarva Sakthi Vinayagar Aalayam";
+      color: #5c554e;
+      font-size: 9px;
+    }
+
+    @bottom-right {
+      content: "Page " counter(page) " of " counter(pages);
+      color: #5c554e;
+      font-size: 9px;
+    }
   }
 
   /* All four selectors are needed. The dark theme is applied by
@@ -3243,6 +3263,46 @@ input[type="checkbox"] {
   }
 
   /* --- Document header --- */
+
+  .print-letterhead {
+    display: block;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+
+  .print-letterhead-name {
+    color: var(--text-strong);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .print-meta {
+    display: block;
+    margin-top: 2px;
+    color: var(--text-muted);
+    font-size: 10.5px;
+  }
+
+  .print-meta::after {
+    content: "Generated on " var(--print-date, "");
+  }
+
+  .print-footer {
+    display: block;
+    margin-top: 22px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 10.5px;
+    break-inside: avoid;
+  }
+
+  .print-footer ul {
+    margin: 3px 0 0;
+    padding-left: 16px;
+  }
 
   .page-header {
     display: block;
@@ -3382,11 +3442,18 @@ input[type="checkbox"] {
   .stat {
     min-height: 0;
     gap: 1px;
-    padding: 8px 12px 8px 0;
+    padding: 8px 12px 8px 12px;
     border: none !important;
+    border-left: 1px solid var(--border) !important;
     background: none !important;
     box-shadow: none;
     break-inside: avoid;
+  }
+
+  .metric-card:first-child,
+  .stat:first-child {
+    padding-left: 0;
+    border-left: none !important;
   }
 
   .metric-head {
@@ -3400,7 +3467,7 @@ input[type="checkbox"] {
   }
 
   .metric-card .metric-value {
-    font-size: 15px;
+    font-size: 17px;
     font-weight: 700;
     color: var(--text-strong) !important;
   }
@@ -3446,10 +3513,21 @@ input[type="checkbox"] {
   }
 
   .data-table tfoot td {
-    border-top: 1px solid var(--border-strong);
+    border-top: 1.5px solid var(--border-strong);
     border-bottom: none;
     color: var(--text-strong);
     font-weight: 700;
+    background: #f1efeb !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* A faint band on alternate rows keeps the eye on its line across a wide
+     ledger-style table; light enough to vanish on a photocopy. */
+  .data-table tbody tr:nth-child(even) td {
+    background: #f8f7f5 !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
 
   .data-table tr {

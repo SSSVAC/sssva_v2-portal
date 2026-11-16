@@ -1,3 +1,5 @@
+import { TEMPLE_NAME } from "@/lib/branding";
+
 import { formatCurrency } from "@/lib/format";
 
 export type ExportColumn = {
@@ -102,6 +104,7 @@ function buildHtmlDocument(title: string, bodyHtml: string) {
     color: #18202f;
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   }
+  .temple { margin: 0 0 6px; color: #6b7280; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
   h1 { margin: 0 0 4px; font-size: 22px; }
   h2 { margin: 28px 0 8px; font-size: 16px; }
   h2:first-of-type { margin-top: 8px; }
@@ -210,6 +213,7 @@ function buildHtmlDocument(title: string, bodyHtml: string) {
 </style>
 </head>
 <body>
+<p class="temple">${escapeHtml(TEMPLE_NAME)}</p>
 <h1>${escapeHtml(title)}</h1>
 <p class="meta">Generated ${escapeHtml(generatedOn)}</p>
 ${bodyHtml}
@@ -634,6 +638,13 @@ export function printReportSection(target: string) {
     : [];
   collapsed.forEach((details) => details.setAttribute("open", ""));
 
+  // The printed header says when the report was generated. A CSS variable
+  // rather than markup so it is the moment of printing, not of the page load.
+  document.body.style.setProperty(
+    "--print-date",
+    `"${new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" }).format(new Date())}"`
+  );
+
   element?.setAttribute("data-printing", "");
   document.body.setAttribute("data-print-target", target);
   if (element) document.body.setAttribute("data-print-scoped", "");
@@ -642,6 +653,7 @@ export function printReportSection(target: string) {
     element?.removeAttribute("data-printing");
     document.body.removeAttribute("data-print-target");
     document.body.removeAttribute("data-print-scoped");
+    document.body.style.removeProperty("--print-date");
     collapsed.forEach((details) => details.removeAttribute("open"));
     window.removeEventListener("afterprint", cleanup);
   };
